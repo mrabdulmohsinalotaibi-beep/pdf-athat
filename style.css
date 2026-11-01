@@ -25,3 +25,12 @@
 .viewer:not(.immersive) .hide-controls{display:block}
 .viewer.immersive .panel{display:none!important}
 @media(max-width:700px){.viewer.immersive .reading-area{height:100dvh}.viewer.immersive .native-preview iframe{height:100%}}
+
+/* Visibility is authoritative even when component layout declares display. */
+[hidden]{display:none!important}
+.viewer.immersive[hidden]{display:none!important}
+.viewer.immersive .native-preview[hidden],.viewer.immersive .sheet[hidden],.viewer.immersive .text-reader[hidden]{display:none!important}
+.viewer.immersive .desk{display:flex;justify-content:center;align-items:flex-start;overflow:auto;min-height:0;width:100%}
+.viewer.immersive .sheet{flex:none;margin:auto;max-width:none}
+.viewer.immersive .native-preview{display:block;width:100%;height:100%}
+.viewer.immersive .reading-area{overflow:hidden}
