@@ -40,13 +40,13 @@
    <button id="thumbToggle" class="icon-btn" title="الصفحات المصغرة" aria-label="الصفحات المصغرة">▦</button>
    <div class="page-group"><button id="prev" aria-label="السابق">‹</button><button id="pageJump" class="page-number" title="انتقال إلى صفحة"><span id="pages">1 / 1</span></button><button id="next" aria-label="التالي">›</button></div>
    <div class="zoom-group"><button id="minus" title="تصغير">−</button><span id="scale">100%</span><button id="plus" title="تكبير">＋</button><button id="fit" class="fit-btn" title="ملاءمة العرض">ملاءمة</button></div>
-   <button id="searchToggle" class="icon-btn" title="بحث في المستند" aria-label="بحث في المستند">⌕</button>
+   <button id="fontFix" class="font-fix-btn" title="إصلاح عرض الخطوط العربية" aria-label="إصلاح الخطوط">خط عربي</button><button id="searchToggle" class="icon-btn" title="بحث في المستند" aria-label="بحث في المستند">⌕</button>
  </div>
  <div class="reading-area">
  <div id="thumbs" class="thumbs" hidden><div class="thumbs-head"><strong>الصفحات</strong><button id="closeThumbs" class="icon-btn">×</button></div><div id="thumbList"></div></div>
  <div id="desk" class="desk" aria-label="صفحة PDF">
   <div id="sheet" class="sheet"><canvas id="pdfCanvas"></canvas><canvas id="inkCanvas"></canvas></div>
-  <div id="nativePreview" class="native-preview" hidden><iframe id="nativeFrame" title="عارض PDF بديل"></iframe></div>
+  <div id="nativePreview" class="native-preview" hidden><iframe id="nativeFrame" title="عارض PDF بديل"></iframe></div><article id="textReader" class="text-reader" hidden dir="rtl" aria-label="قراءة نصية بخط عربي واضح"></article>
   <div id="toolsRail" class="tools-rail" aria-label="أدوات التعليق">
     <button id="pointer" data-tool="pointer" title="تصفح" aria-label="تصفح">↖</button>
     <button id="pen" data-tool="pen" title="قلم" aria-label="قلم">✎</button>
@@ -65,7 +65,7 @@
 <section id="panel" class="panel" hidden><div class="panel-head"><strong id="panelTitle">بحث</strong><button id="closePanel" class="icon-btn">×</button></div>
  <div id="searchPanel" hidden><div class="search-row"><input id="searchInput" type="search" placeholder="ابحث في محتوى PDF" aria-label="بحث نصي"><button id="searchBtn" class="primary-btn">بحث</button></div><p class="hint">يعمل البحث مع ملفات PDF النصية. الملفات المصورة تحتاج إلى OCR.</p><div id="searchResults"></div></div>
  <div id="notesPanel" hidden><p class="hint">اضغط على الصفحة باستخدام أداة التعليق، أو اكتب بالقلم والتظليل.</p><div id="notesList"></div></div>
- <div id="toolsPanel" hidden><p class="hint">اختر أداة ثم المس الصفحة لوضع التعليق أو ابدأ بالكتابة.</p><div id="toolsGrid"></div><button id="nativeToggle" class="secondary-full">عرض بديل للملفات التي تظهر فيها حروف مشوّهة</button></div>
+ <div id="toolsPanel" hidden><p class="hint">اختر أداة ثم المس الصفحة لوضع التعليق أو ابدأ بالكتابة.</p><div id="toolsGrid"></div><button id="nativeToggle" class="secondary-full">عرض بديل للملفات التي تظهر فيها حروف مشوّهة</button></div><div id="fontPanel" hidden><p class="hint">بعض ملفات PDF تستخدم خطوطًا غير مضمّنة أو ترميزات قديمة. جرّب وضع القراءة النصية بخط الجهاز أو افتح الملف في عارض Chrome الأصلي.</p><div class="font-options"><button id="fontNormal" class="secondary-full">📄 العرض الأصلي داخل المحرر</button><button id="fontText" class="secondary-full">أ قراءة عربية بخط واضح</button><button id="fontNative" class="secondary-full">↗ فتح بمحرك PDF في الجهاز</button></div><p id="fontStatus" class="hint">القراءة النصية تعيد تنسيق الفقرات وقد لا تحافظ على تخطيط الصفحة؛ العرض الأصلي يتيح الرسم والتعليق.</p></div>
 </section>
 </main></div></div>
 <script type="module" src="./app-v2.js"></script>
