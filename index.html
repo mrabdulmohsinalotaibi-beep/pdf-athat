@@ -1,1 +1,72 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#263b43"><meta name="description" content="PDF.ATHAT قارئ PDF عربي مع التظليل والقلم والحفظ المحلي"><link rel="manifest" href="./manifest.webmanifest"><title>PDF.ATHAT — محرر PDF</title><link rel="stylesheet" href="./style.css"></head><body><header><div class="brand"><span class="logo">PDF</span><div><b>PDF.ATHAT</b><small>اقرأ • علّق • احفظ</small></div></div><label class="upload">＋ فتح ملف PDF<input type="file" id="file" accept=".pdf,application/pdf" hidden></label></header><div class="layout"><aside><h3>مكتبتي <span id="count">0</span></h3><div id="library"></div><p class="hint">الملفات تحفظ على هذا الجهاز فقط. لا تُرفع إلى الخادم.</p></aside><main><nav><button id="pointer" class="active">تصفّح</button><button id="pen">قلم</button><button id="highlight">تظليل حر</button><input id="color" type="color" value="#e6b44b" aria-label="لون القلم"><button id="undo">تراجع</button><input id="searchInput" type="search" placeholder="ابحث في النص" aria-label="البحث داخل PDF"><button id="searchBtn">بحث</button><button id="download">تنزيل PDF</button></nav><div id="message" role="alert"></div><div id="welcome"><div class="symbol">PDF</div><h1>كل ملفاتك، في مساحة واحدة</h1><p>افتح ملف PDF، اكتب بالقلم أو ظلّل عليه ثم نزّل نسخة محدثة. دون حساب أو رفع للخادم.</p><label class="upload">اختر ملف PDF<input type="file" id="file2" accept=".pdf,application/pdf" hidden></label></div><div id="viewer" hidden><div class="filename"><strong id="name"></strong><span id="status">محفوظ محليًا</span></div><section id="desk"><div id="sheet"><canvas id="pdfCanvas"></canvas><canvas id="inkCanvas"></canvas></div></section><div class="pager"><button id="prev">السابق</button><span id="pages">1 / 1</span><button id="next">التالي</button><button id="minus">−</button><span id="scale">100%</span><button id="plus">＋</button></div></div></main></div><script type="module" src="./app.js"></script></body></html>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f8faf9"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="PDF.ATHAT منصة عربية لقراءة ملفات PDF والتعليق عليها وحفظها محليًا">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>PDF.ATHAT — اقرأ، علّق، احفظ</title><link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="app">
+<header class="appbar">
+  <div class="app-brand"><span class="brand-icon" aria-hidden="true">PDF</span><div class="brand-text"><strong>PDF.ATHAT</strong><small>مساحتك الذكية للمستندات</small></div></div>
+  <div class="header-actions">
+    <button id="themeToggle" class="icon-btn optional-wide" type="button" title="الوضع الداكن" aria-label="الوضع الداكن">◐</button>
+    <button id="libraryToggle" class="icon-btn" type="button" title="المكتبة" aria-label="المكتبة">☷</button>
+    <label class="upload primary-btn">＋ <span>فتح PDF</span><input type="file" id="file" accept=".pdf,application/pdf" hidden></label>
+  </div>
+</header>
+<div id="backdrop" class="backdrop" hidden></div>
+<div class="workspace">
+<aside id="sidebar" class="sidebar" aria-label="مكتبتي">
+ <div class="sidebar-head"><div><strong>مكتبتي</strong><span id="count" class="counter">0</span></div><button id="closeLibrary" class="icon-btn" aria-label="إغلاق المكتبة">×</button></div>
+ <div class="sidebar-switch"><button id="showAll" class="selected">الملفات</button><button id="showFav">المفضلة</button><button id="showTrash">المحذوفة</button></div>
+ <div id="library" class="file-list"></div>
+ <div class="privacy-note">🔒 ملفاتك وتعليقاتك محفوظة محليًا على الجهاز. نزّل نسخة احتياطية قبل مسح بيانات المتصفح.</div>
+</aside>
+<main class="main-panel">
+<div id="message" class="message" role="status" aria-live="polite" hidden></div>
+<section id="welcome" class="welcome">
+ <div class="welcome-mark">PDF</div><span class="eyebrow">PDF.ATHAT</span>
+ <h1>اقرأ براحة. علّق بحرية.</h1>
+ <p>كل ما تحتاجه لقراءة ملفات PDF والكتابة عليها، بتصميم يستغل شاشة الجوال واللوحي دون ازدحام.</p>
+ <label class="primary-btn welcome-cta">＋ اختر ملف PDF<input type="file" id="file2" accept=".pdf,application/pdf" hidden></label>
+ <div class="features"><span>✓ قراءة عربية</span><span>✓ قلم وتظليل</span><span>✓ حفظ محلي</span><span>✓ تنزيل PDF</span></div>
+</section>
+<section id="viewer" class="viewer" hidden>
+ <div class="docbar"><button id="backToHome" class="subtle-btn" aria-label="العودة للمكتبة" title="المكتبة">☰</button><div class="document-title"><strong id="name"></strong><small id="status">محفوظ على جهازك</small></div><button id="favorite" class="icon-btn" aria-label="إضافة للمفضلة" title="المفضلة">☆</button><button id="share" class="icon-btn optional-wide" title="مشاركة الملف" aria-label="مشاركة الملف">↗</button><button id="download" class="primary-btn" title="تنزيل PDF">⇩ <span>تنزيل</span></button></div>
+ <div class="readerbar">
+   <button id="thumbToggle" class="icon-btn" title="الصفحات المصغرة" aria-label="الصفحات المصغرة">▦</button>
+   <div class="page-group"><button id="prev" aria-label="السابق">‹</button><button id="pageJump" class="page-number" title="انتقال إلى صفحة"><span id="pages">1 / 1</span></button><button id="next" aria-label="التالي">›</button></div>
+   <div class="zoom-group"><button id="minus" title="تصغير">−</button><span id="scale">100%</span><button id="plus" title="تكبير">＋</button><button id="fit" class="fit-btn" title="ملاءمة العرض">ملاءمة</button></div>
+   <button id="searchToggle" class="icon-btn" title="بحث في المستند" aria-label="بحث في المستند">⌕</button>
+ </div>
+ <div class="reading-area">
+ <div id="thumbs" class="thumbs" hidden><div class="thumbs-head"><strong>الصفحات</strong><button id="closeThumbs" class="icon-btn">×</button></div><div id="thumbList"></div></div>
+ <div id="desk" class="desk" aria-label="صفحة PDF">
+  <div id="sheet" class="sheet"><canvas id="pdfCanvas"></canvas><canvas id="inkCanvas"></canvas></div>
+  <div id="nativePreview" class="native-preview" hidden><iframe id="nativeFrame" title="عارض PDF بديل"></iframe></div>
+  <div id="toolsRail" class="tools-rail" aria-label="أدوات التعليق">
+    <button id="pointer" data-tool="pointer" title="تصفح" aria-label="تصفح">↖</button>
+    <button id="pen" data-tool="pen" title="قلم" aria-label="قلم">✎</button>
+    <button id="highlight" data-tool="highlight" title="تظليل حر" aria-label="تظليل حر">◩</button>
+    <button id="eraser" data-tool="eraser" title="ممحاة" aria-label="ممحاة">⌫</button>
+    <button id="textTool" data-tool="text" title="إضافة نص" aria-label="إضافة نص">T</button>
+    <button id="commentTool" data-tool="comment" title="تعليق" aria-label="تعليق">▤</button>
+    <button id="shapeTool" data-tool="rect" title="مستطيل" aria-label="مستطيل">▢</button>
+    <button id="signatureTool" data-tool="signature" title="توقيع بالقلم" aria-label="توقيع بالقلم">〰</button>
+   </div>
+ </div>
+ </div>
+ <div id="toolSettings" class="tool-settings" hidden><span id="toolLabel">القلم</span><label class="color-label">اللون <input id="color" type="color" value="#e87824" aria-label="لون الأداة"></label><label class="size-label">السماكة <input id="strokeSize" type="range" min="1" max="18" value="3"></label><button id="undo" class="subtle-btn">↶ تراجع</button><button id="redo" class="subtle-btn">↷ إعادة</button></div>
+ <div class="bottom-reader"><button id="bottomFiles">▤<small>الملفات</small></button><button id="bottomSearch">⌕<small>البحث</small></button><button id="bottomRead" class="selected">▣<small>القراءة</small></button><button id="bottomNotes">▧<small>التعليقات</small></button><button id="bottomTools">✎<small>الأدوات</small></button></div>
+</section>
+<section id="panel" class="panel" hidden><div class="panel-head"><strong id="panelTitle">بحث</strong><button id="closePanel" class="icon-btn">×</button></div>
+ <div id="searchPanel" hidden><div class="search-row"><input id="searchInput" type="search" placeholder="ابحث في محتوى PDF" aria-label="بحث نصي"><button id="searchBtn" class="primary-btn">بحث</button></div><p class="hint">يعمل البحث مع ملفات PDF النصية. الملفات المصورة تحتاج إلى OCR.</p><div id="searchResults"></div></div>
+ <div id="notesPanel" hidden><p class="hint">اضغط على الصفحة باستخدام أداة التعليق، أو اكتب بالقلم والتظليل.</p><div id="notesList"></div></div>
+ <div id="toolsPanel" hidden><p class="hint">اختر أداة ثم المس الصفحة لوضع التعليق أو ابدأ بالكتابة.</p><div id="toolsGrid"></div><button id="nativeToggle" class="secondary-full">عرض بديل للملفات التي تظهر فيها حروف مشوّهة</button></div>
+</section>
+</main></div></div>
+<script type="module" src="./app.js"></script>
+</body></html>
