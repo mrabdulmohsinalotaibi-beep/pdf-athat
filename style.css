@@ -10,3 +10,18 @@
 .text-reader p{margin:0 0 .8em;direction:rtl;overflow-wrap:anywhere}
 .text-reader[hidden],#fontPanel[hidden]{display:none!important}.font-options{display:grid;gap:7px}
 @media(max-width:700px){.font-fix-btn{min-width:60px;font-size:10px;padding:4px 6px}.text-reader{padding:18px 15px;font-size:19px;line-height:2}}
+
+/* Distraction-free reader: the document occupies the entire application viewport. */
+.viewer.immersive{position:fixed;inset:0;z-index:30;background:#e6eae7}
+.viewer.immersive .docbar,.viewer.immersive .readerbar,.viewer.immersive .bottom-reader,.viewer.immersive .tools-rail,.viewer.immersive .tool-settings{display:none!important}
+.viewer.immersive .reading-area{flex:1;min-height:0}
+.viewer.immersive .desk{padding:0!important}
+.viewer.immersive .sheet{box-shadow:none}
+.viewer.immersive .native-preview{inset:0}
+.reveal-controls,.hide-controls{position:absolute;z-index:40;top:max(12px,env(safe-area-inset-top));left:12px;min-width:44px;min-height:44px;border-radius:50%;box-shadow:0 3px 15px #0003;background:#ffffffdf;color:#244538;font-size:23px}
+.viewer.immersive .reveal-controls{display:block}
+.viewer:not(.immersive) .reveal-controls{display:none}
+.viewer.immersive .hide-controls{display:none}
+.viewer:not(.immersive) .hide-controls{display:block}
+.viewer.immersive .panel{display:none!important}
+@media(max-width:700px){.viewer.immersive .reading-area{height:100dvh}.viewer.immersive .native-preview iframe{height:100%}}
