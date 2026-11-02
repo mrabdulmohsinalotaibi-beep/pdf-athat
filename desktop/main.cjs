@@ -17,10 +17,11 @@ function serve(req,res){
   let target=path.resolve(root,'.'+pathname);
   if(!target.startsWith(root+path.sep)&&target!==root){res.writeHead(403);return res.end()}
   if(fs.existsSync(target)&&fs.statSync(target).isDirectory())target=path.join(target,'index.html');
-  fs.createReadStream(target).on('error',()=>{if(!res.headersSent)res.writeHead(404);res.end('Not found')}).pipe(res);
+  if(!fs.existsSync(target)||!fs.statSync(target).isFile()){res.writeHead(404);return res.end('Not found')}
   res.setHeader('Content-Type',mime[path.extname(target)]||'application/octet-stream');
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Content-Security-Policy',"default-src 'self' blob: data:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-src 'self' blob:;");
+  fs.createReadStream(target).on('error',()=>res.destroy()).pipe(res);
  }catch{res.writeHead(400);res.end('Bad request')}
 }
 async function createWindow(){
