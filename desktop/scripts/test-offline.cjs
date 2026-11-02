@@ -13,6 +13,7 @@ assert(app.includes('saveBlob(active.file,active.name)'),'Original export must u
 assert(app.includes('if(!inkVisible)return'),'Annotations visibility is not independent');
 assert(!app.includes('https://cdn.jsdelivr.net'),'CDN dependency must not appear in desktop app');
 assert(app.includes('PDF.ATHAT.backup')&&app.includes('base64ToBytes'),'Backup export and restore must be bundled');
+assert(app.includes('version:2,createdAt')&&app.includes('![1,2].includes(backup.version)'),'New backups must enforce hashes and remain backward compatible');
 assert(app.includes('crypto.subtle.digest("SHA-256"')&&app.includes('sha256:await digestHex'),'Backup exports must include integrity hashes');
 assert(app.includes('(await digestHex(bytes)).toLowerCase()!==d.file.sha256.toLowerCase()'),'Backup imports must verify file hashes');
 assert(app.includes('db.transaction(["documents","strokes"],"readwrite")'),'Backup restore must be atomic');
