@@ -72,10 +72,18 @@ jobs:
         with:
           pattern: pdf-athat-*
           path: release-assets
-          merge-multiple: true
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Consolidate cross-platform SHA-256 checksums
+        run: node desktop/scripts/combine-release-checksums.cjs
       - name: Publish pre-release with installable artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          test -n "$(find release-assets -type f -print -quit)"
-          gh release create "$GITHUB_REF_NAME" release-assets/* --repo "$GITHUB_REPOSITORY" --title "PDF.ATHAT Desktop $GITHUB_REF_NAME" --notes "Offline PDF reader with a separate writable annotation layer. Windows, macOS and Linux installers are unsigned; test on your device and keep a backup of important files." --prerelease --verify-tag
+          mapfile -d '' assets < <(find release-assets -mindepth 2 -type f ! -name SHA256SUMS.txt ! -name '*.blockmap' -print0)
+          test "${#assets[@]}" -gt 0
+          assets+=("release-assets/SHA256SUMS.txt")
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --title "PDF.ATHAT Desktop $GITHUB_REF_NAME" --notes "Offline PDF reader with separate annotations. Windows, macOS and Linux installers are unsigned. Keep backup copies of important PDFs." --prerelease --verify-tag
