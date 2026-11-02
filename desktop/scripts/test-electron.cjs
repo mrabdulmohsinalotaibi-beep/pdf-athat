@@ -10,6 +10,8 @@ const {_electron:electron}=require('playwright');
 const root=path.resolve(__dirname,'..');
 const temp=fs.mkdtempSync(path.join(os.tmpdir(),'athat-e2e-'));
 const userData=path.join(temp,'user-data');
+const saveDir=path.join(temp,'saved-files');
+fs.mkdirSync(saveDir,{recursive:true});
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -35,6 +37,14 @@ async function expectCount(page,store,expected){
  }
  assert.equal(await storeCount(page,store),expected,store+' count mismatch');
 }
+async function awaitSavedFile(name){
+ const file=path.join(saveDir,name);
+ for(let i=0;i<120;i++){
+  if(fs.existsSync(file)&&fs.statSync(file).size>0)return file;
+  await delay(100);
+ }
+ throw Error('Native PDF.ATHAT save did not produce: '+name);
+}
 async function samplePdf(){
  const doc=await PDFDocument.create();
  doc.addPage([595,842]).drawText('PDF.ATHAT first page',{x:45,y:780,size:18});
@@ -48,7 +58,7 @@ async function run(){
   instance=await electron.launch({
    args:[path.join(root,'main.cjs'),'--no-sandbox'],
    cwd:root,
-   env:{...process.env,ATHAT_TEST_USER_DATA:userData},
+   env:{...process.env,ATHAT_TEST_USER_DATA:userData,ATHAT_TEST_OUTPUT_DIR:saveDir},
    timeout:60000
   });
   page=await instance.firstWindow();
@@ -86,27 +96,24 @@ async function run(){
   await page.locator('#annotationSave').click();
   await expectCount(page,'strokes',2);
 
-  const [originalDownload]=await Promise.all([
-   page.waitForEvent('download'),page.locator('#downloadOriginal').click()
-  ]);
-  const originalPath=path.join(temp,'original.pdf');
-  await originalDownload.saveAs(originalPath);
+  await page.locator('#downloadOriginal').click();
+  const originalPath=await awaitSavedFile('ATHAT-test.pdf');
   assert.equal(hash(fs.readFileSync(originalPath)),hash(original),'Original PDF bytes changed');
 
-  const [annotatedDownload]=await Promise.all([
-   page.waitForEvent('download'),page.locator('#download').click()
-  ]);
-  const annotatedPath=path.join(temp,'annotated.pdf');
-  await annotatedDownload.saveAs(annotatedPath);
+  await page.locator('#download').click();
+  const annotatedPath=await awaitSavedFile('ATHAT-test-ATHAT.pdf');
   assert.notEqual(hash(fs.readFileSync(annotatedPath)),hash(original),'Annotated copy must differ');
   assert.equal((await PDFDocument.load(fs.readFileSync(annotatedPath))).getPageCount(),2);
 
   await page.locator('#libraryToggle').click();
-  const [backupDownload]=await Promise.all([
-   page.waitForEvent('download'),page.locator('#backupExport').click()
-  ]);
-  const backupPath=path.join(temp,'backup.athatbackup');
-  await backupDownload.saveAs(backupPath);
+  await page.locator('#backupExport').click();
+  let backupPath;
+  for(let i=0;i<100;i++){
+   const name=fs.readdirSync(saveDir).find(name=>name.endsWith('.athatbackup'));
+   if(name){backupPath=await awaitSavedFile(name);break}
+   await delay(100)
+  }
+  assert(backupPath,'Native backup save did not produce a backup file');
   const backup=JSON.parse(fs.readFileSync(backupPath,'utf8'));
   assert.equal(backup.documents.length,1);
   assert.equal(backup.version,2,'New backups must require integrity fingerprints');
@@ -127,7 +134,7 @@ async function run(){
   instance=await electron.launch({
    args:[path.join(root,'main.cjs'),'--no-sandbox'],
    cwd:root,
-   env:{...process.env,ATHAT_TEST_USER_DATA:userData},
+   env:{...process.env,ATHAT_TEST_USER_DATA:userData,ATHAT_TEST_OUTPUT_DIR:saveDir},
    timeout:60000
   });
   page=await instance.firstWindow();
