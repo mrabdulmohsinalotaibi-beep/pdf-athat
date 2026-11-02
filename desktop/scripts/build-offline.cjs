@@ -35,5 +35,5 @@ if(js.includes('https://')||js.includes('http://'))throw new Error('External URL
 fs.writeFileSync(path.join(out,'app-v2.js'),js);
 const html=fs.readFileSync(path.join(out,'index.html'),'utf8');
 if(!html.includes('id="downloadOriginal"')||!html.includes('id="toggleInk"'))throw new Error('Original PDF protection controls are missing');
-if(!js.includes('saveBlob(active.file,active.name)'))throw new Error('Original PDF export is missing');
+if(!js.includes('saveBlob(file,active.name)'))throw new Error('Original PDF export is missing');
 console.log('PDF.ATHAT fully bundled assets ready: '+out);
