@@ -23,7 +23,8 @@ function serve(req,res){
 async function createWindow(){
  if(!fs.existsSync(path.join(root,'index.html'))){dialog.showErrorBox('PDF.ATHAT','Offline assets missing. Run npm run build:offline first.');app.quit();return}
  server=http.createServer(serve);
- await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve)});
+ await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(41753,'127.0.0.1',resolve)});
+ // Keep a stable local origin so IndexedDB documents survive restarts.
  const port=server.address().port;
  const base='http://127.0.0.1:'+port;
  window=new BrowserWindow({width:1250,height:850,minWidth:730,minHeight:540,title:'PDF.ATHAT',backgroundColor:'#f8faf9',webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,devTools:false}});
