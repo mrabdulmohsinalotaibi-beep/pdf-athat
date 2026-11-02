@@ -3,8 +3,11 @@ const {app,BrowserWindow,shell,dialog}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
-const {randomBytes}=require('node:crypto');
 let server,window;
+// Prevent concurrent instances from competing for the fixed local storage origin.
+const hasLock=app.requestSingleInstanceLock();
+if(!hasLock)app.quit();
+app.on('second-instance',()=>{if(window){if(window.isMinimized())window.restore();window.focus()}});
 const root=path.join(__dirname,'dist');
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json','.wasm':'application/wasm','.bcmap':'application/octet-stream','.bin':'application/octet-stream','.ttf':'font/ttf','.otf':'font/otf','.woff':'font/woff','.woff2':'font/woff2','.pdf':'application/pdf'};
 function serve(req,res){
@@ -29,11 +32,11 @@ async function createWindow(){
  const base='http://127.0.0.1:'+port;
  window=new BrowserWindow({width:1250,height:850,minWidth:730,minHeight:540,title:'PDF.ATHAT',backgroundColor:'#f8faf9',webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,devTools:false}});
  window.setMenuBarVisibility(false);
- window.webContents.setWindowOpenHandler(({url})=>{if(/^https?:/.test(url))shell.openExternal(url);return {action:'deny'}});
+ window.webContents.setWindowOpenHandler(({url})=>{if(/^https:\/\//.test(url))shell.openExternal(url);return {action:'deny'}});
  window.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith(base+'/'))event.preventDefault()});
  window.webContents.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));
  window.loadURL(base+'/');
 }
-app.whenReady().then(createWindow);
+if(hasLock)app.whenReady().then(createWindow).catch(error=>{dialog.showErrorBox('PDF.ATHAT',String(error.message||error));app.quit()});
 app.on('window-all-closed',()=>app.quit());
 app.on('before-quit',()=>{server?.close()});
