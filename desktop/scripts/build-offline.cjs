@@ -26,6 +26,9 @@ const replacements=[
  ['https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm','./vendor/pdf-lib.esm.js']
 ];
 for(const [from,to]of replacements){if(!js.includes(from))throw new Error('Expected dependency URL not found: '+from);js=js.replaceAll(from,to)}
-if(/https?:\\/\\//.test(js))console.warn('Review remaining external URL references in app-v2.js');
+if(/https?:\\/\\//.test(js))throw new Error('External URL reference remains in desktop application');
 fs.writeFileSync(path.join(out,'app-v2.js'),js);
+const html=fs.readFileSync(path.join(out,'index.html'),'utf8');
+if(!html.includes('id="downloadOriginal"')||!html.includes('id="toggleInk"'))throw new Error('Original PDF protection controls are missing');
+if(!js.includes('saveBlob(active.file,active.name)'))throw new Error('Original PDF export is missing');
 console.log('PDF.ATHAT fully bundled assets ready: '+out);
