@@ -1,10 +1,43 @@
 'use strict';
-const {app,BrowserWindow,shell,dialog}=require('electron');
+const {app,BrowserWindow,dialog,ipcMain}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
 // The test profile is isolated from any real user's documents.
 if(process.env.ATHAT_TEST_USER_DATA){fs.mkdirSync(process.env.ATHAT_TEST_USER_DATA,{recursive:true});app.setPath('userData',process.env.ATHAT_TEST_USER_DATA)}
+
+function sanitizedFileName(name,kind){
+ const extension=kind==='backup'?'.athatbackup':'.pdf';
+ const safe=String(name||'PDF-ATHAT').replace(/[\\\\/:*?"<>|\\x00-\\x1f]/g,'_').slice(0,180);
+ return safe.toLowerCase().endsWith(extension)?safe:safe+extension;
+}
+ipcMain.handle('athat:save-file',async(event,args)=>{
+ if(!window||event.sender!==window.webContents)throw Error('Unauthorized save request');
+ if(!args||!['pdf','backup'].includes(args.kind))throw Error('Unsupported file kind');
+ const filename=sanitizedFileName(args.name,args.kind);
+ let buffer;
+ const value=args.bytes;
+ if(value instanceof ArrayBuffer)buffer=Buffer.from(value);
+ else if(ArrayBuffer.isView(value))buffer=Buffer.from(value.buffer,value.byteOffset,value.byteLength);
+ else throw Error('Unsupported file data');
+ if(buffer.length===0||buffer.length>800*1024*1024)throw Error('File size is outside the allowed range');
+ let target;
+ if(process.env.ATHAT_TEST_OUTPUT_DIR){
+  const base=process.env.ATHAT_TEST_OUTPUT_DIR;
+  fs.mkdirSync(base,{recursive:true});
+  target=path.join(base,filename);
+ }else{
+  const selected=await dialog.showSaveDialog(window,{
+   title:'حفظ ملف PDF.ATHAT',
+   defaultPath:filename,
+   filters:args.kind==='backup'?[{name:'نسخة احتياطية PDF.ATHAT',extensions:['athatbackup']}]:[{name:'ملف PDF',extensions:['pdf']}]
+  });
+  if(selected.canceled||!selected.filePath)return {saved:false};
+  target=selected.filePath;
+ }
+ await fs.promises.writeFile(target,buffer);
+ return {saved:true};
+});
 let server,window;
 // Prevent concurrent instances from competing for the fixed local storage origin.
 const hasLock=app.requestSingleInstanceLock();
@@ -33,7 +66,7 @@ async function createWindow(){
  // Keep a stable local origin so IndexedDB documents survive restarts.
  const port=server.address().port;
  const base='http://127.0.0.1:'+port;
- window=new BrowserWindow({width:1250,height:850,minWidth:730,minHeight:540,title:'PDF.ATHAT',backgroundColor:'#f8faf9',webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,devTools:false}});
+ window=new BrowserWindow({width:1250,height:850,minWidth:730,minHeight:540,title:'PDF.ATHAT',backgroundColor:'#f8faf9',webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,devTools:false,preload:path.join(__dirname,'preload.cjs')}});
  window.setMenuBarVisibility(false);
  window.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith('blob:'+base+'/'))return {action:'allow',overrideBrowserWindowOptions:{autoHideMenuBar:true,webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true}}};return {action:'deny'}});
  window.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith(base+'/'))event.preventDefault()});
