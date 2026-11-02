@@ -3,6 +3,8 @@ const {app,BrowserWindow,shell,dialog}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
+// The test profile is isolated from any real user's documents.
+if(process.env.ATHAT_TEST_USER_DATA){fs.mkdirSync(process.env.ATHAT_TEST_USER_DATA,{recursive:true});app.setPath('userData',process.env.ATHAT_TEST_USER_DATA)}
 let server,window;
 // Prevent concurrent instances from competing for the fixed local storage origin.
 const hasLock=app.requestSingleInstanceLock();
