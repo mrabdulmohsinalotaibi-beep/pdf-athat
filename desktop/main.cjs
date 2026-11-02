@@ -33,7 +33,7 @@ async function createWindow(){
  const base='http://127.0.0.1:'+port;
  window=new BrowserWindow({width:1250,height:850,minWidth:730,minHeight:540,title:'PDF.ATHAT',backgroundColor:'#f8faf9',webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,devTools:false}});
  window.setMenuBarVisibility(false);
- window.webContents.setWindowOpenHandler(({url})=>{if(/^https:\/\//.test(url))shell.openExternal(url);return {action:'deny'}});
+ window.webContents.setWindowOpenHandler(({url})=>{if(url.startsWith('blob:'+base+'/'))return {action:'allow',overrideBrowserWindowOptions:{autoHideMenuBar:true,webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true}}};return {action:'deny'}});
  window.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith(base+'/'))event.preventDefault()});
  window.webContents.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));
  window.loadURL(base+'/');
