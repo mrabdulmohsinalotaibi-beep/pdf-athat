@@ -26,6 +26,11 @@ const replacements=[
  ['https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm','./vendor/pdf-lib.esm.js']
 ];
 for(const [from,to]of replacements){if(!js.includes(from))throw new Error('Expected dependency URL not found: '+from);js=js.replaceAll(from,to)}
+// Electron serves complete immutable assets from disk; a PWA service worker is unnecessary
+// and would leave an obsolete cache after desktop upgrades.
+const swCall='if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});';
+if(!js.includes(swCall))throw new Error('Expected service worker registration not found');
+js=js.replace(swCall,'/* Desktop: bundled assets, no service worker */');
 if(js.includes('https://')||js.includes('http://'))throw new Error('External URL reference remains in desktop application');
 fs.writeFileSync(path.join(out,'app-v2.js'),js);
 const html=fs.readFileSync(path.join(out,'index.html'),'utf8');
