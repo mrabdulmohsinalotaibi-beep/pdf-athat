@@ -24,14 +24,17 @@ jobs:
           - os: macos-latest
             command: dist:mac
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: desktop
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
+          package-manager-cache: false
       - run: npm install --no-audit --no-fund
       - run: npm run test:offline
       - name: Test offline desktop workflows (Linux)
@@ -42,13 +45,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Upload desktop failure screenshot
         if: failure() && matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-test-failure
           path: desktop/test-results/
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: pdf-athat-${{ matrix.os }}
           path: desktop/release/*
           if-no-files-found: error
+          retention-days: 30
