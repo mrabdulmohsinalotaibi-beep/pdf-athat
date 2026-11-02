@@ -10,15 +10,12 @@ for(const name of ['index.html','style.css','app-v2.js','manifest.webmanifest','
 const vendor=path.join(out,'vendor');
 const pdfjs=path.join(desktop,'node_modules/pdfjs-dist');
 const pdflib=path.join(desktop,'node_modules/pdf-lib/dist/pdf-lib.esm.js');
-const fontkit=path.join(desktop,'node_modules/@pdf-lib/fontkit/dist/fontkit.umd.min.js');
 for(const dir of ['build','cmaps','standard_fonts','wasm']){
  if(!fs.existsSync(path.join(pdfjs,dir)))throw new Error('Missing pdfjs assets: '+dir);
  copy(path.join(pdfjs,dir),path.join(vendor,'pdfjs',dir));
 }
 if(!fs.existsSync(pdflib))throw new Error('Missing pdf-lib ESM bundle');
 copy(pdflib,path.join(vendor,'pdf-lib.esm.js'));
-if(!fs.existsSync(fontkit))throw new Error('Missing fontkit UMD bundle');
-copy(fontkit,path.join(vendor,'fontkit.umd.min.js'));
 let js=fs.readFileSync(path.join(out,'app-v2.js'),'utf8');
 const replacements=[
  ['https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.min.mjs'],
