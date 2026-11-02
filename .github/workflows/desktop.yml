@@ -12,6 +12,9 @@ on:
       - 'manifest.webmanifest'
       - 'icon.svg'
       - '.github/workflows/desktop.yml'
+concurrency:
+  group: pdf-athat-desktop-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 jobs:
   package:
     strategy:
