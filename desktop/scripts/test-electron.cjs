@@ -79,6 +79,10 @@ async function run(){
   await expectCount(page,'strokes',0);
   await page.locator('#redo').click();
   await expectCount(page,'strokes',1);
+  await page.locator('#textTool').click();
+  page.once('dialog',dialog=>dialog.accept('ملاحظة عربية\\nسطر جديد'.replace('\\n','\n')));
+  await page.mouse.click(px,py+65);
+  await expectCount(page,'strokes',2);
 
   const [originalDownload]=await Promise.all([
    page.waitForEvent('download'),page.locator('#downloadOriginal').click()
@@ -104,17 +108,17 @@ async function run(){
   const backup=JSON.parse(fs.readFileSync(backupPath,'utf8'));
   assert.equal(backup.documents.length,1);
   assert.equal(backup.version,2,'New backups must require integrity fingerprints');
-  assert.equal(backup.strokes.length,1);
+  assert.equal(backup.strokes.length,2);
   assert.equal(backup.documents[0].file.sha256,hash(original));
   page.on('dialog',dialog=>dialog.accept());
   await page.locator('#backupImport').setInputFiles(backupPath);
   await expectCount(page,'documents',2);
-  await expectCount(page,'strokes',2);
+  await expectCount(page,'strokes',4);
   const damaged={...backup,documents:backup.documents.map(d=>({...d,file:{...d.file,sha256:'0'.repeat(64)}}))};
   await page.locator('#backupImport').setInputFiles({name:'damaged.athatbackup',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(damaged))});
   await delay(300);
   await expectCount(page,'documents',2);
-  await expectCount(page,'strokes',2);
+  await expectCount(page,'strokes',4);
   assert.deepEqual(external,[],'App attempted an external network request');
 
   await instance.close();
@@ -127,7 +131,7 @@ async function run(){
   page=await instance.firstWindow();
   await page.waitForFunction(()=>document.documentElement.dataset.ready==='yes',null,{timeout:45000});
   await expectCount(page,'documents',2);
-  await expectCount(page,'strokes',2);
+  await expectCount(page,'strokes',4);
   const integrity=await page.evaluate(async()=>{
     const db=await new Promise((resolve,reject)=>{const open=indexedDB.open('pdf-athat-v1');open.onsuccess=()=>resolve(open.result);open.onerror=()=>reject(open.error)});
     const read=store=>new Promise((resolve,reject)=>{const t=db.transaction(store,'readonly');const request=t.objectStore(store).getAll();request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
@@ -141,6 +145,7 @@ async function run(){
     return {docs:out,notes:notes.map(note=>({documentId:note.documentId,page:note.page}))};
   });
   assert.equal(integrity.docs.length,2);
+  assert.equal(integrity.notes.length,4);
   assert(integrity.docs.every(doc=>doc.hash===hash(original)),'Restored PDF differs from original');
   const knownIds=new Set(integrity.docs.map(doc=>doc.id));
   assert(integrity.notes.every(note=>knownIds.has(note.documentId)&&note.page===1),'Annotations lost original document/page association');
