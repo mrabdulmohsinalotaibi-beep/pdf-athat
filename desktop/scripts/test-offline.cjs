@@ -18,4 +18,6 @@ assert(app.includes('(await digestHex(bytes)).toLowerCase()!==d.file.sha256.toLo
 assert(app.includes('db.transaction(["documents","strokes"],"readwrite")'),'Backup restore must be atomic');
 assert(app.includes('documentId:remap.get(note.documentId)'),'Annotations must be remapped to restored documents');
 assert(app.includes('transaction.objectStore("documents").add(d)'),'Backup must not overwrite existing documents');
+assert(app.includes('await save("strokes",s);strokes.push(s)'),'Ink must be stored before UI state changes');
+assert(app.includes('let editing=false;'),'Undo and redo must have an operation lock');
 console.log('PASS: local PDF engines, original-preserving controls and annotation layer');
