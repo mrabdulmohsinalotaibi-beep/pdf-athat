@@ -9,7 +9,9 @@ for(const p of ['vendor/pdfjs/build/pdf.min.mjs','vendor/pdfjs/build/pdf.worker.
 for(const id of ['pdfCanvas','inkCanvas','toggleInk','downloadOriginal','download','backupExport','backupImport']){
  assert(html.includes('id="'+id+'"'),'Missing UI control: '+id);
 }
-assert(app.includes('saveBlob(active.file,active.name)'),'Original export must use original Blob');
+assert(app.includes('saveBlob(file,active.name)'),'Original export must use original File');
+assert(app.includes('window.athatDesktop?.saveFile'),'Desktop must use native Save As');
+assert(html.includes('id="annotationDialog"')&&html.includes('id="annotationText"'),'Multiline note editor must be present');
 assert(app.includes('if(!inkVisible)return'),'Annotations visibility is not independent');
 assert(!app.includes('https://cdn.jsdelivr.net'),'CDN dependency must not appear in desktop app');
 assert(!app.includes('navigator.serviceWorker.register'),'Desktop must load bundled assets directly without stale PWA caches');
