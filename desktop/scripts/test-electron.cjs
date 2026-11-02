@@ -103,6 +103,7 @@ async function run(){
   await backupDownload.saveAs(backupPath);
   const backup=JSON.parse(fs.readFileSync(backupPath,'utf8'));
   assert.equal(backup.documents.length,1);
+  assert.equal(backup.version,2,'New backups must require integrity fingerprints');
   assert.equal(backup.strokes.length,1);
   assert.equal(backup.documents[0].file.sha256,hash(original));
   page.on('dialog',dialog=>dialog.accept());
