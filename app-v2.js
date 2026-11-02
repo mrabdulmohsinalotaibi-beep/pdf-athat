@@ -42,7 +42,7 @@ $("toggleInk").onclick=()=>{inkVisible=!inkVisible;$("toggleInk").textContent=in
 $("downloadOriginal").onclick=()=>{if(active)saveBlob(active.file,active.name)};
 async function download(){if(!active||docBusy)return;docBusy=true;tell("تجهيز الملف للتنزيل...");try{const doc=await PDFDocument.load(await active.file.arrayBuffer());const baseFont=await doc.embedFont(StandardFonts.Helvetica);for(const s of strokes.filter(x=>x.documentId===active.id)){const p=doc.getPage(s.page-1),{width,height}=p.getSize(),hex=(s.color||"#e87824").replace("#",""),color=rgb(parseInt(hex.slice(0,2),16)/255,parseInt(hex.slice(2,4),16)/255,parseInt(hex.slice(4,6),16)/255);if(s.tool==="text"||s.tool==="comment"){
  const value=String(s.text||"");if(!value)continue;
- if(/^[\\x00-\\x7f]*$/.test(value)){p.drawText(value,{x:s.points[0][0]*width,y:(1-s.points[0][1])*height,size:s.size||13,font:baseFont,color});continue}
+ if([...value].every(ch=>ch.codePointAt(0)<=127)){p.drawText(value,{x:s.points[0][0]*width,y:(1-s.points[0][1])*height,size:s.size||13,font:baseFont,color});continue}
  // Rasterize only the added Arabic annotation; retain the original PDF page untouched.
  const fontSize=s.size||13,ratio=3,canvas=document.createElement("canvas"),cc=canvas.getContext("2d");
  cc.font=`${fontSize*ratio}px sans-serif`;const tw=Math.ceil(cc.measureText(value).width)+fontSize*ratio;
