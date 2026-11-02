@@ -9,7 +9,7 @@
     "start": "npm run build:offline && electron .",
     "dist:win": "npm run build:offline && electron-builder --win nsis portable",
     "dist:linux": "npm run build:offline && electron-builder --linux AppImage",
-    "dist:mac": "npm run build:offline && electron-builder --mac dmg",
+    "dist:mac": "npm run build:offline && electron-builder --mac dmg --x64 --arm64",
     "test:offline": "npm run build:offline && node --check main.cjs && node --check scripts/build-offline.cjs && node scripts/check-module.cjs && node scripts/test-offline.cjs && node scripts/test-pdf-engine.cjs",
     "test:electron": "node scripts/test-electron.cjs"
   },
