@@ -59,9 +59,9 @@ async function run(){
     if(['http:','https:'].includes(u.protocol)&&u.hostname!=='127.0.0.1')external.push(u.href);
    }catch{}
   });
-  await page.waitForFunction(()=>document.documentElement.dataset.ready==='yes',{timeout:45000});
+  await page.waitForFunction(()=>document.documentElement.dataset.ready==='yes',null,{timeout:45000});
   await page.locator('#file').setInputFiles({name:'ATHAT-test.pdf',mimeType:'application/pdf',buffer:original});
-  await page.waitForFunction(()=>document.querySelector('#pages')?.textContent?.includes(' / 2'),{timeout:45000});
+  await page.waitForFunction(()=>document.querySelector('#pages')?.textContent?.includes(' / 2'),null,{timeout:45000});
   await expectCount(page,'documents',1);
   await page.locator('#revealControls').click();
   await page.locator('#pen').click();
@@ -74,6 +74,10 @@ async function run(){
   await page.mouse.down();
   await page.mouse.move(px+35,py+28,{steps:9});
   await page.mouse.up();
+  await expectCount(page,'strokes',1);
+  await page.locator('#undo').click();
+  await expectCount(page,'strokes',0);
+  await page.locator('#redo').click();
   await expectCount(page,'strokes',1);
 
   const [originalDownload]=await Promise.all([
@@ -105,6 +109,11 @@ async function run(){
   await page.locator('#backupImport').setInputFiles(backupPath);
   await expectCount(page,'documents',2);
   await expectCount(page,'strokes',2);
+  const damaged={...backup,documents:backup.documents.map(d=>({...d,file:{...d.file,sha256:'0'.repeat(64)}}))};
+  await page.locator('#backupImport').setInputFiles({name:'damaged.athatbackup',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(damaged))});
+  await delay(300);
+  await expectCount(page,'documents',2);
+  await expectCount(page,'strokes',2);
   assert.deepEqual(external,[],'App attempted an external network request');
 
   await instance.close();
@@ -115,7 +124,7 @@ async function run(){
    timeout:60000
   });
   page=await instance.firstWindow();
-  await page.waitForFunction(()=>document.documentElement.dataset.ready==='yes',{timeout:45000});
+  await page.waitForFunction(()=>document.documentElement.dataset.ready==='yes',null,{timeout:45000});
   await expectCount(page,'documents',2);
   await expectCount(page,'strokes',2);
   console.log('PASS: Electron offline PDF import, pen, original checksum, annotated export, backup restore, persisted restart');
