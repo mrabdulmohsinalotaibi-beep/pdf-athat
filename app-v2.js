@@ -37,7 +37,31 @@ function paint(){ctx.clearRect(0,0,ink.width,ink.height);if(!inkVisible)return;f
 function pos(e){const r=ink.getBoundingClientRect();return [Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))]}
 function chooseTool(t){if(!inkVisible&&t!=="pointer"){tell("أظهر طبقة الكتابة أولًا");return}if(fontMode!=="original"&&t!=="pointer"){tell("للرسم على PDF، ارجع إلى العرض الأصلي");return}tool=t;ink.style.pointerEvents=t==="pointer"?"none":"auto";for(const b of document.querySelectorAll("[data-tool]"))b.classList.toggle("active",b.dataset.tool===t);$("toolSettings").hidden=t==="pointer";$("toolLabel").textContent=({pen:"القلم",signature:"التوقيع",highlight:"التظليل",eraser:"ممحاة",text:"إضافة نص",comment:"تعليق",rect:"مستطيل"})[t]||"التصفح";if(t!=="pointer")closePanel()}
 for(const [id,t]of [["pointer","pointer"],["pen","pen"],["highlight","highlight"],["eraser","eraser"],["textTool","text"],["commentTool","comment"],["shapeTool","rect"],["signatureTool","signature"]])$(id).onclick=()=>chooseTool(t);chooseTool("pointer");
-ink.onpointerdown=async e=>{if(!active||tool==="pointer"||$("nativePreview").hidden===false)return;e.preventDefault();const p=pos(e);if(tool==="eraser"){const candidates=strokes.filter(s=>s.documentId===active.id&&s.page===page);let best=null,dist=Infinity;for(const s of candidates){for(const [x,y]of s.points){const d=Math.hypot(x-p[0],y-p[1]);if(d<dist){dist=d;best=s}}}if(best&&dist<.045){strokes=strokes.filter(s=>s.id!==best.id);history.push({type:"remove",stroke:best});redo=[];await remove("strokes",best.id);paint()}return}if(tool==="text"||tool==="comment"){const docId=active.id,docPage=page,selectedTool=tool;const text=prompt(selectedTool==="comment"?"اكتب التعليق":"اكتب النص الذي تريد إضافته");if(!text||!active||active.id!==docId)return;const s={id:crypto.randomUUID(),documentId:docId,page:docPage,tool:selectedTool,text,color:$("color").value,size:tool==="text"?16:13,points:[p]};await persist(s);return}ink.setPointerCapture(e.pointerId);draft={id:crypto.randomUUID(),documentId:active.id,page,tool,color:$("color").value,size:tool==="highlight"?16:Number($("strokeSize").value),points:[p]};paint()};
+function askAnnotationText(kind){
+ const dialog=$("annotationDialog"),field=$("annotationText");
+ $("annotationHeading").textContent=kind==="comment"?"إضافة تعليق":"إضافة نص إلى الصفحة";
+ field.value="";
+ return new Promise(resolve=>{
+  let settled=false;
+  function finish(value){
+   if(settled)return;settled=true;
+   dialog.removeEventListener("cancel",cancel);
+   dialog.removeEventListener("close",closed);
+   field.onkeydown=null;$("annotationSave").onclick=null;$("annotationCancel").onclick=null;
+   if(dialog.open)dialog.close();
+   resolve(value&&value.trim()?value:null)
+  }
+  function cancel(event){event.preventDefault();finish(null)}
+  function closed(){finish(null)}
+  dialog.addEventListener("cancel",cancel);
+  dialog.addEventListener("close",closed);
+  $("annotationSave").onclick=()=>finish(field.value);
+  $("annotationCancel").onclick=()=>finish(null);
+  field.onkeydown=event=>{if((event.ctrlKey||event.metaKey)&&event.key==="Enter"){event.preventDefault();finish(field.value)}};
+  dialog.showModal();field.focus()
+ })
+}
+ink.onpointerdown=async e=>{if(!active||tool==="pointer"||$("nativePreview").hidden===false)return;e.preventDefault();const p=pos(e);if(tool==="eraser"){const candidates=strokes.filter(s=>s.documentId===active.id&&s.page===page);let best=null,dist=Infinity;for(const s of candidates){for(const [x,y]of s.points){const d=Math.hypot(x-p[0],y-p[1]);if(d<dist){dist=d;best=s}}}if(best&&dist<.045){strokes=strokes.filter(s=>s.id!==best.id);history.push({type:"remove",stroke:best});redo=[];await remove("strokes",best.id);paint()}return}if(tool==="text"||tool==="comment"){const docId=active.id,docPage=page,selectedTool=tool;const text=await askAnnotationText(selectedTool);if(!text||!active||active.id!==docId)return;const s={id:crypto.randomUUID(),documentId:docId,page:docPage,tool:selectedTool,text,color:$("color").value,size:tool==="text"?16:13,points:[p]};await persist(s);return}ink.setPointerCapture(e.pointerId);draft={id:crypto.randomUUID(),documentId:active.id,page,tool,color:$("color").value,size:tool==="highlight"?16:Number($("strokeSize").value),points:[p]};paint()};
 ink.onpointermove=e=>{if(!draft||!active||draft.documentId!==active.id)return;draft.points.push(pos(e));paint()};
 async function persist(s){if(!active||s.documentId!==active.id)return;try{await save("strokes",s);strokes.push(s);if(!active||active.id!==s.documentId)return;history.push({type:"add",stroke:s});redo=[];paint();updateNotes()}catch(e){console.error(e);tell("لم تُحفظ الكتابة. تحقق من مساحة التخزين وأعد المحاولة")}}
 async function finish(){if(!draft)return;const s=draft;draft=null;if(!active||s.documentId!==active.id)return;if(s.points.length===1)s.points.push([...s.points[0]]);await persist(s)}ink.onpointerup=finish;ink.onpointercancel=finish;
