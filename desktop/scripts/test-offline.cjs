@@ -13,4 +13,6 @@ assert(app.includes('saveBlob(active.file,active.name)'),'Original export must u
 assert(app.includes('if(!inkVisible)return'),'Annotations visibility is not independent');
 assert(!app.includes('https://cdn.jsdelivr.net'),'CDN dependency must not appear in desktop app');
 assert(app.includes('PDF.ATHAT.backup')&&app.includes('base64ToBytes'),'Backup export and restore must be bundled');
+assert(app.includes('crypto.subtle.digest("SHA-256"')&&app.includes('sha256:await digestHex'),'Backup exports must include integrity hashes');
+assert(app.includes('await digestHex(bytes)!==d.file.sha256'),'Backup imports must verify file hashes');
 console.log('PASS: local PDF engines, original-preserving controls and annotation layer');
