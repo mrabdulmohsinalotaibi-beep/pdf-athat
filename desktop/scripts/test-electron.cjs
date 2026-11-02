@@ -80,8 +80,10 @@ async function run(){
   await page.locator('#redo').click();
   await expectCount(page,'strokes',1);
   await page.locator('#textTool').click();
-  page.once('dialog',dialog=>dialog.accept('ملاحظة عربية\\nسطر جديد'.replace('\\n','\n')));
   await page.mouse.click(px,py+65);
+  await page.locator('#annotationDialog').waitFor({state:'visible'});
+  await page.locator('#annotationText').fill('ملاحظة عربية\\nسطر جديد'.replace('\\n','\n'));
+  await page.locator('#annotationSave').click();
   await expectCount(page,'strokes',2);
 
   const [originalDownload]=await Promise.all([
