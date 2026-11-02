@@ -10,7 +10,7 @@
     "dist:win": "npm run build:offline && electron-builder --win nsis portable",
     "dist:linux": "npm run build:offline && electron-builder --linux AppImage",
     "dist:mac": "npm run build:offline && electron-builder --mac dmg",
-    "test:offline": "npm run build:offline && node --check main.cjs && node --check scripts/build-offline.cjs && node scripts/test-offline.cjs"
+    "test:offline": "npm run build:offline && node --check main.cjs && node --check scripts/build-offline.cjs && node --check --input-type=module < dist/app-v2.js && node scripts/test-offline.cjs"
   },
   "dependencies": {
     "pdfjs-dist": "5.4.394",
