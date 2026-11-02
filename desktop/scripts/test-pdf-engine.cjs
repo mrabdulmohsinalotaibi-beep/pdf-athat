@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createHash}=require('node:crypto');
+const {PDFDocument,rgb}=require('pdf-lib');
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+(async()=>{
+ const original=await PDFDocument.create();
+ const page=original.addPage([595,842]);
+ page.drawText('PDF.ATHAT offline sample',{x:50,y:780,size:18});
+ const originalBytes=await original.save();
+ const originalChecksum=hash(originalBytes);
+ const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');
+ const document=await pdfjs.getDocument({data:new Uint8Array(originalBytes),disableFontFace:true,useSystemFonts:true}).promise;
+ assert.equal(document.numPages,1);
+ const rendered=await document.getPage(1);
+ const textContent=await rendered.getTextContent();
+ assert(textContent.items.some(item=>item.str.includes('PDF.ATHAT')));
+ await document.destroy();
+ const annotated=await PDFDocument.load(originalBytes);
+ annotated.getPage(0).drawLine({start:{x:40,y:730},end:{x:240,y:730},thickness:3,color:rgb(1,0,0)});
+ const annotatedBytes=await annotated.save();
+ assert.equal(hash(originalBytes),originalChecksum,'Original PDF must remain byte-for-byte unchanged');
+ assert.notEqual(hash(annotatedBytes),originalChecksum,'Annotated PDF must be a separate output');
+ const verified=await PDFDocument.load(annotatedBytes);
+ assert.equal(verified.getPageCount(),1);
+ console.log('PASS: offline PDF parsing, extracting text, annotating a copy, preserving original bytes');
+})().catch(error=>{console.error(error);process.exitCode=1});
