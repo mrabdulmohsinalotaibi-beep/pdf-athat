@@ -70,4 +70,15 @@
 </section>
 </main></div></div>
 <script type="module" src="./app-v2.js"></script>
+<dialog id="annotationDialog" class="annotation-dialog" aria-labelledby="annotationHeading">
+  <div class="annotation-dialog-content">
+    <h2 id="annotationHeading">إضافة نص إلى الصفحة</h2>
+    <p>اكتب تعليقك هنا، ويمكنك إضافة أكثر من سطر. تُحفظ الكتابة فوق الملف الأصلي دون تعديله.</p>
+    <textarea id="annotationText" dir="auto" rows="6" maxlength="12000" placeholder="اكتب هنا..." aria-label="نص التعليق"></textarea>
+    <div class="annotation-dialog-actions">
+      <button id="annotationCancel" type="button" class="subtle-btn">إلغاء</button>
+      <button id="annotationSave" type="button" class="primary-btn">إضافة إلى الصفحة</button>
+    </div>
+  </div>
+</dialog>
 </body></html>
