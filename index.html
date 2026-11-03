@@ -34,6 +34,28 @@
  <label class="primary-btn welcome-cta">＋ اختر ملف PDF<input type="file" id="file2" accept=".pdf,application/pdf" hidden></label>
  <div class="features"><span>✓ قراءة عربية</span><span>✓ قلم وتظليل</span><span>✓ حفظ محلي</span><span>✓ تنزيل PDF</span></div>
 </section>
+<section id="libraryPage" class="library-page" hidden aria-label="مكتبتي الرقمية">
+ <div class="library-content">
+  <div class="library-hero">
+   <div class="library-title"><div class="library-title-icon" aria-hidden="true">▤</div><div><h1>مكتبتي</h1><p>ملفاتي ومساحتي الخاصة · محفوظة على هذا الجهاز</p></div></div>
+   <label class="library-add">＋ إضافة PDF<input id="file3" type="file" accept=".pdf,application/pdf" hidden></label>
+  </div>
+  <div class="library-search-row"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="ابحث عن كتاب أو ملف..." aria-label="البحث في الملفات"></div>
+  <div class="library-section-heading"><h2>المجلدات</h2><button id="libraryNewFolder" class="library-text-button" type="button">＋ مجلد جديد</button></div>
+  <div id="libraryFolders" class="library-folders" aria-label="مجلدات مكتبتي"></div>
+  <section id="libraryResume" class="library-resume" hidden aria-label="متابعة القراءة">
+   <h2>أكمل القراءة</h2>
+   <div id="libraryResumeCard"></div>
+  </section>
+  <div class="library-section-heading library-files-heading"><h2 id="libraryFilesTitle">جميع الملفات</h2>
+   <div class="library-view-actions"><select id="librarySort" aria-label="ترتيب الملفات"><option value="recent">الأحدث</option><option value="name">الاسم</option><option value="oldest">الأقدم</option></select><div class="library-view-switch" role="group" aria-label="طريقة العرض"><button id="libraryListView" class="selected" type="button" aria-label="عرض القائمة" title="قائمة">☷</button><button id="libraryGridView" type="button" aria-label="عرض الأغلفة" title="أغلفة">▦</button></div></div>
+  </div>
+  <div id="libraryCards" class="library-cards list-view" aria-live="polite"></div>
+  <p id="libraryEmpty" class="library-empty" hidden>لا توجد ملفات في هذا القسم. أضف ملف PDF أو اختر مجلدًا آخر.</p>
+  <section id="libraryManage" class="library-manage" hidden><h2>إدارة المكتبة</h2><p>يمكنك حفظ نسخة احتياطية تشمل ملفات PDF وتعليقاتك، أو استعادتها دون حذف الملفات الحالية.</p><div class="library-manage-actions"><button id="libraryBackupExport" type="button">⇩ نسخة احتياطية</button><button id="libraryBackupImport" type="button">↥ استعادة نسخة</button><button id="libraryOpenTrash" type="button">♻ الملفات المحذوفة</button></div></section>
+ </div>
+ <nav class="library-bottom-nav" aria-label="أقسام مكتبتي"><button id="libraryTabAll" type="button" class="selected"><span>▤</span><small>مكتبتي</small></button><button id="libraryTabRecent" type="button"><span>◷</span><small>الأخيرة</small></button><button id="libraryTabFav" type="button"><span>☆</span><small>المفضلة</small></button><button id="libraryTabManage" type="button"><span>⚙</span><small>إدارة</small></button></nav>
+</section>
 <section id="viewer" class="viewer reading-mode" hidden>
  <nav id="readerTopbar" class="reader-topbar" aria-label="أدوات قراءة المستند">
   <button type="button" id="readerBack" class="reader-icon" title="العودة إلى المكتبة" aria-label="العودة إلى المكتبة">‹</button>
@@ -101,5 +123,15 @@
       <button id="annotationSave" type="button" class="primary-btn">إضافة إلى الصفحة</button>
     </div>
   </div>
+</dialog>
+<dialog id="libraryDocDialog" class="library-doc-dialog" aria-labelledby="libraryDocTitle">
+ <form method="dialog" class="library-doc-dialog-inner">
+  <h2 id="libraryDocTitle">تنظيم الملف</h2>
+  <label>اسم الملف<input id="libraryRename" type="text" maxlength="240" required></label>
+  <p>المجلدات (يمكن اختيار أكثر من مجلد)</p>
+  <div id="libraryDocFolders" class="library-doc-folder-picks"></div>
+  <div class="library-doc-actions"><button id="libraryDialogFavorite" type="button">☆ المفضلة</button><button id="libraryDialogDelete" type="button">نقل للمحذوفات</button></div>
+  <div class="library-dialog-bottom"><button id="libraryDialogCancel" type="button">إلغاء</button><button id="libraryDialogSave" class="primary-btn" type="button">حفظ التغييرات</button></div>
+ </form>
 </dialog>
 </body></html>
