@@ -1,1 +1,18 @@
-{"name":"PDF.ATHAT","short_name":"PDF.ATHAT","start_url":"./","display":"standalone","background_color":"#f3f5f4","theme_color":"#263b43","lang":"ar","dir":"rtl"}
+{
+  "name": "PDF.ATHAT",
+  "short_name": "PDF.ATHAT",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fdf0d5",
+  "theme_color": "#800000",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
