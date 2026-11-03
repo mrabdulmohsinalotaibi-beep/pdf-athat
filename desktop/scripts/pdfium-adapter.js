@@ -1,20 +1,17 @@
-// PDFium/WASM page renderer. Bundled locally for the website and desktop application.
-// The original PDF bytes remain untouched; image pixels are used only for preview.
-import { PDFiumLibrary } from '@hyzyla/pdfium/inline';
-let libraryPromise=null;
+// PDFium WebAssembly page renderer, bundled for both offline site and desktop.
+// The original file is never edited. PDF.js remains available for search/export/fallback.
+import { PDFiumLibrary } from '@hyzyla/pdfium';
+let libraryPromise;
 export async function createPdfiumDocument(bytes){
-  if(!libraryPromise)libraryPromise=PDFiumLibrary.init().catch(e=>{libraryPromise=null;throw e});
+  if(!libraryPromise)libraryPromise=PDFiumLibrary.init({wasmUrl:new URL('./vendor/pdfium/pdfium.wasm',import.meta.url).href}).catch(error=>{libraryPromise=null;throw error});
   const library=await libraryPromise;
   const doc=await library.loadDocument(bytes);
   return {
     pages:doc.getPageCount(),
-    async renderPage(number,width,height){
-      const p=doc.getPage(number-1);
-      try{
-        const size=p.getOriginalSize();
-        const ratio=Math.min(width/size.originalWidth,height/size.originalHeight);
-        return await p.render({scale:ratio,render:'bitmap',renderFormFields:true});
-      }finally{p.close()}
+    async renderPage(number,scale){
+      const page=doc.getPage(number-1);
+      try{return await page.render({scale,render:'bitmap',renderFormFields:true})}
+      finally{page.close()}
     },
     destroy(){doc.destroy()}
   };
