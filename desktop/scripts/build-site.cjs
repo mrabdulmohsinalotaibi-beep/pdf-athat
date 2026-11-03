@@ -21,6 +21,15 @@ fs.writeFileSync(htmlFile,html);
 // build:offline removes the Electron-incompatible service-worker call, so the
 // website registers its worker here instead of trying to replace it.
 source += '\nif("serviceWorker" in navigator){let refreshing=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!refreshing&&!active){refreshing=true;location.reload()}else if(active)tell("تحديث جديد للموقع متاح؛ احفظ تعليقاتك ثم أعد فتح الصفحة")});navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>reg.update()).catch(()=>{});}\n';
+// Parse the final client module and guard the continuous-reader controls during deployment.
+require('esbuild').transformSync(source,{loader:'js',format:'esm',target:'es2022'});
+const htmlCheck=fs.readFileSync(htmlFile,'utf8');
+for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"']){
+ if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
+}
+for(const marker of ['async function startContinuous()','async function renderContinuousPage(','async function setReaderEditing(']){
+ if(!source.includes(marker))throw Error('Reader controller missing '+marker);
+}
 fs.writeFileSync(file,source);
 const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
