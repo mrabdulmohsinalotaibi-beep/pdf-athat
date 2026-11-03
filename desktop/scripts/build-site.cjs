@@ -18,9 +18,9 @@ for(const [fileName,attribute] of [['style.css','href'],['icon.svg','href'],['ma
 }
 fs.writeFileSync(htmlFile,html);
 
-const originalRegistration='if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});';
-if(!source.includes(originalRegistration))throw Error('Service worker registration missing from application');
-source=source.replace(originalRegistration,`if("serviceWorker"in navigator){let refreshInProgress=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!refreshInProgress&&!active){refreshInProgress=true;location.reload()}else if(active)tell("تحديث جديد للموقع متاح؛ احفظ تعليقاتك ثم أعد فتح الصفحة")});navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>reg.update()).catch(()=>{});}`);
+// build:offline removes the Electron-incompatible service-worker call, so the
+// website registers its worker here instead of trying to replace it.
+source += '\nif("serviceWorker" in navigator){let refreshing=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!refreshing&&!active){refreshing=true;location.reload()}else if(active)tell("تحديث جديد للموقع متاح؛ احفظ تعليقاتك ثم أعد فتح الصفحة")});navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>reg.update()).catch(()=>{});}\n';
 fs.writeFileSync(file,source);
 const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
