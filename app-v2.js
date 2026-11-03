@@ -18,7 +18,77 @@ $("revealControls").onclick=()=>setImmersive(false);$("hideControls").onclick=()
 function toggleSidebar(on){$("sidebar").classList.remove("open");$("backdrop").hidden=true;$("libraryToggle").setAttribute("aria-expanded","false");if(on){if(active)closeDocument();else showLibrary()}}
 $("backdrop").onclick=()=>toggleSidebar(false);$("libraryToggle").onclick=()=>toggleSidebar(true);$("closeLibrary").onclick=()=>toggleSidebar(false);$("backToHome").onclick=()=>toggleSidebar(true);$("bottomFiles").onclick=()=>toggleSidebar(true);
 $("themeToggle").onclick=()=>{document.documentElement.classList.toggle("dark");localStorage.setItem("athat-theme",document.documentElement.classList.contains("dark")?"dark":"light")};if(localStorage.getItem("athat-theme")==="dark")document.documentElement.classList.add("dark");
-async function refresh(){let docs=await getAll("documents");$("count").textContent=docs.filter(d=>!d.deleted).length;docs=docs.filter(d=>filter==="trash"?d.deleted:!d.deleted&&(filter==="fav"?d.favorite:true)).sort((a,b)=>b.updated-a.updated);$("library").replaceChildren();for(const d of docs){const row=document.createElement("div");row.className="doc"+(active?.id===d.id?" selected":"");const open=document.createElement("button");open.className="open";open.textContent=d.name;open.title=d.name;open.onclick=async()=>{if(d.deleted){d.deleted=false;await save("documents",d);await refresh()}else{toggleSidebar(false);await activate(d)}};const fav=document.createElement("button");fav.className="mini-star";fav.textContent=d.favorite?"★":"☆";fav.title="المفضلة";fav.onclick=async()=>{d.favorite=!d.favorite;await save("documents",d);refresh()};const del=document.createElement("button");del.className="delete";del.textContent=d.deleted?"↶":"×";del.title=d.deleted?"استعادة":"نقل للمحذوفات";del.onclick=async()=>{d.deleted=!d.deleted;await save("documents",d);if(d.deleted&&active?.id===d.id)closeDocument();refresh()};row.append(open,fav,del);$("library").append(row)}}
+async function refresh(){let docs=await getAll("documents");$("count").textContent=docs.filter(d=>!d.deleted).length;docs=docs.filter(d=>filter==="trash"?d.deleted:!d.deleted&&(filter==="fav"?d.favorite:true)).sort((a,b)=>b.updated-a.updated);$("library").replaceChildren();for(const d of docs){const row=document.createElement("div");row.className="doc"+(active?.id===d.id?" selected":"");const open=document.createElement("button");open.className="open";open.textContent=d.name;open.title=d.name;open.onclick=async()=>{if(d.deleted){d.deleted=false;await save("documents",d);await refresh()}else{toggleSidebar(false);await activate(d)}};const fav=document.createElement("button");fav.className="mini-star";fav.textContent=d.favorite?"★":"☆";fav.title="المفضلة";fav.onclick=async()=>{d.favorite=!d.favorite;await save("documents",d);refresh()};const del=document.createElement("button");del.className="delete";del.textContent=d.deleted?"↶":"×";del.title=d.deleted?"استعادة":"نقل للمحذوفات";del.onclick=async()=>{d.deleted=!d.deleted;await save("documents",d);if(d.deleted&&active?.id===d.id)closeDocument();refresh()};row.append(open,fav,del);$("library").append(row)}await renderLibrary()}
+
+/* IndexedDB is kept unchanged; folders are stored as per-document labels and portable backups. */
+try{const f=JSON.parse(localStorage.getItem("pdfathat-folders")||"[]");if(Array.isArray(f))libraryCustomFolders=f.filter(x=>typeof x==="string"&&x.trim()&&x.length<41)}catch(e){console.warn(e)}
+const folderList=()=>[...new Set([...libraryFoldersDefault,...libraryCustomFolders])];
+const saveFolders=()=>{try{localStorage.setItem("pdfathat-folders",JSON.stringify(libraryCustomFolders))}catch(e){console.warn(e)}};
+function libNode(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
+function showLibrary(){if(active){closeDocument();return}document.documentElement.classList.remove("reader-open");$("viewer").hidden=true;$("welcome").hidden=true;$("libraryPage").hidden=false;$("sidebar").classList.remove("open");$("backdrop").hidden=true;void renderLibrary()}
+function librarySelect(tab,folder=""){libraryTab=tab;libraryFolder=folder;for(const [id,t]of [["libraryTabAll","all"],["libraryTabRecent","recent"],["libraryTabFav","fav"],["libraryTabManage","manage"]])$(id).classList.toggle("selected",tab===t);void renderLibrary()}
+for(const [id,t]of [["libraryTabAll","all"],["libraryTabRecent","recent"],["libraryTabFav","fav"],["libraryTabManage","manage"]])$(id).onclick=()=>librarySelect(t);
+$("libraryOpenTrash").onclick=()=>librarySelect("trash");
+$("librarySearch").oninput=e=>{librarySearch=e.target.value.trim().toLowerCase();void renderLibrary()};
+$("librarySort").onchange=e=>{librarySort=e.target.value;void renderLibrary()};
+$("libraryListView").onclick=()=>{libraryLayout="list";void renderLibrary()};
+$("libraryGridView").onclick=()=>{libraryLayout="grid";void renderLibrary()};
+$("libraryBackupExport").onclick=()=>$("backupExport").click();
+$("libraryBackupImport").onclick=()=>$("backupImport").click();
+$("libraryNewFolder").onclick=()=>{const raw=prompt("اسم المجلد الجديد");if(raw===null)return;const name=raw.trim().slice(0,40);if(!name)return;if(folderList().includes(name))return tell("اسم المجلد موجود");libraryCustomFolders.push(name);saveFolders();librarySelect("all",name)};
+function libraryCover(d){
+ const box=libNode("div","library-cover");box.append(libNode("span","library-cover-symbol","▤"),libNode("span","library-cover-label","PDF"));
+ const img=document.createElement("img");img.className="library-cover-image";img.alt="غلاف "+d.name;img.hidden=true;box.append(img);
+ const data=libraryThumbCache.get(d.id);
+ if(data){img.src=data;img.hidden=false;box.classList.add("has-preview")}
+ else {img.__doc=d;if(!libraryThumbObserver)libraryThumbObserver=new IntersectionObserver(entries=>{for(const item of entries)if(item.isIntersecting){libraryThumbObserver.unobserve(item.target);const target=item.target.querySelector("img");if(target?.__doc){libraryThumbQueue.push({doc:target.__doc,image:target,cover:item.target});void drawLibraryCovers()}}},{root:$("libraryPage").querySelector(".library-content"),rootMargin:"150px"});queueMicrotask(()=>{if(box.isConnected)libraryThumbObserver?.observe(box)})}
+ return box
+}
+async function drawLibraryCovers(){
+ if(libraryThumbBusy)return;libraryThumbBusy=true;
+ try{while(libraryThumbQueue.length){const {doc,image,cover}=libraryThumbQueue.shift();if(!image.isConnected)continue;let src=libraryThumbCache.get(doc.id);if(!src){let pdfFile=null;try{pdfFile=await pdfjs.getDocument({data:new Uint8Array(await doc.file.arrayBuffer()),useSystemFonts:false}).promise;const p=await pdfFile.getPage(1);const base=p.getViewport({scale:1}),v=p.getViewport({scale:Math.min(1,150/base.width)});const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.ceil(v.width));canvas.height=Math.max(1,Math.ceil(v.height));await p.render({canvasContext:canvas.getContext("2d"),viewport:v}).promise;src=canvas.toDataURL("image/jpeg",.7);if(libraryThumbCache.size>=30)libraryThumbCache.delete(libraryThumbCache.keys().next().value);libraryThumbCache.set(doc.id,src)}catch(e){console.warn("PDF cover",e)}finally{if(pdfFile)try{await pdfFile.destroy()}catch(_){}}}if(src&&image.isConnected){image.src=src;image.hidden=false;cover.classList.add("has-preview")}}}finally{libraryThumbBusy=false}
+}
+function openLibraryDocument(d){$("libraryPage").hidden=true;void activate(d)}
+function docDialog(d){
+ libraryDialogId=d.id;$("libraryDocTitle").textContent="تنظيم الملف";$("libraryRename").value=d.name;
+ const box=$("libraryDocFolders");box.replaceChildren();
+ for(const n of folderList()){const label=libNode("label","library-doc-folder-option"),input=document.createElement("input");input.type="checkbox";input.value=n;input.checked=d.folders?.includes(n)||false;label.append(input,document.createTextNode(n));box.append(label)}
+ $("libraryDialogFavorite").textContent=d.favorite?"★ إزالة من المفضلة":"☆ إضافة للمفضلة";
+ $("libraryDialogDelete").textContent=d.deleted?"↶ استعادة الملف":"نقل للمحذوفات";
+ $("libraryDocDialog").showModal()
+}
+$("libraryDialogCancel").onclick=()=>$("libraryDocDialog").close();
+$("libraryDialogFavorite").onclick=async()=>{const d=(await getAll("documents")).find(x=>x.id===libraryDialogId);if(!d)return;d.favorite=!d.favorite;d.updated=Date.now();await save("documents",d);$("libraryDialogFavorite").textContent=d.favorite?"★ إزالة من المفضلة":"☆ إضافة للمفضلة";await refresh()};
+$("libraryDialogDelete").onclick=async()=>{const d=(await getAll("documents")).find(x=>x.id===libraryDialogId);if(!d)return;d.deleted=!d.deleted;d.updated=Date.now();await save("documents",d);$("libraryDocDialog").close();if(d.deleted&&active?.id===d.id)closeDocument();await refresh()};
+$("libraryDialogSave").onclick=async()=>{const d=(await getAll("documents")).find(x=>x.id===libraryDialogId);if(!d)return;let n=$("libraryRename").value.trim();if(!n)return tell("اكتب اسم الملف");if(!/\.pdf$/i.test(n))n+=".pdf";d.name=n;d.folders=[...$("libraryDocFolders").querySelectorAll("input:checked")].map(x=>x.value);d.updated=Date.now();await save("documents",d);$("libraryDocDialog").close();await refresh()};
+function libraryFileCard(d,comments){
+ const article=libNode("article","library-book-card"),open=libNode("button","library-book-open");open.type="button";open.onclick=()=>d.deleted?docDialog(d):openLibraryDocument(d);open.append(libraryCover(d));
+ const info=libNode("div","library-book-details");info.append(libNode("strong","library-book-name",d.name),libNode("small","library-book-meta",(d.lastPage>1?"صفحة "+d.lastPage:"ملف PDF")+(comments?" · "+comments+" تعليق":"")));
+ if(d.totalPages>1&&d.lastPage>1){const track=libNode("div","library-book-progress"),bar=libNode("span");bar.style.width=Math.min(100,Math.round(d.lastPage/d.totalPages*100))+"%";track.append(bar);info.append(track)}
+ open.append(info);const more=libNode("button","library-book-menu","⋯");more.type="button";more.title="تنظيم "+d.name;more.onclick=()=>docDialog(d);article.append(open,more);return article
+}
+let librarySeq=0;
+async function renderLibrary(){
+ if(!db)return;const seq=++librarySeq,docs=await getAll("documents");if(seq!==librarySeq)return;const activeDocs=docs.filter(d=>!d.deleted),notes=await getAll("strokes");if(seq!==librarySeq)return;const noteCount=new Map();for(const n of notes)noteCount.set(n.documentId,(noteCount.get(n.documentId)||0)+1);
+ const folders=$("libraryFolders");folders.replaceChildren();
+ const folderItems=[{name:"كل الملفات",key:"",icon:"▤",count:activeDocs.length},...folderList().map(n=>({name:n,key:n,icon:n==="الكتب"?"▥":"▰",count:activeDocs.filter(d=>d.folders?.includes(n)).length})),{name:"غير مصنف",key:"__none",icon:"◫",count:activeDocs.filter(d=>!d.folders?.length).length}];
+ for(const f of folderItems){const card=libNode("div","library-folder-card"+(libraryTab==="all"&&libraryFolder===f.key?" selected":"")),button=libNode("button","library-folder-open");button.type="button";button.append(libNode("span","library-folder-icon",f.icon),libNode("span","library-folder-label",f.name),libNode("small","library-folder-count",String(f.count)));button.onclick=()=>librarySelect("all",f.key);card.append(button);
+ if(libraryCustomFolders.includes(f.key)){const del=libNode("button","library-folder-delete","×");del.title="حذف مجلد مع إبقاء ملفاته";del.onclick=async()=>{if(!confirm("حذف المجلد دون حذف ملفاته؟"))return;libraryCustomFolders=libraryCustomFolders.filter(n=>n!==f.key);saveFolders();for(const d of activeDocs)if(d.folders?.includes(f.key)){d.folders=d.folders.filter(n=>n!==f.key);await save("documents",d)}if(libraryFolder===f.key)libraryFolder="";void renderLibrary()};card.append(del)}folders.append(card)}
+ const managing=libraryTab==="manage";$("libraryManage").hidden=!managing;$("libraryFilesTitle").parentElement.hidden=managing;$("librarySearch").parentElement.hidden=managing;$("libraryCards").hidden=managing;$("libraryFolders").hidden=managing;$("libraryNewFolder").parentElement.hidden=managing;
+ const resumeDoc=[...activeDocs].filter(d=>d.lastPage>1).sort((a,b)=>(b.updated||0)-(a.updated||0))[0];$("libraryResume").hidden=!(resumeDoc&&libraryTab==="all"&&!libraryFolder&&!librarySearch);
+ if(!$("libraryResume").hidden){const root=$("libraryResumeCard");root.replaceChildren();const btn=libNode("button","library-resume-open");btn.onclick=()=>openLibraryDocument(resumeDoc);btn.append(libraryCover(resumeDoc));const info=libNode("div","library-resume-details");info.append(libNode("strong","",resumeDoc.name),libNode("small","","آخر قراءة: صفحة "+resumeDoc.lastPage+(resumeDoc.totalPages?" من "+resumeDoc.totalPages:"")),libNode("span","library-resume-link","◉ متابعة القراءة"));btn.append(info);root.append(btn)}
+ if(managing)return;
+ let filtered=libraryTab==="trash"?docs.filter(d=>d.deleted):activeDocs;
+ if(libraryTab==="fav")filtered=filtered.filter(d=>d.favorite);
+ if(libraryTab==="all"&&libraryFolder)filtered=filtered.filter(d=>libraryFolder==="__none"?!d.folders?.length:d.folders?.includes(libraryFolder));
+ if(librarySearch)filtered=filtered.filter(d=>d.name.toLowerCase().includes(librarySearch));
+ filtered.sort((a,b)=>librarySort==="name"?a.name.localeCompare(b.name,"ar"):librarySort==="oldest"?(a.updated||0)-(b.updated||0):(b.updated||0)-(a.updated||0));if(libraryTab==="recent")filtered=filtered.slice(0,20);
+ $("libraryFilesTitle").textContent=(libraryTab==="fav"?"المفضلة":libraryTab==="recent"?"الملفات الأخيرة":libraryTab==="trash"?"المحذوفة":libraryFolder==="__none"?"غير مصنف":libraryFolder||"جميع الملفات")+" ("+filtered.length+")";
+ $("libraryListView").classList.toggle("selected",libraryLayout==="list");$("libraryGridView").classList.toggle("selected",libraryLayout==="grid");
+ const list=$("libraryCards");list.className="library-cards "+(libraryLayout==="grid"?"grid-view":"list-view");libraryThumbObserver?.disconnect();libraryThumbQueue.length=0;list.replaceChildren();
+ const frag=document.createDocumentFragment();for(const d of filtered)frag.append(libraryFileCard(d,noteCount.get(d.id)||0));list.append(frag);$("libraryEmpty").hidden=filtered.length>0
+}
+
 for(const [id,name]of [["showAll","all"],["showFav","fav"],["showTrash","trash"]])$(id).onclick=()=>{filter=name;for(const x of ["showAll","showFav","showTrash"])$(x).classList.toggle("selected",x===id);refresh()};
 function closeDocument(){history=[];redo=[];draft=null;stopContinuous();renderSeq++;loadSeq++;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=null;pdf=null;document.documentElement.classList.remove("reader-open");$("viewer").classList.remove("immersive");$("viewer").hidden=true;$("welcome").hidden=true;if(nativeURL){URL.revokeObjectURL(nativeURL);nativeURL=null}closePanel();toggleSidebar(false);showLibrary()}
 async function addFile(file){if(!file)return;try{if(file.size>75*1024*1024)throw Error("الحد الأقصى 75 ميجابايت");const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");const d={id:crypto.randomUUID(),name:file.name,file,updated:Date.now(),lastPage:1,deleted:false,favorite:false};await save("documents",d);await activate(d)}catch(e){tell(e.message||"تعذر فتح المستند")}}
