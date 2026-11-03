@@ -230,3 +230,13 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
  .library-bottom-nav button{min-height:49px;min-width:58px}
 }
 [hidden]{display:none!important}
+
+
+/* Keep the library toggle on the natural RTL starting edge beside the mark. */
+.appbar{direction:rtl}
+.app-brand{min-width:0;flex-shrink:0;direction:rtl}
+.library-header-toggle{width:42px;min-width:42px;height:42px;min-height:42px;display:grid;place-items:center;background:var(--panel-soft);border:1px solid var(--line);border-radius:12px;color:var(--green);font-size:23px;line-height:1;flex:none}
+.library-header-toggle:hover,.library-header-toggle:focus-visible{background:var(--green-light);border-color:#c28d75}
+.library-header-toggle[aria-expanded="true"]{background:var(--green-light);border-color:#c28d75}
+.header-actions{margin-inline-start:auto}
+@media(max-width:700px){.app-brand{gap:7px}.library-header-toggle{width:38px;min-width:38px;height:38px;min-height:38px;border-radius:10px;font-size:21px}}
