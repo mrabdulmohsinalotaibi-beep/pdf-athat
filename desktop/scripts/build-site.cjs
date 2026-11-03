@@ -9,7 +9,7 @@ let source=fs.readFileSync(file,'utf8');
 const version=crypto.createHash('sha256').update(source).digest('hex').slice(0,12);
 source+='\nif ("serviceWorker" in navigator) { addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(console.error)); }\n';
 fs.writeFileSync(file,source);
-const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js'];
+const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm'];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
