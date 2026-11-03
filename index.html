@@ -10,11 +10,10 @@
 <body>
 <div id="app">
 <header class="appbar">
-  <div class="app-brand"><span class="brand-icon" role="img" aria-label="شعار PDF.ATHAT"></span><div class="brand-text"><strong>PDF.ATHAT</strong><small>مساحتك الذكية للمستندات</small></div></div>
+  <div class="app-brand"><button id="libraryToggle" class="icon-btn library-header-toggle" type="button" title="مكتبتي" aria-label="فتح مكتبتي" aria-controls="sidebar" aria-expanded="false">☷</button><span class="brand-icon" role="img" aria-label="شعار PDF.ATHAT"></span><div class="brand-text"><strong>PDF.ATHAT</strong><small>مساحتك الذكية للمستندات</small></div></div>
   <div class="header-actions">
     <button id="themeToggle" class="icon-btn optional-wide" type="button" title="الوضع الداكن" aria-label="الوضع الداكن">◐</button>
-    <button id="libraryToggle" class="icon-btn" type="button" title="المكتبة" aria-label="المكتبة">☷</button>
-    <label class="upload primary-btn">＋ <span>فتح PDF</span><input type="file" id="file" accept=".pdf,application/pdf" hidden></label>
+    <input type="file" id="file" accept=".pdf,application/pdf" hidden aria-label="اختيار ملف PDF جديد">
   </div>
 </header>
 <div id="backdrop" class="backdrop" hidden></div>
@@ -46,6 +45,7 @@
  </nav>
  <div id="readerOptions" class="reader-options" hidden aria-label="خيارات القارئ">
   <button type="button" id="readerLibrary">☷ مكتبتي</button>
+  <button type="button" id="readerOpenFile">＋ فتح ملف PDF آخر</button>
   <button type="button" id="readerOriginal">⇩ تنزيل الملف الأصلي</button>
   <button type="button" id="readerExport">⇩ تنزيل مع التعليقات</button>
   <button type="button" id="readerEngines">◫ محركات عرض PDF</button>
