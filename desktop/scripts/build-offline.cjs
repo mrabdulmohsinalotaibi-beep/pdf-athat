@@ -16,6 +16,15 @@ for(const dir of ['build','cmaps','standard_fonts','wasm']){
 }
 if(!fs.existsSync(pdflib))throw new Error('Missing pdf-lib ESM bundle');
 copy(pdflib,path.join(vendor,'pdf-lib.esm.js'));
+const pdfiumWasm=path.join(desktop,'node_modules/@hyzyla/pdfium/dist/pdfium.wasm');
+if(!fs.existsSync(pdfiumWasm))throw Error('Missing PDFium WASM engine');
+copy(pdfiumWasm,path.join(vendor,'pdfium/pdfium.wasm'));
+require('esbuild').buildSync({
+ entryPoints:[path.join(desktop,'scripts/pdfium-adapter.js')],
+ bundle:true,format:'esm',platform:'browser',target:['es2022'],
+ outfile:path.join(out,'pdfium-adapter.js'),
+ logLevel:'warning'
+});
 let js=fs.readFileSync(path.join(out,'app-v2.js'),'utf8');
 const replacements=[
  ['https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.min.mjs'],
