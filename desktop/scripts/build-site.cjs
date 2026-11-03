@@ -30,6 +30,13 @@ for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"
 for(const marker of ['async function startContinuous()','async function renderContinuousPage(','async function setReaderEditing(']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
 }
+for(const marker of ['id="libraryPage"','id="librarySearch"','id="libraryFolders"','id="libraryCards"','id="libraryListView"','id="libraryGridView"','id="libraryDocDialog"','id="file3"']){
+ if(!htmlCheck.includes(marker))throw Error('Library UI missing '+marker);
+}
+for(const marker of ['function showLibrary()','async function renderLibrary()','function openLibraryDocument(','function docDialog(','async function drawLibraryCovers()']){
+ if(!source.includes(marker))throw Error('Library controller missing '+marker);
+}
+
 fs.writeFileSync(file,source);
 const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
