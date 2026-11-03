@@ -15,12 +15,14 @@
   },
   "dependencies": {
     "pdfjs-dist": "5.4.394",
-    "pdf-lib": "1.17.1"
+    "pdf-lib": "1.17.1",
+    "@hyzyla/pdfium": "3.0.0"
   },
   "devDependencies": {
     "electron": "^35.7.5",
     "electron-builder": "^26.0.12",
-    "playwright": "^1.55.1"
+    "playwright": "^1.55.1",
+    "esbuild": "^0.25.12"
   },
   "build": {
     "appId": "app.athat.pdf",
