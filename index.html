@@ -35,7 +35,25 @@
  <label class="primary-btn welcome-cta">＋ اختر ملف PDF<input type="file" id="file2" accept=".pdf,application/pdf" hidden></label>
  <div class="features"><span>✓ قراءة عربية</span><span>✓ قلم وتظليل</span><span>✓ حفظ محلي</span><span>✓ تنزيل PDF</span></div>
 </section>
-<section id="viewer" class="viewer immersive" hidden><button id="revealControls" class="reveal-controls" type="button" aria-label="إظهار أدوات القراءة" title="إظهار الأدوات">☰</button><button id="hideControls" class="hide-controls" type="button" aria-label="إخفاء الأدوات" title="إخفاء الأدوات">×</button>
+<section id="viewer" class="viewer reading-mode" hidden>
+ <nav id="readerTopbar" class="reader-topbar" aria-label="أدوات قراءة المستند">
+  <button type="button" id="readerBack" class="reader-icon" title="العودة إلى المكتبة" aria-label="العودة إلى المكتبة">‹</button>
+  <div class="reader-heading"><strong id="readerFileName" dir="auto"></strong><small>قارئ PDF.ATHAT</small></div>
+  <button type="button" id="readerThumbnails" class="reader-icon" title="الصفحات" aria-label="الصفحات المصغرة">▦</button>
+  <button type="button" id="readerSearch" class="reader-icon" title="بحث" aria-label="بحث في الملف">⌕</button>
+  <button type="button" id="readerNotes" class="reader-icon" title="الملاحظات" aria-label="التعليقات">▤</button>
+  <button type="button" id="readerMenuBtn" class="reader-icon" title="خيارات" aria-label="خيارات العرض">⋮</button>
+ </nav>
+ <div id="readerOptions" class="reader-options" hidden aria-label="خيارات القارئ">
+  <button type="button" id="readerLibrary">☷ مكتبتي</button>
+  <button type="button" id="readerOriginal">⇩ تنزيل الملف الأصلي</button>
+  <button type="button" id="readerExport">⇩ تنزيل مع التعليقات</button>
+  <button type="button" id="readerEngines">◫ محركات عرض PDF</button>
+  <button type="button" id="readerToggleInk">◉ إظهار / إخفاء التعليقات</button>
+  <div class="reader-zoom-controls"><button id="readerZoomOut" type="button" aria-label="تصغير">−</button><span>تكبير الصفحة</span><button id="readerZoomIn" type="button" aria-label="تكبير">＋</button></div>
+  <button id="readerFit" type="button">↔ ملاءمة الصفحة</button>
+ </div>
+ <button id="revealControls" class="reveal-controls" type="button" aria-label="إظهار أدوات القراءة" title="إظهار الأدوات" hidden>☰</button><button id="hideControls" class="hide-controls" type="button" aria-label="إخفاء الأدوات" title="إخفاء الأدوات" hidden>×</button>
  <div class="docbar"><button id="backToHome" class="subtle-btn" aria-label="العودة للمكتبة" title="المكتبة">☰</button><div class="document-title"><strong id="name"></strong><small id="status">محفوظ على جهازك</small></div><button id="favorite" class="icon-btn" aria-label="إضافة للمفضلة" title="المفضلة">☆</button><button id="share" class="icon-btn optional-wide" title="مشاركة الملف" aria-label="مشاركة الملف">↗</button><button id="toggleInk" class="icon-btn" title="إخفاء الكتابة وإظهارها" aria-label="إخفاء الكتابة وإظهارها">◉</button><button id="downloadOriginal" class="subtle-btn" title="تنزيل الملف الأصلي دون الكتابة">الأصل</button><button id="download" class="primary-btn" title="تنزيل PDF">⇩ <span>تنزيل</span></button></div>
  <div class="readerbar">
    <button id="thumbToggle" class="icon-btn" title="الصفحات المصغرة" aria-label="الصفحات المصغرة">▦</button>
@@ -46,6 +64,7 @@
  <div class="reading-area">
  <div id="thumbs" class="thumbs" hidden><div class="thumbs-head"><strong>الصفحات</strong><button id="closeThumbs" class="icon-btn">×</button></div><div id="thumbList"></div></div>
  <div id="desk" class="desk" aria-label="صفحة PDF">
+  <div id="continuousReader" class="continuous-pages" role="document" aria-label="صفحات PDF المتتابعة"></div>
   <div id="sheet" class="sheet"><canvas id="pdfCanvas"></canvas><canvas id="inkCanvas"></canvas></div>
   <div id="nativePreview" class="native-preview" hidden><iframe id="nativeFrame" title="عارض PDF بديل"></iframe></div><article id="textReader" class="text-reader" hidden dir="rtl" aria-label="قراءة نصية بخط عربي واضح"></article>
   <div id="toolsRail" class="tools-rail" aria-label="أدوات التعليق">
@@ -60,6 +79,8 @@
    </div>
  </div>
  </div>
+ <button id="readerFab" class="reader-fab" type="button" aria-label="بدء التعليق على الصفحة" title="الكتابة والتظليل">✎</button>
+ <button id="readerPageInfo" class="reader-page-info" type="button" title="الانتقال إلى صفحة" aria-label="الانتقال إلى صفحة">1 / 1</button>
  <div id="toolSettings" class="tool-settings" hidden><span id="toolLabel">القلم</span><label class="color-label">اللون <input id="color" type="color" value="#e87824" aria-label="لون الأداة"></label><label class="size-label">السماكة <input id="strokeSize" type="range" min="1" max="18" value="3"></label><button id="undo" class="subtle-btn">↶ تراجع</button><button id="redo" class="subtle-btn">↷ إعادة</button></div>
  <div class="bottom-reader"><button id="bottomFiles">▤<small>الملفات</small></button><button id="bottomSearch">⌕<small>البحث</small></button><button id="bottomRead" class="selected">▣<small>القراءة</small></button><button id="bottomNotes">▧<small>التعليقات</small></button><button id="bottomTools">✎<small>الأدوات</small></button></div>
 </section>
