@@ -1,7 +1,7 @@
 // Account dialog and explicit permission. Never synchronize without opting in.
 export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  const el=id=>document.getElementById(id);
- let account=null,busy=false,mode="register";
+ let account=null,busy=false,mode="register",emailReady=false;
  const message=t=>{el("accountFeedback").textContent=t||""};
  const call=async(path,options={})=>{
   const response=await fetch("/api/"+path,{credentials:"same-origin",cache:"no-store",...options});
@@ -30,12 +30,20 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  }
  el("accountButton").onclick=()=>run(async()=>{
   el("accountDialog").showModal();await session();
-  // Password registration and login work independently of the optional email-code service.
+  await emailServiceStatus();
  });
  el("accountClose").onclick=()=>el("accountDialog").close();
  el("welcomeAccount").onclick=()=>el("accountButton").click();
+ async function emailServiceStatus(){
+  try{
+   const health=await call("health");
+   emailReady=!!health.otpReady;
+  }catch{emailReady=false}
+  el("accountEmailAlternative").hidden=mode!=="login"||!emailReady;
+  el("accountServiceNotice").textContent=emailReady?"تأكيد البريد متاح. يمكنك إنشاء حساب أو الدخول برمز يرسل إلى بريدك.":"إرسال رسائل التحقق غير مفعّل حاليًا. إنشاء الحسابات الجديدة يتطلب تفعيل خدمة البريد لدى إدارة الموقع؛ وتسجيل الدخول بكلمة المرور متاح للحسابات الموجودة.";
+ }
  const setMode=next=>{
-  mode=next;el("accountModeRegister").classList.toggle("selected",next==="register");
+  mode=next;el("accountEmailAlternative").hidden=next!=="login"||!emailReady;el("accountModeRegister").classList.toggle("selected",next==="register");
   el("accountModeLogin").classList.toggle("selected",next==="login");
   el("accountSendCode").textContent="إرسال رمز التحقق";
   el("accountPasswordSubmit").textContent=next==="register"?"إنشاء حساب":"تسجيل الدخول";
@@ -82,6 +90,7 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  };
  el("accountSendCode").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase();
+  if(mode!=="login")throw Error("يُنشأ الحساب الجديد بكلمة مرور ثم يُؤكّد بالبريد.");
   const res=await call("auth/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,mode})});
   el("accountOtpArea").hidden=false;message(res.message||"أُرسل الرمز")
  });
