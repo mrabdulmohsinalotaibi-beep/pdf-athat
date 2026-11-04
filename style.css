@@ -240,3 +240,24 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 .library-header-toggle[aria-expanded="true"]{background:var(--green-light);border-color:#c28d75}
 .header-actions{margin-inline-start:auto}
 @media(max-width:700px){.app-brand{gap:7px}.library-header-toggle{width:38px;min-width:38px;height:38px;min-height:38px;border-radius:10px;font-size:21px}}
+
+
+/* Account connection: accessible, compact and explicitly opt-in. */
+#accountButton{font-size:25px;color:var(--green)}
+.account-dialog{width:min(450px,calc(100vw - 26px));max-height:90dvh;overflow:auto;border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--ink);padding:0;box-shadow:0 16px 65px #230a0a55;direction:rtl}
+.account-dialog::backdrop{background:#250c0ca8}
+.account-box{padding:22px;display:flex;flex-direction:column;gap:13px}
+.account-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.account-head h2{font-size:21px;margin:0}
+.account-head button{border:0;background:transparent;font-size:28px;min-height:36px}
+.account-help{color:var(--mute);line-height:1.9;font-size:13px;margin:0}
+.account-box label{display:block;font-size:13px;font-weight:650;margin:10px 0}
+.account-box input{display:block;width:100%;margin-top:7px;background:var(--panel-soft);border:1px solid var(--line);border-radius:12px;min-height:45px;padding:10px 12px;color:var(--ink);font-size:17px}
+.account-box .primary-btn{width:100%;margin:6px 0}
+.account-box button:not(.primary-btn):not(.account-head button){padding:9px 12px;margin:5px 0}
+.account-consent{background:var(--panel-soft);border:1px solid var(--line);border-radius:14px;padding:14px}
+.account-consent p{font-size:13px;color:var(--mute);line-height:1.8}
+.account-identity{font-weight:700;direction:ltr;text-align:right;overflow-wrap:anywhere}
+.account-logout{color:var(--green);margin-top:14px}
+#accountFeedback{font-size:13px;line-height:1.8;color:var(--green);min-height:16px;margin:0}
+#accountSyncControls{border-top:1px solid var(--line);padding-top:12px}
