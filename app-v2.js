@@ -434,6 +434,11 @@ $("readerZoomOut").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)
 $("readerZoomIn").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)$("plus").click();else{readerZoom=Math.min(2.5,readerZoom+.15);startContinuous()}};
 $("readerFit").onclick=()=>{$("readerOptions").hidden=true;readerZoom=1;if(readerEditing)$("fit").click();else startContinuous()};
 $("readerPageInfo").onclick=()=>{$("pageJump").click()};
+$("viewer").addEventListener("pointermove",event=>{
+ if(!desktopSingle()||!desktopReaderSettings.autoHide)return;
+ $("viewer").classList.toggle("desktop-controls-visible",event.clientY<=84);
+});
+$("viewer").addEventListener("pointerleave",()=>{$("viewer").classList.remove("desktop-controls-visible")});
 document.addEventListener("keydown",event=>{
  if(!active||!desktopSingle()||readerEditing||event.altKey||event.ctrlKey||event.metaKey)return;
  const target=event.target;
