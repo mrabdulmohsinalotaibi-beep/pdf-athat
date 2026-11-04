@@ -263,3 +263,6 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
  .reader-open .viewer.desktop-expanded .reader-options{position:absolute;top:54px;left:8px}
  .reader-open .viewer.desktop-expanded.editing-mode .desk{overflow:auto;display:block;padding:18px 10px 100px!important}
 }
+
+/* Optional reading separator indicator stays accessible in the reader menu. */
+.reader-options #readerBookmark,.reader-options #readerBookmarkGo,.reader-options #readerBookmarkClear{font-size:13px}
