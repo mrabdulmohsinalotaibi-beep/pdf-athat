@@ -33,13 +33,17 @@ async function input(request,limit=2000){
 async function requestCode(context){
  const {request,env}=context;
  if(!env.RESEND_API_KEY||!env.OTP_FROM_EMAIL||!env.OTP_SECRET)return fail("خدمة إرسال رموز البريد لم تُفعّل بعد.",503);
- const obj=await input(request),email=cleanEmail(obj?.email);
+ const obj=await input(request),email=cleanEmail(obj?.email),mode=obj?.mode==="register"?"register":obj?.mode==="login"?"login":null;
+ if(!mode)return fail("اختر إنشاء حساب أو تسجيل الدخول.",400);
  if(!emailValid(email))return fail("أدخل بريدًا إلكترونيًا صحيحًا.",400);
+ const existing=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
+ if(mode==="register"&&existing)return fail("هذا البريد مسجل بالفعل. اختر تسجيل الدخول.",409);
+ if(mode==="login"&&!existing)return fail("لا يوجد حساب بهذا البريد. اختر إنشاء حساب جديد.",404);
  const ip=request.headers.get("cf-connecting-ip")||"unknown";
  const ipKey=await hmac(env.OTP_SECRET,"ip:"+ip);
  if(!await throttle(env.PDF_AUTH_DB,"otp-ip:"+ipKey,12,3600)||!await throttle(env.PDF_AUTH_DB,"otp-mail:"+await hmac(env.OTP_SECRET,email),4,3600))return fail("طلبات كثيرة، حاول لاحقًا.",429);
  const value=crypto.getRandomValues(new Uint32Array(1))[0]%1000000,code=String(value).padStart(6,"0");
- const codeHash=await hmac(env.OTP_SECRET,email+":"+code);
+ const codeHash=await hmac(env.OTP_SECRET,email+":"+mode+":"+code);
  await env.PDF_AUTH_DB.prepare("INSERT INTO challenges(email,code_hash,expires_at,attempts,issued_at) VALUES(?,?,?,0,?) ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash,expires_at=excluded.expires_at,attempts=0,issued_at=excluded.issued_at").bind(email,codeHash,now()+600,now()).run();
  const sent=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+env.RESEND_API_KEY,"Content-Type":"application/json"},body:JSON.stringify({from:env.OTP_FROM_EMAIL,to:[email],subject:"رمز الدخول إلى PDF.ATHAT",text:"رمز التحقق الخاص بك: "+code+"\nصالح لمدة عشر دقائق. إذا لم تطلبه فتجاهل الرسالة."})});
  if(!sent.ok){await env.PDF_AUTH_DB.prepare("DELETE FROM challenges WHERE email=?").bind(email).run();return fail("تعذر إرسال رمز التحقق، حاول مرة أخرى.",502)}
@@ -47,15 +51,17 @@ async function requestCode(context){
 }
 async function verifyCode(context){
  const {request,env}=context;if(!env.OTP_SECRET)return fail("إعدادات التحقق غير مكتملة.",503);
- const data=await input(request),email=cleanEmail(data?.email),code=String(data?.code||"");
- if(!emailValid(email)||!/^[0-9]{6}$/.test(code))return fail("تحقق من البريد والرمز.",400);
+ const data=await input(request),email=cleanEmail(data?.email),code=String(data?.code||""),mode=data?.mode==="register"?"register":data?.mode==="login"?"login":null;
+ if(!mode||!emailValid(email)||!/^[0-9]{6}$/.test(code))return fail("تحقق من البريد والرمز.",400);
  const row=await env.PDF_AUTH_DB.prepare("SELECT * FROM challenges WHERE email=?").bind(email).first();
  if(!row||row.expires_at<now()||row.attempts>=5)return fail("الرمز غير صالح أو انتهت صلاحيته.",401);
  await env.PDF_AUTH_DB.prepare("UPDATE challenges SET attempts=attempts+1 WHERE email=?").bind(email).run();
- const candidate=await hmac(env.OTP_SECRET,email+":"+code);
+ const candidate=await hmac(env.OTP_SECRET,email+":"+mode+":"+code);
  if(candidate!==row.code_hash)return fail("الرمز غير صحيح.",401);
  await env.PDF_AUTH_DB.prepare("DELETE FROM challenges WHERE email=?").bind(email).run();
  let user=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
+ if(mode==="login"&&!user)return fail("لا يوجد حساب بهذا البريد. اختر إنشاء حساب جديد.",404);
+ if(mode==="register"&&user)return fail("الحساب موجود بالفعل. اختر تسجيل الدخول.",409);
  if(!user){const id=crypto.randomUUID();await env.PDF_AUTH_DB.prepare("INSERT OR IGNORE INTO users(id,email,created_at) VALUES(?,?,?)").bind(id,email,now()).run();user=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first()}
  const token=random(),device=crypto.randomUUID();
  const deviceName=String(data?.deviceName||"جهاز جديد").slice(0,70);
