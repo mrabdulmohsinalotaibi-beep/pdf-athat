@@ -159,6 +159,8 @@ export async function onRequest(context){
   const origin=request.headers.get("origin");
   if(origin&&origin!==new URL(request.url).origin)return fail("مصدر الطلب غير مسموح.",403);
  }
+ // New email registrations have been disabled by the owner. Preserve existing accounts and data.
+ if(method==="POST"&&["auth/password/register","auth/password/confirm"].includes(path.join("/")))return fail("إنشاء حسابات جديدة متوقف. يمكنك استخدام القارئ دون حساب.",410);
  if(path.join("/")==="health"&&method==="GET")return json({ok:true,otpReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET),signupVerificationReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET)});
  try{
   if(path.join("/")==="auth/password/register"&&method==="POST")return await passwordAction(context,"register");
