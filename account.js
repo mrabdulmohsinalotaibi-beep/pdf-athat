@@ -41,7 +41,7 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
   el("accountPasswordSubmit").textContent=next==="register"?"إنشاء حساب":"تسجيل الدخول";
   el("accountPassword").setAttribute("autocomplete",next==="register"?"new-password":"current-password");
   el("accountHeading").textContent=next==="register"?"إنشاء حساب جديد":"تسجيل الدخول";
-  el("accountOtpArea").hidden=true;el("accountOtp").value="";message("");
+  el("accountOtpArea").hidden=true;el("accountOtp").value="";el("accountConfirmArea").hidden=true;el("accountPassword").disabled=false;el("accountEmail").disabled=false;el("accountPasswordSubmit").hidden=false;message("");
  };
  el("accountModeRegister").onclick=()=>setMode("register");
  el("accountModeLogin").onclick=()=>setMode("login");
@@ -49,10 +49,37 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
   const email=el("accountEmail").value.trim().toLowerCase(),password=el("accountPassword").value;
   if(password.length<12)throw Error("كلمة المرور يجب أن تكون 12 حرفًا على الأقل.");
   const deviceName=/Android/i.test(navigator.userAgent)?"Android":/iPhone|iPad/i.test(navigator.userAgent)?"iPhone / iPad":"حاسوب";
-  await call("auth/password/"+mode,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,deviceName})});
+  const result=await call("auth/password/"+mode,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,deviceName})});
   el("accountPassword").value="";
-  await session();message(mode==="register"?"تم إنشاء حسابك المستقل بنجاح.":"تم تسجيل الدخول بنجاح.");
+  if(mode==="register"&&result.verificationRequired){
+   el("accountConfirmArea").hidden=false;
+   el("accountPasswordSubmit").hidden=true;
+   el("accountEmail").disabled=true;
+   el("accountPassword").disabled=true;
+   message(result.message||"أرسلنا رمز التفعيل إلى بريدك الإلكتروني.");
+   el("accountConfirmCode").focus();
+   return;
+  }
+  await session();message("تم تسجيل الدخول بنجاح.");
  });
+ el("accountConfirmSubmit").onclick=()=>run(async()=>{
+  const email=el("accountEmail").value.trim().toLowerCase(),code=el("accountConfirmCode").value.trim();
+  if(!/^[0-9]{6}$/.test(code))throw Error("أدخل رمز التحقق المكون من 6 أرقام.");
+  const deviceName=/Android/i.test(navigator.userAgent)?"Android":/iPhone|iPad/i.test(navigator.userAgent)?"iPhone / iPad":"حاسوب";
+  await call("auth/password/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code,deviceName})});
+  el("accountConfirmCode").value="";
+  el("accountConfirmArea").hidden=true;
+  el("accountPasswordSubmit").hidden=false;
+  el("accountEmail").disabled=false;
+  el("accountPassword").disabled=false;
+  await session();
+  message("تم تأكيد البريد وإنشاء حسابك. يمكنك الآن تسجيل الدخول على أجهزتك.");
+ });
+ el("accountConfirmBack").onclick=()=>{
+  el("accountConfirmArea").hidden=true;el("accountPasswordSubmit").hidden=false;
+  el("accountEmail").disabled=false;el("accountPassword").disabled=false;
+  el("accountConfirmCode").value="";message("أعد إدخال كلمة المرور ثم اطلب رمز تأكيد جديد.");
+ };
  el("accountSendCode").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase();
   const res=await call("auth/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,mode})});
