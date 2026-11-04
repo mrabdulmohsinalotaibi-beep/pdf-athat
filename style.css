@@ -271,3 +271,15 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 @media (min-width:900px) and (pointer:fine){
  .reader-open .viewer.desktop-single .continuous-pages .read-page canvas{max-width:none;max-height:none;image-rendering:auto}
 }
+
+/* Desktop native PDF: let Chrome / Edge / Safari draw the original document. */
+@media (min-width:900px) and (pointer:fine){
+ .reader-open .viewer.native-reading .reading-area,
+ .reader-open .viewer.native-reading .desk{min-height:0;width:100%;height:100%}
+ .reader-open .viewer.native-reading .desk{position:relative;display:block;overflow:hidden;padding:0!important}
+ .reader-open .viewer.native-reading #nativePreview{position:absolute;inset:0;display:block;width:100%;height:100%;background:#ececec}
+ .reader-open .viewer.native-reading #nativeFrame{display:block;width:100%;height:100%;border:0}
+ .reader-open .viewer.native-reading #continuousReader,
+ .reader-open .viewer.native-reading #sheet{display:none!important}
+ .reader-open .viewer.native-reading .reader-fab{opacity:.8}
+}

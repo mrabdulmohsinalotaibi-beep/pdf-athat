@@ -73,6 +73,7 @@
   <button type="button" id="readerOriginal">⇩ تنزيل الملف الأصلي</button>
   <button type="button" id="readerExport">⇩ تنزيل مع التعليقات</button>
   <button type="button" id="readerEngines">◫ محركات عرض PDF</button>
+  <button type="button" id="readerOpenNativeTab">↗ فتح PDF في تبويب المتصفح الأصلي</button>
   <button type="button" id="readerToggleInk">◉ إظهار / إخفاء التعليقات</button>
   <button type="button" id="readerBookmark" aria-label="وضع فاصل قراءة اختياري">🔖 وضع فاصل عند هذه الصفحة</button>
   <button type="button" id="readerBookmarkGo" hidden>↩ العودة إلى فاصل القراءة</button>
@@ -93,7 +94,7 @@
  <div id="desk" class="desk" aria-label="صفحة PDF">
   <div id="continuousReader" class="continuous-pages" role="document" aria-label="صفحات PDF المتتابعة"></div>
   <div id="sheet" class="sheet"><canvas id="pdfCanvas"></canvas><canvas id="inkCanvas"></canvas></div>
-  <div id="nativePreview" class="native-preview" hidden><iframe id="nativeFrame" title="عارض PDF بديل"></iframe></div><article id="textReader" class="text-reader" hidden dir="rtl" aria-label="قراءة نصية بخط عربي واضح"></article>
+  <div id="nativePreview" class="native-preview" hidden><iframe id="nativeFrame" title="عارض PDF الأصلي للمتصفح"></iframe></div><article id="textReader" class="text-reader" hidden dir="rtl" aria-label="قراءة نصية بخط عربي واضح"></article>
   <div id="toolsRail" class="tools-rail" aria-label="أدوات التعليق">
     <button id="pointer" data-tool="pointer" title="تصفح" aria-label="تصفح">↖</button>
     <button id="pen" data-tool="pen" title="قلم" aria-label="قلم">✎</button>
