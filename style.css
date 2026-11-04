@@ -266,3 +266,8 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 
 /* Optional reading separator indicator stays accessible in the reader menu. */
 .reader-options #readerBookmark,.reader-options #readerBookmarkGo,.reader-options #readerBookmarkClear{font-size:13px}
+
+/* Full-page desktop: use a native-size backing canvas, not a CSS-stretched preview. */
+@media (min-width:900px) and (pointer:fine){
+ .reader-open .viewer.desktop-single .continuous-pages .read-page canvas{max-width:none;max-height:none;image-rendering:auto}
+}

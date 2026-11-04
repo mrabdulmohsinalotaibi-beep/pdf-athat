@@ -28,7 +28,7 @@ for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
 }
 // Guard against regression to low-resolution full-page desktop rendering.
-if(!source.includes('Math.max(2.25,devicePixelRatio||1)')||!source.includes('Math.sqrt(20000000/'))throw Error('High-DPI desktop full-page rendering missing');
+if(!source.includes('Math.max(3,devicePixelRatio||1)')||!source.includes('Math.sqrt(24000000/'))||!source.includes('fontMode=desktopSingle()?"pdfjs":"original"'))throw Error('Crisp desktop PDF.js full-page rendering missing');
 for(const marker of ['async function startContinuous()','async function renderDesktopSingle()','async function renderContinuousPage(','async function setReaderEditing(','function updateReaderBookmark()']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
 }
