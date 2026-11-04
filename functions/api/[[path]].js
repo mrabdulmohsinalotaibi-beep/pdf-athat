@@ -30,6 +30,43 @@ async function input(request,limit=2000){
  const text=await request.text();if(text.length>limit)return null;
  try{return JSON.parse(text)}catch{return null}
 }
+// Independent PDF.ATHAT password credentials, unrelated to AAA's user database.
+const ITERATIONS=210000;
+const passwordOk=v=>typeof v==="string"&&v.length>=12&&v.length<=128;
+async function derive(password,salt,iterations=ITERATIONS){
+ const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);
+ return hex(new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:Uint8Array.from(salt.match(/../g).map(x=>parseInt(x,16))),iterations},key,256)))
+}
+async function establishSession(env,userId,deviceName){
+ const token=random(),device=crypto.randomUUID();
+ await env.PDF_AUTH_DB.prepare("INSERT INTO sessions(token_hash,user_id,device_id,device_name,expires_at,created_at) VALUES(?,?,?,?,?,?)").bind(await digest(token),userId,device,String(deviceName||"جهاز جديد").slice(0,70),now()+2592000,now()).run();
+ return new Response(JSON.stringify({ok:true,deviceId:device}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store","Set-Cookie":sessionCookie(token,2592000)}})
+}
+async function passwordAction(context,action){
+ const {request,env}=context,data=await input(request,2500);
+ const email=cleanEmail(data?.email),password=data?.password;
+ if(!emailValid(email)||!passwordOk(password))return fail("أدخل بريدًا صحيحًا وكلمة مرور من 12 إلى 128 حرفًا.",400);
+ const ip=request.headers.get("cf-connecting-ip")||"unknown";
+ const ipHash=await hmac(env.OTP_SECRET||"pdf-athat-limits",ip);
+ if(!await throttle(env.PDF_AUTH_DB,"password-ip:"+ipHash,30,3600))return fail("محاولات كثيرة من هذا الجهاز. حاول لاحقًا.",429);
+ if(!await throttle(env.PDF_AUTH_DB,"password-email:"+await digest(email),10,900))return fail("محاولات كثيرة لهذا البريد. حاول بعد 15 دقيقة.",429);
+ if(action==="register"){
+  const existing=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
+  if(existing)return fail("هذا البريد مسجل بالفعل. اختر تسجيل الدخول.",409);
+  const salt=random(),hash=await derive(password,salt),userId=crypto.randomUUID();
+  await env.PDF_AUTH_DB.prepare("INSERT INTO users(id,email,created_at) VALUES(?,?,?)").bind(userId,email,now()).run();
+  await env.PDF_AUTH_DB.prepare("INSERT INTO password_credentials(user_id,salt,hash,iterations,created_at) VALUES(?,?,?,?,?)").bind(userId,salt,hash,ITERATIONS,now()).run();
+  return establishSession(env,userId,data.deviceName)
+ }
+ const user=await env.PDF_AUTH_DB.prepare("SELECT u.id,p.salt,p.hash,p.iterations FROM users u JOIN password_credentials p ON p.user_id=u.id WHERE u.email=?").bind(email).first();
+ if(!user){await derive(password,random());return fail("البريد أو كلمة المرور غير صحيحة.",401)}
+ const candidate=await derive(password,user.salt,user.iterations);
+ // Fixed-length comparison avoids early exits.
+ const a=Uint8Array.from(candidate.match(/../g).map(x=>parseInt(x,16))),b=Uint8Array.from(user.hash.match(/../g).map(x=>parseInt(x,16)));
+ let diff=a.length^b.length;for(let i=0;i<Math.max(a.length,b.length);i++)diff|=(a[i]||0)^(b[i]||0);
+ if(diff!==0)return fail("البريد أو كلمة المرور غير صحيحة.",401);
+ return establishSession(env,user.id,data.deviceName)
+}
 async function requestCode(context){
  const {request,env}=context;
  if(!env.RESEND_API_KEY||!env.OTP_FROM_EMAIL||!env.OTP_SECRET)return fail("خدمة إرسال رموز البريد لم تُفعّل بعد.",503);
@@ -88,6 +125,8 @@ export async function onRequest(context){
  }
  if(path.join("/")==="health"&&method==="GET")return json({ok:true,otpReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET)});
  try{
+  if(path.join("/")==="auth/password/register"&&method==="POST")return await passwordAction(context,"register");
+  if(path.join("/")==="auth/password/login"&&method==="POST")return await passwordAction(context,"login");
   if(path.join("/")==="auth/request"&&method==="POST")return await requestCode(context);
   if(path.join("/")==="auth/verify"&&method==="POST")return await verifyCode(context);
   if(path.join("/")==="auth/logout"&&method==="POST")return await logout(context);
