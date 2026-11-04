@@ -1,7 +1,7 @@
 // Account dialog and explicit permission. Never synchronize without opting in.
 export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  const el=id=>document.getElementById(id);
- let account=null,busy=false,mode="register",emailReady=false;
+ let account=null,busy=false,mode="login",emailReady=false;
  const message=t=>{el("accountFeedback").textContent=t||""};
  const call=async(path,options={})=>{
   const response=await fetch("/api/"+path,{credentials:"same-origin",cache:"no-store",...options});
@@ -40,57 +40,18 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
    emailReady=!!health.otpReady;
   }catch{emailReady=false}
   el("accountEmailAlternative").hidden=mode!=="login"||!emailReady;
-  el("accountServiceNotice").textContent=emailReady?"تأكيد البريد متاح. يمكنك إنشاء حساب أو الدخول برمز يرسل إلى بريدك.":"إرسال رسائل التحقق غير مفعّل حاليًا. إنشاء الحسابات الجديدة يتطلب تفعيل خدمة البريد لدى إدارة الموقع؛ وتسجيل الدخول بكلمة المرور متاح للحسابات الموجودة.";
+  el("accountServiceNotice").textContent=emailReady?"يمكن لأصحاب الحسابات السابقة الدخول برمز يُرسل إلى البريد. إنشاء حسابات جديدة متوقف.":"الدخول برمز البريد غير متاح حاليًا. يمكن لأصحاب الحسابات السابقة استخدام كلمة المرور. لا تحتاج إلى حساب لفتح ملفات PDF محليًا.";
  }
- const setMode=next=>{
-  mode=next;el("accountEmailAlternative").hidden=next!=="login"||!emailReady;el("accountModeRegister").classList.toggle("selected",next==="register");
-  el("accountModeLogin").classList.toggle("selected",next==="login");
-  el("accountSendCode").textContent="إرسال رمز التحقق";
-  el("accountPasswordSubmit").textContent=next==="register"?"إنشاء حساب":"تسجيل الدخول";
-  el("accountPassword").setAttribute("autocomplete",next==="register"?"new-password":"current-password");
-  el("accountHeading").textContent=next==="register"?"إنشاء حساب جديد":"تسجيل الدخول";
-  el("accountOtpArea").hidden=true;el("accountOtp").value="";el("accountConfirmArea").hidden=true;el("accountPassword").disabled=false;el("accountEmail").disabled=false;el("accountPasswordSubmit").hidden=false;message("");
- };
- el("accountModeRegister").onclick=()=>setMode("register");
- el("accountModeLogin").onclick=()=>setMode("login");
  el("accountPasswordSubmit").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase(),password=el("accountPassword").value;
   if(password.length<12)throw Error("كلمة المرور يجب أن تكون 12 حرفًا على الأقل.");
   const deviceName=/Android/i.test(navigator.userAgent)?"Android":/iPhone|iPad/i.test(navigator.userAgent)?"iPhone / iPad":"حاسوب";
-  const result=await call("auth/password/"+mode,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,deviceName})});
+  await call("auth/password/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,deviceName})});
   el("accountPassword").value="";
-  if(mode==="register"&&result.verificationRequired){
-   el("accountConfirmArea").hidden=false;
-   el("accountPasswordSubmit").hidden=true;
-   el("accountEmail").disabled=true;
-   el("accountPassword").disabled=true;
-   message(result.message||"أرسلنا رمز التفعيل إلى بريدك الإلكتروني.");
-   el("accountConfirmCode").focus();
-   return;
-  }
   await session();message("تم تسجيل الدخول بنجاح.");
  });
- el("accountConfirmSubmit").onclick=()=>run(async()=>{
-  const email=el("accountEmail").value.trim().toLowerCase(),code=el("accountConfirmCode").value.trim();
-  if(!/^[0-9]{6}$/.test(code))throw Error("أدخل رمز التحقق المكون من 6 أرقام.");
-  const deviceName=/Android/i.test(navigator.userAgent)?"Android":/iPhone|iPad/i.test(navigator.userAgent)?"iPhone / iPad":"حاسوب";
-  await call("auth/password/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code,deviceName})});
-  el("accountConfirmCode").value="";
-  el("accountConfirmArea").hidden=true;
-  el("accountPasswordSubmit").hidden=false;
-  el("accountEmail").disabled=false;
-  el("accountPassword").disabled=false;
-  await session();
-  message("تم تأكيد البريد وإنشاء حسابك. يمكنك الآن تسجيل الدخول على أجهزتك.");
- });
- el("accountConfirmBack").onclick=()=>{
-  el("accountConfirmArea").hidden=true;el("accountPasswordSubmit").hidden=false;
-  el("accountEmail").disabled=false;el("accountPassword").disabled=false;
-  el("accountConfirmCode").value="";message("أعد إدخال كلمة المرور ثم اطلب رمز تأكيد جديد.");
- };
  el("accountSendCode").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase();
-  if(mode!=="login")throw Error("يُنشأ الحساب الجديد بكلمة مرور ثم يُؤكّد بالبريد.");
   const res=await call("auth/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,mode})});
   el("accountOtpArea").hidden=false;message(res.message||"أُرسل الرمز")
  });
@@ -98,7 +59,7 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
   const email=el("accountEmail").value.trim().toLowerCase(),code=el("accountOtp").value.trim();
   const deviceName=/Android/i.test(navigator.userAgent)?"Android":/iPhone|iPad/i.test(navigator.userAgent)?"iPhone / iPad":"حاسوب";
   await call("auth/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code,deviceName,mode})});
-  await session();message(mode==="register"?"تم إنشاء حسابك بنجاح. اختر طريقة استخدام ملفاتك.":"تم تسجيل دخولك بنجاح. اختر طريقة استخدام ملفاتك.")
+  await session();message("تم تسجيل دخولك بنجاح. اختر طريقة استخدام ملفاتك.")
  });
  el("accountEnableSync").onclick=()=>{if(!account)return;localStorage.setItem(consentKey(),"yes");draw();message("المزامنة مفعّلة على هذا الجهاز. ابدأها يدويًا من الزر.")};
  el("accountLocalOnly").onclick=()=>{if(!account)return;localStorage.setItem(consentKey(),"no");draw();message("ستبقى الملفات محلية فقط.")};
