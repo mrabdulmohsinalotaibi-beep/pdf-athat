@@ -238,7 +238,11 @@ function readerDimensions(pdfPage){
   ? Math.min(3,Math.max(.08,Math.min(readerViewportWidth()/v.width,readerViewportHeight()/v.height)*readerZoom))
   : Math.min(3,Math.max(.25,readerViewportWidth()/v.width*readerZoom));
  const viewport=pdfPage.getViewport({scale:cssScale});
- const ratio=Math.min(devicePixelRatio||1,2.5,Math.sqrt(8500000/Math.max(1,viewport.width*viewport.height)));
+ // Full-page desktop reading needs a high-resolution backing buffer, even on 1x displays.
+ // Limit total pixels and canvas edges to avoid out-of-memory failures on large PDF pages.
+ const ratio=desktopSingle()
+  ? Math.max(.5,Math.min(3,Math.max(2.25,devicePixelRatio||1),Math.sqrt(20000000/Math.max(1,viewport.width*viewport.height)),8192/Math.max(1,viewport.width),8192/Math.max(1,viewport.height)))
+  : Math.min(devicePixelRatio||1,2.5,Math.sqrt(8500000/Math.max(1,viewport.width*viewport.height)));
  return {viewport,ratio};
 }
 function updateReaderBookmark(){
