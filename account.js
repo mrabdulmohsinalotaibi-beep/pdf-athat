@@ -37,12 +37,22 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  const setMode=next=>{
   mode=next;el("accountModeRegister").classList.toggle("selected",next==="register");
   el("accountModeLogin").classList.toggle("selected",next==="login");
-  el("accountSendCode").textContent=next==="register"?"إنشاء حساب وإرسال رمز التحقق":"إرسال رمز تسجيل الدخول";
+  el("accountSendCode").textContent="إرسال رمز التحقق";
+  el("accountPasswordSubmit").textContent=next==="register"?"إنشاء حساب":"تسجيل الدخول";
+  el("accountPassword").setAttribute("autocomplete",next==="register"?"new-password":"current-password");
   el("accountHeading").textContent=next==="register"?"إنشاء حساب جديد":"تسجيل الدخول";
   el("accountOtpArea").hidden=true;el("accountOtp").value="";message("");
  };
  el("accountModeRegister").onclick=()=>setMode("register");
  el("accountModeLogin").onclick=()=>setMode("login");
+ el("accountPasswordSubmit").onclick=()=>run(async()=>{
+  const email=el("accountEmail").value.trim().toLowerCase(),password=el("accountPassword").value;
+  if(password.length<12)throw Error("كلمة المرور يجب أن تكون 12 حرفًا على الأقل.");
+  const deviceName=/Android/i.test(navigator.userAgent)?"Android":/iPhone|iPad/i.test(navigator.userAgent)?"iPhone / iPad":"حاسوب";
+  await call("auth/password/"+mode,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,deviceName})});
+  el("accountPassword").value="";
+  await session();message(mode==="register"?"تم إنشاء حسابك المستقل بنجاح.":"تم تسجيل الدخول بنجاح.");
+ });
  el("accountSendCode").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase();
   const res=await call("auth/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,mode})});
