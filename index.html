@@ -12,6 +12,7 @@
 <header class="appbar">
   <div class="app-brand"><button id="libraryToggle" class="icon-btn library-header-toggle" type="button" title="مكتبتي" aria-label="فتح مكتبتي" aria-controls="sidebar" aria-expanded="false">☷</button><span class="brand-icon" role="img" aria-label="شعار PDF.ATHAT"></span><div class="brand-text"><strong>PDF.ATHAT</strong><small>مساحتك الذكية للمستندات</small></div></div>
   <div class="header-actions">
+    <button id="accountButton" class="icon-btn" type="button" title="الحساب والمزامنة" aria-label="الحساب والمزامنة">♙</button>
     <button id="themeToggle" class="icon-btn optional-wide" type="button" title="الوضع الداكن" aria-label="الوضع الداكن">◐</button>
     <input type="file" id="file" accept=".pdf,application/pdf" hidden aria-label="اختيار ملف PDF جديد">
   </div>
@@ -133,5 +134,36 @@
   <div class="library-doc-actions"><button id="libraryDialogFavorite" type="button">☆ المفضلة</button><button id="libraryDialogDelete" type="button">نقل للمحذوفات</button></div>
   <div class="library-dialog-bottom"><button id="libraryDialogCancel" type="button">إلغاء</button><button id="libraryDialogSave" class="primary-btn" type="button">حفظ التغييرات</button></div>
  </form>
+</dialog>
+<dialog id="accountDialog" class="account-dialog" aria-labelledby="accountHeading">
+ <div class="account-box">
+  <div class="account-head"><h2 id="accountHeading">حساب PDF.ATHAT</h2><button id="accountClose" type="button" aria-label="إغلاق">×</button></div>
+  <p class="account-help">ملفاتك تبقى على جهازك. يمكنك ربط أجهزتك بنفس البريد وتفعيل المزامنة باختيارك فقط.</p>
+  <div id="accountGuest">
+   <label>البريد الإلكتروني<input id="accountEmail" type="email" autocomplete="email" dir="ltr" placeholder="name@example.com"></label>
+   <button id="accountSendCode" class="primary-btn" type="button">إرسال رمز التحقق</button>
+   <div id="accountOtpArea" hidden>
+    <label>رمز التحقق المكون من 6 أرقام<input id="accountOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label>
+    <button id="accountVerify" type="button" class="primary-btn">تأكيد البريد والدخول</button>
+   </div>
+  </div>
+  <div id="accountMember" hidden>
+   <p id="accountIdentity" class="account-identity"></p>
+   <p id="accountDevices" class="account-help"></p>
+   <div id="accountConsent" class="account-consent">
+    <strong>هل تريد المزامنة مع أجهزتك؟</strong>
+    <p>ستُرفع ملفات PDF وتعليقاتها فقط إلى مساحة خاصة بحسابك بعد موافقتك. يمكنك مواصلة الاستخدام المحلي دون مزامنة.</p>
+    <button id="accountEnableSync" class="primary-btn" type="button">تفعيل المزامنة على هذا الجهاز</button>
+    <button id="accountLocalOnly" type="button">الاستخدام على هذا الجهاز فقط</button>
+   </div>
+   <div id="accountSyncControls" hidden>
+    <p class="account-help">المزامنة اختيارية، ولا تحدث إلا عند ضغط الزر.</p>
+    <button id="accountSyncNow" type="button" class="primary-btn">مزامنة الملفات والتعليقات الآن</button>
+    <button id="accountDisableSync" type="button">إيقاف المزامنة على هذا الجهاز</button>
+   </div>
+   <button id="accountLogout" type="button" class="account-logout">تسجيل الخروج من الحساب</button>
+  </div>
+  <p id="accountFeedback" role="status" aria-live="polite"></p>
+ </div>
 </dialog>
 </body></html>
