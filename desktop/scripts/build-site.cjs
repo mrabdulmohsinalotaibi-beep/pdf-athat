@@ -6,10 +6,7 @@ const dist=path.resolve(__dirname,'../dist');
 const file=path.join(dist,'app-v2.js');
 if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
-const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','account.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
-// Keep the account code aligned with the version of the main application.
-if(!source.includes('from "./account.js"'))throw Error('Account module import missing');
-source=source.replace('from "./account.js"','from "./account.js?v='+version+'"');
+const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
 // Version the visual assets to bypass older service-worker caches on mobile devices.
@@ -26,7 +23,6 @@ fs.writeFileSync(htmlFile,html);
 source += '\nif("serviceWorker" in navigator){let refreshing=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!refreshing&&!active){refreshing=true;location.reload()}else if(active)tell("تحديث جديد للموقع متاح؛ احفظ تعليقاتك ثم أعد فتح الصفحة")});navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"}).then(reg=>reg.update()).catch(()=>{});}\n';
 // Parse the final client module and guard the continuous-reader controls during deployment.
 require('esbuild').transformSync(source,{loader:'js',format:'esm',target:'es2022'});
-require('esbuild').transformSync(fs.readFileSync(path.join(dist,'account.js'),'utf8'),{loader:'js',format:'esm',target:'es2022'});
 const htmlCheck=fs.readFileSync(htmlFile,'utf8');
 for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"']){
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
@@ -42,7 +38,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./','./index.html','./style.css','./app-v2.js','./account.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./account.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -54,7 +50,7 @@ self.addEventListener('fetch',e=>{
  e.respondWith((async()=>{
   const cache=await caches.open(CACHE);
   const cached=await cache.match(e.request);
-  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/account.js','/icon.svg','/manifest.webmanifest'].includes(u.pathname);
+  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/icon.svg','/manifest.webmanifest'].includes(u.pathname);
   if(cached&&!revalidate)return cached;
   try{
    const response=await fetch(e.request,revalidate?{cache:'no-store'}:{});

@@ -3,7 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'../..'),desktop=path.resolve(__dirname,'..'),out=path.join(desktop,'dist');
 const copy=(from,to)=>{fs.mkdirSync(path.dirname(to),{recursive:true});fs.cpSync(from,to,{recursive:true})};
 fs.rmSync(out,{recursive:true,force:true});fs.mkdirSync(out,{recursive:true});
-for(const name of ['index.html','style.css','app-v2.js','account.js','manifest.webmanifest','icon.svg']){
+for(const name of ['index.html','style.css','app-v2.js','manifest.webmanifest','icon.svg']){
  const src=path.join(root,name);if(!fs.existsSync(src))throw new Error('Missing application asset: '+name);
  copy(src,path.join(out,name));
 }
