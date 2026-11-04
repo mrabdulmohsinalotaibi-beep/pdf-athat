@@ -33,7 +33,7 @@
  <h1>اقرأ براحة. علّق بحرية.</h1>
  <p>كل ما تحتاجه لقراءة ملفات PDF والكتابة عليها، بتصميم يستغل شاشة الجوال واللوحي دون ازدحام.</p>
  <label class="primary-btn welcome-cta">＋ اختر ملف PDF<input type="file" id="file2" accept=".pdf,application/pdf" hidden></label>
- <button id="welcomeAccount" type="button" class="welcome-account">الدخول بالبريد وربط أجهزتي اختياريًا</button>
+ <button id="welcomeAccount" type="button" class="welcome-account">لدي حساب سابق (اختياري)</button>
  <div class="features"><span>✓ قراءة عربية</span><span>✓ قلم وتظليل</span><span>✓ حفظ محلي</span><span>✓ تنزيل PDF</span></div>
 </section>
 <section id="libraryPage" class="library-page" hidden aria-label="مكتبتي الرقمية">
@@ -139,18 +139,11 @@
 <dialog id="accountDialog" class="account-dialog" aria-labelledby="accountHeading">
  <div class="account-box">
   <div class="account-head"><h2 id="accountHeading">حساب PDF.ATHAT</h2><button id="accountClose" type="button" aria-label="إغلاق">×</button></div>
-  <p class="account-help">أنشئ حسابًا مستقلًا بالبريد وكلمة المرور، أو سجّل الدخول إلى حسابك الحالي. ملفاتك المحلية لن تُحذف.</p>
+  <p class="account-help">لا يلزم إنشاء حساب لاستخدام PDF.ATHAT. إذا كان لديك حساب سابق، يمكنك تسجيل الدخول للوصول إلى ملفاتك المتزامنة. ملفاتك المحلية لن تُحذف.</p>
   <div id="accountGuest">
-   <div class="account-mode-switch" role="group" aria-label="نوع الحساب"><button type="button" id="accountModeRegister" class="selected">إنشاء حساب جديد</button><button type="button" id="accountModeLogin">تسجيل الدخول</button></div>
    <label>البريد الإلكتروني<input id="accountEmail" type="email" autocomplete="email" dir="ltr" placeholder="name@example.com"></label>
-   <label>كلمة المرور (12 حرفًا على الأقل)<input id="accountPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="كلمة مرور قوية"></label>
-   <button id="accountPasswordSubmit" class="primary-btn" type="button">إنشاء حساب</button>
-   <div id="accountConfirmArea" hidden>
-    <p class="account-help">أرسلنا رمز تفعيل حسابك إلى البريد. اكتب الرمز المكوّن من 6 أرقام لتأكيد الحساب.</p>
-    <label>رمز تأكيد البريد الإلكتروني<input id="accountConfirmCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label>
-    <button id="accountConfirmSubmit" class="primary-btn" type="button">تأكيد البريد وإنشاء الحساب</button>
-    <button id="accountConfirmBack" type="button">تغيير البريد أو طلب رمز جديد</button>
-   </div>
+   <label>كلمة المرور (12 حرفًا على الأقل)<input id="accountPassword" type="password" autocomplete="current-password" minlength="12" maxlength="128" placeholder="كلمة مرور قوية"></label>
+   <button id="accountPasswordSubmit" class="primary-btn" type="button">تسجيل الدخول</button>
    <p class="account-help" id="accountServiceNotice" role="status"></p>
    <div id="accountEmailAlternative" class="account-email-alternative" hidden><button id="accountSendCode" type="button">إرسال رمز التحقق</button></div>
    <div id="accountOtpArea" hidden>
