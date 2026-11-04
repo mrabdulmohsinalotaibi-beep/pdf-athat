@@ -145,7 +145,13 @@
    <label>البريد الإلكتروني<input id="accountEmail" type="email" autocomplete="email" dir="ltr" placeholder="name@example.com"></label>
    <label>كلمة المرور (12 حرفًا على الأقل)<input id="accountPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="كلمة مرور قوية"></label>
    <button id="accountPasswordSubmit" class="primary-btn" type="button">إنشاء حساب</button>
-   <details class="account-email-alternative"><summary>الدخول برمز البريد (عند تفعيل خدمة البريد)</summary><button id="accountSendCode" class="primary-btn" type="button">إرسال رمز التحقق</button></details>
+   <div id="accountConfirmArea" hidden>
+    <p class="account-help">أرسلنا رمز تفعيل حسابك إلى البريد. اكتب الرمز المكوّن من 6 أرقام لتأكيد الحساب.</p>
+    <label>رمز تأكيد البريد الإلكتروني<input id="accountConfirmCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label>
+    <button id="accountConfirmSubmit" class="primary-btn" type="button">تأكيد البريد وإنشاء الحساب</button>
+    <button id="accountConfirmBack" type="button">تغيير البريد أو طلب رمز جديد</button>
+   </div>
+   <div class="account-email-alternative" hidden><button id="accountSendCode" type="button">إرسال رمز التحقق</button></div>
    <div id="accountOtpArea" hidden>
     <label>رمز التحقق المكون من 6 أرقام<input id="accountOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label>
     <button id="accountVerify" type="button" class="primary-btn">تأكيد البريد والدخول</button>
