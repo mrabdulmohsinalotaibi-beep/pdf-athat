@@ -27,6 +27,8 @@ const htmlCheck=fs.readFileSync(htmlFile,'utf8');
 for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"','id="readerBookmark"']){
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
 }
+// Guard against regression to low-resolution full-page desktop rendering.
+if(!source.includes('Math.max(2.25,devicePixelRatio||1)')||!source.includes('Math.sqrt(20000000/'))throw Error('High-DPI desktop full-page rendering missing');
 for(const marker of ['async function startContinuous()','async function renderDesktopSingle()','async function renderContinuousPage(','async function setReaderEditing(','function updateReaderBookmark()']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
 }
