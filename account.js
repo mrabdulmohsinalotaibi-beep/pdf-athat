@@ -33,6 +33,7 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
   if(!account){const h=await call("health");if(!h.otpReady)message("خدمة إرسال رموز البريد لم تُفعّل بعد. يمكنك استخدام الملفات محليًا.")}
  });
  el("accountClose").onclick=()=>el("accountDialog").close();
+ el("welcomeAccount").onclick=()=>el("accountButton").click();
  el("accountSendCode").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase();
   const res=await call("auth/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
@@ -72,6 +73,9 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
    const response=await fetch("/api/sync/document/"+encodeURIComponent(item.id),{credentials:"same-origin",cache:"no-store"});
    if(!response.ok)throw Error("تعذر استعادة "+item.name);
    const blob=await response.blob();
+   const bytes=await blob.arrayBuffer();
+   const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(b=>b.toString(16).padStart(2,"0")).join("");
+   if(hash!==item.sha256)throw Error("لم تنجح مراجعة سلامة المستند "+item.name);
    const file=new File([blob],item.name,{type:"application/pdf"});
    await save("documents",{id:item.id,name:item.name,file,updated:Date.now(),lastPage:item.page||1,deleted:false,favorite:false});down++
   }
@@ -83,4 +87,11 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
   }
   await notesRefresh();await refresh();return {up,down,skip}
  }
+ // When a device already has an active email session, offer consent once.
+ void session().then(()=>{
+  if(account&&localStorage.getItem(consentKey())===null&&!el("accountDialog").open){
+   el("accountDialog").showModal();
+   message("هذا الجهاز مرتبط ببريدك. اختر هل تريد مزامنة ملفاتك أم إبقاءها محلية.");
+  }
+ }).catch(()=>{});
 }
