@@ -53,10 +53,20 @@ async function passwordAction(context,action){
  if(action==="register"){
   const existing=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
   if(existing)return fail("هذا البريد مسجل بالفعل. اختر تسجيل الدخول.",409);
-  const salt=random(),hash=await derive(password,salt),userId=crypto.randomUUID();
-  await env.PDF_AUTH_DB.prepare("INSERT INTO users(id,email,created_at) VALUES(?,?,?)").bind(userId,email,now()).run();
-  await env.PDF_AUTH_DB.prepare("INSERT INTO password_credentials(user_id,salt,hash,iterations,created_at) VALUES(?,?,?,?,?)").bind(userId,salt,hash,ITERATIONS,now()).run();
-  return establishSession(env,userId,data.deviceName)
+  if(!env.RESEND_API_KEY||!env.OTP_FROM_EMAIL||!env.OTP_SECRET)return fail("إرسال رسائل تأكيد البريد لم يُفعّل بعد. يرجى التواصل مع إدارة الموقع.",503);
+  const salt=random(),hash=await derive(password,salt);
+  const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,"0");
+  const codeHash=await hmac(env.OTP_SECRET,"password-signup:"+email+":"+code);
+  await env.PDF_AUTH_DB.prepare("INSERT INTO pending_password_signups(email,salt,hash,iterations,code_hash,expires_at,attempts,created_at) VALUES(?,?,?,?,?,?,0,?) ON CONFLICT(email) DO UPDATE SET salt=excluded.salt,hash=excluded.hash,iterations=excluded.iterations,code_hash=excluded.code_hash,expires_at=excluded.expires_at,attempts=0,created_at=excluded.created_at").bind(email,salt,hash,ITERATIONS,codeHash,now()+600,now()).run();
+  const response=await fetch("https://api.resend.com/emails",{
+   method:"POST",headers:{"Authorization":"Bearer "+env.RESEND_API_KEY,"Content-Type":"application/json"},
+   body:JSON.stringify({from:env.OTP_FROM_EMAIL,to:[email],subject:"PDF.ATHAT - تأكيد البريد الإلكتروني",text:"رمز تفعيل حسابك في PDF.ATHAT: "+code+"\\nصالح لمدة 10 دقائق. إذا لم تطلب إنشاء حساب، تجاهل الرسالة."})
+  });
+  if(!response.ok){
+   await env.PDF_AUTH_DB.prepare("DELETE FROM pending_password_signups WHERE email=? AND code_hash=?").bind(email,codeHash).run();
+   return fail("تعذر إرسال رسالة التأكيد. تحقق من إعدادات البريد وأعد المحاولة.",502)
+  }
+  return json({ok:true,verificationRequired:true,message:"أرسلنا رمز التفعيل إلى بريدك. أدخله لإتمام إنشاء الحساب."})
  }
  const user=await env.PDF_AUTH_DB.prepare("SELECT u.id,p.salt,p.hash,p.iterations FROM users u JOIN password_credentials p ON p.user_id=u.id WHERE u.email=?").bind(email).first();
  if(!user){await derive(password,random());return fail("البريد أو كلمة المرور غير صحيحة.",401)}
@@ -66,6 +76,32 @@ async function passwordAction(context,action){
  let diff=a.length^b.length;for(let i=0;i<Math.max(a.length,b.length);i++)diff|=(a[i]||0)^(b[i]||0);
  if(diff!==0)return fail("البريد أو كلمة المرور غير صحيحة.",401);
  return establishSession(env,user.id,data.deviceName)
+}
+async function confirmSignup(context){
+ const {env,request}=context;
+ if(!env.OTP_SECRET)return fail("التحقق غير مهيأ.",503);
+ const data=await input(request,1500),email=cleanEmail(data?.email),code=String(data?.code||"");
+ if(!emailValid(email)||!/^[0-9]{6}$/.test(code))return fail("البريد أو رمز التحقق غير صحيح.",400);
+ const ip=request.headers.get("cf-connecting-ip")||"unknown";
+ if(!await throttle(env.PDF_AUTH_DB,"signup-verify:"+await hmac(env.OTP_SECRET,ip+":"+email),10,900))return fail("محاولات كثيرة، حاول لاحقًا.",429);
+ const pending=await env.PDF_AUTH_DB.prepare("SELECT salt,hash,iterations,code_hash,expires_at,attempts FROM pending_password_signups WHERE email=?").bind(email).first();
+ if(!pending||pending.expires_at<now()||pending.attempts>=5)return fail("الرمز غير صالح أو انتهى. أعد التسجيل للحصول على رمز جديد.",401);
+ await env.PDF_AUTH_DB.prepare("UPDATE pending_password_signups SET attempts=attempts+1 WHERE email=?").bind(email).run();
+ const expected=await hmac(env.OTP_SECRET,"password-signup:"+email+":"+code);
+ let mismatch=expected.length^pending.code_hash.length;
+ for(let i=0;i<Math.max(expected.length,pending.code_hash.length);i++)mismatch|=(expected.charCodeAt(i)||0)^(pending.code_hash.charCodeAt(i)||0);
+ if(mismatch)return fail("رمز التحقق غير صحيح.",401);
+ const already=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
+ if(already)return fail("هذا البريد مرتبط بحساب آخر. استخدم تسجيل الدخول.",409);
+ const id=crypto.randomUUID(),stamp=now();
+ try{
+  await env.PDF_AUTH_DB.batch([
+   env.PDF_AUTH_DB.prepare("INSERT INTO users(id,email,created_at) VALUES(?,?,?)").bind(id,email,stamp),
+   env.PDF_AUTH_DB.prepare("INSERT INTO password_credentials(user_id,salt,hash,iterations,created_at) VALUES(?,?,?,?,?)").bind(id,pending.salt,pending.hash,pending.iterations,stamp),
+   env.PDF_AUTH_DB.prepare("DELETE FROM pending_password_signups WHERE email=?").bind(email)
+  ]);
+ }catch(error){console.error("signup confirm",error);return fail("لم يكتمل إنشاء الحساب، حاول مجددًا.",409)}
+ return establishSession(env,id,data.deviceName)
 }
 async function requestCode(context){
  const {request,env}=context;
@@ -123,10 +159,11 @@ export async function onRequest(context){
   const origin=request.headers.get("origin");
   if(origin&&origin!==new URL(request.url).origin)return fail("مصدر الطلب غير مسموح.",403);
  }
- if(path.join("/")==="health"&&method==="GET")return json({ok:true,otpReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET)});
+ if(path.join("/")==="health"&&method==="GET")return json({ok:true,otpReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET),signupVerificationReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET)});
  try{
   if(path.join("/")==="auth/password/register"&&method==="POST")return await passwordAction(context,"register");
   if(path.join("/")==="auth/password/login"&&method==="POST")return await passwordAction(context,"login");
+  if(path.join("/")==="auth/password/confirm"&&method==="POST")return await confirmSignup(context);
   if(path.join("/")==="auth/request"&&method==="POST")return await requestCode(context);
   if(path.join("/")==="auth/verify"&&method==="POST")return await verifyCode(context);
   if(path.join("/")==="auth/logout"&&method==="POST")return await logout(context);
