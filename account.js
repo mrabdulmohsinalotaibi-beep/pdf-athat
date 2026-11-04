@@ -30,7 +30,7 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  }
  el("accountButton").onclick=()=>run(async()=>{
   el("accountDialog").showModal();await session();
-  if(!account){const h=await call("health");if(!h.otpReady)message("خدمة إرسال رموز البريد لم تُفعّل بعد. يمكنك استخدام الملفات محليًا.")}
+  // Password registration and login work independently of the optional email-code service.
  });
  el("accountClose").onclick=()=>el("accountDialog").close();
  el("welcomeAccount").onclick=()=>el("accountButton").click();
