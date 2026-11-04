@@ -2,7 +2,7 @@ import * as pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pd
 import {PDFDocument,rgb,StandardFonts} from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
 pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs";
 const $=id=>document.getElementById(id),c=$("pdfCanvas"),ink=$("inkCanvas"),ctx=ink.getContext("2d");
-let readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="list",librarySearch="",librarySort="recent",libraryFoldersDefault=["الكتب","المراجع","العمل"],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
+let readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="list",librarySearch="",librarySort="recent",libraryFoldersDefault=[],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
 const tell=t=>{$("message").textContent=t||"";$("message").hidden=!t},isMobile=()=>innerWidth<=700;
 const desktopReaderKey="pdf-athat-desktop-reader-v1";
 const desktopReaderDefaults={view:"single",fit:"page",autoHide:true,expanded:true};
@@ -38,7 +38,7 @@ async function refresh(){let docs=await getAll("documents");$("count").textConte
 
 /* IndexedDB is kept unchanged; folders are stored as per-document labels and portable backups. */
 try{const f=JSON.parse(localStorage.getItem("pdfathat-folders")||"[]");if(Array.isArray(f))libraryCustomFolders=f.filter(x=>typeof x==="string"&&x.trim()&&x.length<41)}catch(e){console.warn(e)}
-const folderList=()=>[...new Set([...libraryFoldersDefault,...libraryCustomFolders])];
+const folderList=()=>[...new Set(libraryCustomFolders)];
 const saveFolders=()=>{try{localStorage.setItem("pdfathat-folders",JSON.stringify(libraryCustomFolders))}catch(e){console.warn(e)}};
 function libNode(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
 function showLibrary(){if(active){closeDocument();return}document.documentElement.classList.remove("reader-open");$("viewer").hidden=true;$("welcome").hidden=true;$("libraryPage").hidden=false;$("sidebar").classList.remove("open");$("backdrop").hidden=true;void renderLibrary()}
@@ -79,7 +79,7 @@ $("libraryDialogDelete").onclick=async()=>{const d=(await getAll("documents")).f
 $("libraryDialogSave").onclick=async()=>{const d=(await getAll("documents")).find(x=>x.id===libraryDialogId);if(!d)return;let n=$("libraryRename").value.trim();if(!n)return tell("اكتب اسم الملف");if(!/\.pdf$/i.test(n))n+=".pdf";d.name=n;d.folders=[...$("libraryDocFolders").querySelectorAll("input:checked")].map(x=>x.value);d.updated=Date.now();await save("documents",d);$("libraryDocDialog").close();await refresh()};
 function libraryFileCard(d,comments){
  const article=libNode("article","library-book-card"),open=libNode("button","library-book-open");open.type="button";open.onclick=()=>d.deleted?docDialog(d):openLibraryDocument(d);open.append(libraryCover(d));
- const info=libNode("div","library-book-details");info.append(libNode("strong","library-book-name",d.name),libNode("small","library-book-meta",(d.lastPage>1?"صفحة "+d.lastPage:"ملف PDF")+(comments?" · "+comments+" تعليق":"")));
+ const info=libNode("div","library-book-details");info.append(libNode("strong","library-book-name",d.name),libNode("small","library-book-meta",(d.lastPage>1?"صفحة "+d.lastPage:"ملف PDF")+(comments?" · "+comments+" تعليق":"")+(d.bookmarkPage?" · 🔖 فاصل: "+d.bookmarkPage:"")));
  if(d.totalPages>1&&d.lastPage>1){const track=libNode("div","library-book-progress"),bar=libNode("span");bar.style.width=Math.min(100,Math.round(d.lastPage/d.totalPages*100))+"%";track.append(bar);info.append(track)}
  open.append(info);const more=libNode("button","library-book-menu","⋯");more.type="button";more.title="تنظيم "+d.name;more.onclick=()=>docDialog(d);article.append(open,more);return article
 }
@@ -87,7 +87,7 @@ let librarySeq=0;
 async function renderLibrary(){
  if(!db)return;const seq=++librarySeq,docs=await getAll("documents");if(seq!==librarySeq)return;const activeDocs=docs.filter(d=>!d.deleted),notes=await getAll("strokes");if(seq!==librarySeq)return;const noteCount=new Map();for(const n of notes)noteCount.set(n.documentId,(noteCount.get(n.documentId)||0)+1);
  const folders=$("libraryFolders");folders.replaceChildren();
- const folderItems=[{name:"كل الملفات",key:"",icon:"▤",count:activeDocs.length},...folderList().map(n=>({name:n,key:n,icon:n==="الكتب"?"▥":"▰",count:activeDocs.filter(d=>d.folders?.includes(n)).length})),{name:"غير مصنف",key:"__none",icon:"◫",count:activeDocs.filter(d=>!d.folders?.length).length}];
+ const folderItems=[{name:"كل الملفات",key:"",icon:"▤",count:activeDocs.length},...folderList().map(n=>({name:n,key:n,icon:"▰",count:activeDocs.filter(d=>d.folders?.includes(n)).length}))];
  for(const f of folderItems){const card=libNode("div","library-folder-card"+(libraryTab==="all"&&libraryFolder===f.key?" selected":"")),button=libNode("button","library-folder-open");button.type="button";button.append(libNode("span","library-folder-icon",f.icon),libNode("span","library-folder-label",f.name),libNode("small","library-folder-count",String(f.count)));button.onclick=()=>librarySelect("all",f.key);card.append(button);
  if(libraryCustomFolders.includes(f.key)){const del=libNode("button","library-folder-delete","×");del.title="حذف مجلد مع إبقاء ملفاته";del.onclick=async()=>{if(!confirm("حذف المجلد دون حذف ملفاته؟"))return;libraryCustomFolders=libraryCustomFolders.filter(n=>n!==f.key);saveFolders();for(const d of activeDocs)if(d.folders?.includes(f.key)){d.folders=d.folders.filter(n=>n!==f.key);await save("documents",d)}if(libraryFolder===f.key)libraryFolder="";void renderLibrary()};card.append(del)}folders.append(card)}
  const managing=libraryTab==="manage";$("libraryManage").hidden=!managing;$("libraryFilesTitle").parentElement.hidden=managing;$("librarySearch").parentElement.hidden=managing;$("libraryCards").hidden=managing;$("libraryFolders").hidden=managing;$("libraryNewFolder").parentElement.hidden=managing;
@@ -162,7 +162,7 @@ let editing=false;
 async function undo(){if(editing||!active)return;const h=history.at(-1);if(!h||h.stroke.documentId!==active.id)return;editing=true;try{if(h.type==="add")await remove("strokes",h.stroke.id);else await save("strokes",h.stroke);if(h.type==="add")strokes=strokes.filter(s=>s.id!==h.stroke.id);else strokes.push(h.stroke);if(!active||active.id!==h.stroke.documentId)return;history.pop();redo.push(h);paint();updateNotes()}catch(e){console.error(e);tell("تعذر التراجع؛ لم تتغير الكتابات المحفوظة")}finally{editing=false}}
 async function redoOp(){if(editing||!active)return;const h=redo.at(-1);if(!h||h.stroke.documentId!==active.id)return;editing=true;try{if(h.type==="add")await save("strokes",h.stroke);else await remove("strokes",h.stroke.id);if(h.type==="add")strokes.push(h.stroke);else strokes=strokes.filter(s=>s.id!==h.stroke.id);if(!active||active.id!==h.stroke.documentId)return;redo.pop();history.push(h);paint();updateNotes()}catch(e){console.error(e);tell("تعذرت الإعادة؛ لم تتغير الكتابات المحفوظة")}finally{editing=false}}
 $("undo").onclick=undo;$("redo").onclick=redoOp;
-async function go(delta){if(!pdf||!active)return;page=Math.min(pdf.numPages,Math.max(1,page+delta));active.lastPage=page;active.updated=Date.now();await save("documents",active);if(!readerEditing&&["original","pdfjs"].includes(fontMode))readerGoTo(page);else render()}
+async function go(delta){if(!pdf||!active)return;page=Math.min(pdf.numPages,Math.max(1,page+delta));updateReaderBookmark();active.lastPage=page;active.updated=Date.now();await save("documents",active);if(!readerEditing&&["original","pdfjs"].includes(fontMode))readerGoTo(page);else render()}
 $("prev").onclick=()=>go(-1);$("next").onclick=()=>go(1);
 $("pageJump").onclick=()=>{if(!pdf)return;const n=Number(prompt("رقم الصفحة (1 إلى "+pdf.numPages+")",page));if(Number.isInteger(n)&&n>=1&&n<=pdf.numPages)go(n-page)};
 $("minus").onclick=()=>{autoFit=false;scale=Math.max(.3,scale-.15);render()};$("plus").onclick=()=>{autoFit=false;scale=Math.min(3,scale+.15);render()};$("fit").onclick=()=>{autoFit=true;render()};
@@ -241,8 +241,16 @@ function readerDimensions(pdfPage){
  const ratio=Math.min(devicePixelRatio||1,2.5,Math.sqrt(8500000/Math.max(1,viewport.width*viewport.height)));
  return {viewport,ratio};
 }
+function updateReaderBookmark(){
+ const marked=Number.isInteger(active?.bookmarkPage)&&active.bookmarkPage>0;
+ $("readerBookmark").textContent=marked&&active.bookmarkPage===page?"🔖 تحديث فاصل القراءة (الصفحة "+page+")":"🔖 وضع فاصل عند الصفحة "+page;
+ $("readerBookmarkGo").hidden=!marked;
+ $("readerBookmarkClear").hidden=!marked;
+ if(marked)$("readerBookmarkGo").textContent="↩ العودة إلى فاصل القراءة: "+active.bookmarkPage;
+}
 function readerInfo(){
  $("readerPageInfo").textContent=page+" / "+(pdf?.numPages||1);
+ updateReaderBookmark();
  $("readerFab").textContent=readerEditing?"✓":"✎";
  $("readerFab").title=readerEditing?"إنهاء التعليق والعودة للقراءة":"الكتابة والتظليل على الصفحة";
  $("readerFab").setAttribute("aria-label",$("readerFab").title);
@@ -430,6 +438,27 @@ $("readerOriginal").onclick=()=>{$("readerOptions").hidden=true;$("downloadOrigi
 $("readerExport").onclick=()=>{$("readerOptions").hidden=true;$("download").click()};
 $("readerEngines").onclick=()=>{$("readerOptions").hidden=true;showPanel("fontPanel")};
 $("readerToggleInk").onclick=()=>{$("readerOptions").hidden=true;$("toggleInk").click();refreshReaderOverlays()};
+$("readerBookmark").onclick=async()=>{
+ if(!active||!pdf)return;
+ active.bookmarkPage=page;
+ await save("documents",active);
+ updateReaderBookmark();
+ $("readerOptions").hidden=true;
+ tell("حُفظ فاصل القراءة عند الصفحة "+page+" على هذا الجهاز");
+};
+$("readerBookmarkGo").onclick=async()=>{
+ if(!active||!pdf||!Number.isInteger(active.bookmarkPage))return;
+ $("readerOptions").hidden=true;
+ await go(active.bookmarkPage-page);
+};
+$("readerBookmarkClear").onclick=async()=>{
+ if(!active)return;
+ delete active.bookmarkPage;
+ await save("documents",active);
+ updateReaderBookmark();
+ $("readerOptions").hidden=true;
+ tell("أُزيل فاصل القراءة");
+};
 $("readerZoomOut").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)$("minus").click();else{readerZoom=Math.max(.5,readerZoom-.15);startContinuous()}};
 $("readerZoomIn").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)$("plus").click();else{readerZoom=Math.min(2.5,readerZoom+.15);startContinuous()}};
 $("readerFit").onclick=()=>{$("readerOptions").hidden=true;readerZoom=1;if(readerEditing)$("fit").click();else startContinuous()};
