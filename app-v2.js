@@ -109,7 +109,7 @@ for(const [id,name]of [["showAll","all"],["showFav","fav"],["showTrash","trash"]
 function closeDocument(){history=[];redo=[];draft=null;stopContinuous();renderSeq++;loadSeq++;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=null;pdf=null;document.documentElement.classList.remove("reader-open");$("viewer").classList.remove("immersive");$("viewer").hidden=true;$("welcome").hidden=true;if(nativeURL){URL.revokeObjectURL(nativeURL);nativeURL=null}closePanel();toggleSidebar(false);showLibrary()}
 async function addFile(file){if(!file)return;try{if(file.size>75*1024*1024)throw Error("الحد الأقصى 75 ميجابايت");const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");const d={id:crypto.randomUUID(),name:file.name,file,updated:Date.now(),lastPage:1,deleted:false,favorite:false};await save("documents",d);await activate(d)}catch(e){tell(e.message||"تعذر فتح المستند")}}
 for(const id of ["file","file2","file3"])$(id).onchange=e=>{addFile(e.target.files[0]);e.target.value=""};
-async function activate(d){history=[];redo=[];draft=null;chooseTool("pointer");const seq=++loadSeq;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=d;pdf=null;$("libraryPage").hidden=true;page=d.lastPage||1;setImmersive(true);autoFit=true;readerEditing=false;readerZoom=1;applyDesktopReader();$("viewer").classList.add("reading-mode");$("viewer").classList.remove("editing-mode");$("readerOptions").hidden=true;fontMode="original";$("textReader").hidden=true;$("nativePreview").hidden=true;$("sheet").hidden=false;$("name").textContent=d.name;$("readerFileName").textContent=d.name;$("viewer").hidden=false;$("welcome").hidden=true;$("favorite").textContent=d.favorite?"★":"☆";$("nativePreview").hidden=true;$("sheet").hidden=false;if(nativeURL)URL.revokeObjectURL(nativeURL);nativeURL=URL.createObjectURL(d.file);$("nativeFrame").src=nativeURL;tell("");try{const newpdf=await pdfjs.getDocument({data:new Uint8Array(await d.file.arrayBuffer()),useSystemFonts:false,disableFontFace:false,cMapUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/cmaps/",cMapPacked:true,standardFontDataUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/standard_fonts/",useWasm:true,wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/wasm/"}).promise;if(seq!==loadSeq){newpdf.destroy();return}pdf=newpdf;page=Math.min(Math.max(page,1),pdf.numPages);if(d.totalPages!==pdf.numPages){d.totalPages=pdf.numPages;await save("documents",d)}try{pdfiumImport??=import("./pdfium-adapter.js");const {createPdfiumDocument}=await pdfiumImport;const engine=await createPdfiumDocument(new Uint8Array(await d.file.arrayBuffer()));if(seq!==loadSeq){engine.destroy();return}if(engine.pages!==pdf.numPages){engine.destroy();throw Error("PDFium page count mismatch")}pdfiumDoc=engine}catch(error){console.warn("PDFium unavailable, using PDF.js",error);fontMode="pdfjs";tell("تعذر تشغيل PDFium لهذا الملف؛ تم استخدام PDF.js بدلًا منه")}await startContinuous();refresh()}catch(e){console.error(e);tell("تعذر عرض المستند، جرب فتح الملف الأصلي من خيارات الخط") }}
+async function activate(d){history=[];redo=[];draft=null;chooseTool("pointer");const seq=++loadSeq;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=d;pdf=null;$("libraryPage").hidden=true;page=d.lastPage||1;setImmersive(true);autoFit=true;readerEditing=false;readerZoom=1;applyDesktopReader();$("viewer").classList.add("reading-mode");$("viewer").classList.remove("editing-mode");$("readerOptions").hidden=true;fontMode=desktopSingle()?"pdfjs":"original";$("textReader").hidden=true;$("nativePreview").hidden=true;$("sheet").hidden=false;$("name").textContent=d.name;$("readerFileName").textContent=d.name;$("viewer").hidden=false;$("welcome").hidden=true;$("favorite").textContent=d.favorite?"★":"☆";$("nativePreview").hidden=true;$("sheet").hidden=false;if(nativeURL)URL.revokeObjectURL(nativeURL);nativeURL=URL.createObjectURL(d.file);$("nativeFrame").src=nativeURL;tell("");try{const newpdf=await pdfjs.getDocument({data:new Uint8Array(await d.file.arrayBuffer()),useSystemFonts:false,disableFontFace:false,cMapUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/cmaps/",cMapPacked:true,standardFontDataUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/standard_fonts/",useWasm:true,wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/wasm/"}).promise;if(seq!==loadSeq){newpdf.destroy();return}pdf=newpdf;page=Math.min(Math.max(page,1),pdf.numPages);if(d.totalPages!==pdf.numPages){d.totalPages=pdf.numPages;await save("documents",d)}try{pdfiumImport??=import("./pdfium-adapter.js");const {createPdfiumDocument}=await pdfiumImport;const engine=await createPdfiumDocument(new Uint8Array(await d.file.arrayBuffer()));if(seq!==loadSeq){engine.destroy();return}if(engine.pages!==pdf.numPages){engine.destroy();throw Error("PDFium page count mismatch")}pdfiumDoc=engine}catch(error){console.warn("PDFium unavailable, using PDF.js",error);fontMode="pdfjs";tell("تعذر تشغيل PDFium لهذا الملف؛ تم استخدام PDF.js بدلًا منه")}await startContinuous();refresh()}catch(e){console.error(e);tell("تعذر عرض المستند، جرب فتح الملف الأصلي من خيارات الخط") }}
 function fitWidth(p){const width=$("desk").clientWidth-(isMobile()?16:48)-(isMobile()?44:0);return Math.min(3,Math.max(.3,width/p.getViewport({scale:1}).width))}
 async function render(){if(!pdf)return;if(fontMode==="text"){await renderArabicText();return}const seq=++renderSeq;try{renderTask?.cancel();const p=await pdf.getPage(page);if(seq!==renderSeq)return;if(autoFit)scale=fitWidth(p);const v=p.getViewport({scale}),ratio=Math.min(devicePixelRatio||1,3,Math.sqrt(16000000/Math.max(1,v.width*v.height)));c.width=ink.width=Math.ceil(v.width*ratio);c.height=ink.height=Math.ceil(v.height*ratio);for(const el of [c,ink]){el.style.width=v.width+"px";el.style.height=v.height+"px"}$("sheet").style.width=v.width+"px";$("sheet").style.height=v.height+"px";if(fontMode==="original"&&pdfiumDoc&&v.rotation===0){try{
  const bitmap=await pdfiumDoc.renderPage(page,scale*ratio);
@@ -241,7 +241,7 @@ function readerDimensions(pdfPage){
  // Full-page desktop reading needs a high-resolution backing buffer, even on 1x displays.
  // Limit total pixels and canvas edges to avoid out-of-memory failures on large PDF pages.
  const ratio=desktopSingle()
-  ? Math.max(.5,Math.min(3,Math.max(2.25,devicePixelRatio||1),Math.sqrt(20000000/Math.max(1,viewport.width*viewport.height)),8192/Math.max(1,viewport.width),8192/Math.max(1,viewport.height)))
+  ? Math.max(.5,Math.min(3.5,Math.max(3,devicePixelRatio||1),Math.sqrt(24000000/Math.max(1,viewport.width*viewport.height)),8192/Math.max(1,viewport.width),8192/Math.max(1,viewport.height)))
   : Math.min(devicePixelRatio||1,2.5,Math.sqrt(8500000/Math.max(1,viewport.width*viewport.height)));
  return {viewport,ratio};
 }
@@ -299,8 +299,8 @@ async function renderDesktopSingle(){
  const node=document.createElement("section");
  node.className="read-page";node.dataset.page=String(n);
  node.setAttribute("aria-label","صفحة "+n);
- node.style.width=Math.ceil(viewport.width)+"px";
- node.style.height=Math.ceil(viewport.height)+"px";
+ node.style.width=viewport.width+"px";
+ node.style.height=viewport.height+"px";
  root.replaceChildren(node);
  readerNodes[n]=node;
  root.hidden=false;$("sheet").hidden=true;$("nativePreview").hidden=true;$("textReader").hidden=true;
@@ -347,10 +347,10 @@ async function renderContinuousPage(n,token){
  const el=readerNodes[n],p=await pdf.getPage(n);
  if(token!==continuousToken||!el)return;
  const {viewport,ratio}=readerDimensions(p),width=Math.ceil(viewport.width*ratio),height=Math.ceil(viewport.height*ratio);
- const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;canvas.style.width="100%";canvas.style.height="100%";
- el.style.width=Math.round(viewport.width)+"px";el.style.height=Math.round(viewport.height)+"px";
+ const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;canvas.style.width=viewport.width+"px";canvas.style.height=viewport.height+"px";
+ el.style.width=viewport.width+"px";el.style.height=viewport.height+"px";
  let ok=false;
- if(fontMode==="original"&&pdfiumDoc&&viewport.rotation===0){
+ if(fontMode==="original"&&!desktopSingle()&&pdfiumDoc&&viewport.rotation===0){
   try{
    const bitmap=await pdfiumDoc.renderPage(n,viewport.scale*ratio);
    if(token!==continuousToken)return;
@@ -367,7 +367,7 @@ async function renderContinuousPage(n,token){
  if(token!==continuousToken||readerNodes[n]!==el)return;
  const overlay=document.createElement("canvas");
  overlay.className="read-annotation";overlay.width=canvas.width;overlay.height=canvas.height;
- overlay.style.width="100%";overlay.style.height="100%";
+ overlay.style.width=viewport.width+"px";overlay.style.height=viewport.height+"px";
  el.replaceChildren(canvas,overlay);el.classList.add("rendered");delete el.dataset.error;
  paintReaderOverlay(overlay,n);
 }
