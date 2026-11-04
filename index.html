@@ -139,11 +139,13 @@
 <dialog id="accountDialog" class="account-dialog" aria-labelledby="accountHeading">
  <div class="account-box">
   <div class="account-head"><h2 id="accountHeading">حساب PDF.ATHAT</h2><button id="accountClose" type="button" aria-label="إغلاق">×</button></div>
-  <p class="account-help">أنشئ حسابًا بالبريد الإلكتروني، أو سجّل الدخول إلى حسابك الحالي برمز تحقق. ملفاتك المحلية لن تُحذف.</p>
+  <p class="account-help">أنشئ حسابًا مستقلًا بالبريد وكلمة المرور، أو سجّل الدخول إلى حسابك الحالي. ملفاتك المحلية لن تُحذف.</p>
   <div id="accountGuest">
    <div class="account-mode-switch" role="group" aria-label="نوع الحساب"><button type="button" id="accountModeRegister" class="selected">إنشاء حساب جديد</button><button type="button" id="accountModeLogin">تسجيل الدخول</button></div>
    <label>البريد الإلكتروني<input id="accountEmail" type="email" autocomplete="email" dir="ltr" placeholder="name@example.com"></label>
-   <button id="accountSendCode" class="primary-btn" type="button">إنشاء حساب وإرسال رمز التحقق</button>
+   <label>كلمة المرور (12 حرفًا على الأقل)<input id="accountPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="كلمة مرور قوية"></label>
+   <button id="accountPasswordSubmit" class="primary-btn" type="button">إنشاء حساب</button>
+   <details class="account-email-alternative"><summary>الدخول برمز البريد (عند تفعيل خدمة البريد)</summary><button id="accountSendCode" class="primary-btn" type="button">إرسال رمز التحقق</button></details>
    <div id="accountOtpArea" hidden>
     <label>رمز التحقق المكون من 6 أرقام<input id="accountOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label>
     <button id="accountVerify" type="button" class="primary-btn">تأكيد البريد والدخول</button>
