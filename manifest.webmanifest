@@ -9,7 +9,7 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "./icon.svg",
+      "src": "./icon.svg?logo=vector-20261104",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
