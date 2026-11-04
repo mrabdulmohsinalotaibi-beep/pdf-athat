@@ -1,3 +1,4 @@
+import {setupAccountUI} from "./account.js";
 import * as pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.min.mjs";
 import {PDFDocument,rgb,StandardFonts} from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
 pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs";
@@ -388,6 +389,8 @@ $("readerZoomOut").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)
 $("readerZoomIn").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)$("plus").click();else{readerZoom=Math.min(2.5,readerZoom+.15);startContinuous()}};
 $("readerFit").onclick=()=>{$("readerOptions").hidden=true;readerZoom=1;if(readerEditing)$("fit").click();else startContinuous()};
 $("readerPageInfo").onclick=()=>{$("pageJump").click()};
+
+setupAccountUI({getAll,save,refresh,notesRefresh:async()=>{strokes=await getAll("strokes");if(active)paint()}});
 
 // Original PDF viewing does not re-typeset the document or alter embedded fonts.
 $("fontOpenOriginal").onclick=()=>{if(!active)return;const url=URL.createObjectURL(active.file);const win=window.open(url,"_blank","noopener,noreferrer");if(!win){const link=document.createElement("a");link.href=url;link.download=active.name;link.click();tell("إذا تعذر فتح الملف في تبويب جديد، سيتم تنزيل الأصل للقراءة بتطبيق PDF")}setTimeout(()=>URL.revokeObjectURL(url),120000)};
