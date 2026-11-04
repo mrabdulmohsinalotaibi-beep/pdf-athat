@@ -27,7 +27,7 @@ const htmlCheck=fs.readFileSync(htmlFile,'utf8');
 for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"']){
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
 }
-for(const marker of ['async function startContinuous()','async function renderContinuousPage(','async function setReaderEditing(']){
+for(const marker of ['async function startContinuous()','async function renderDesktopSingle()','async function renderContinuousPage(','async function setReaderEditing(']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
 }
 for(const marker of ['id="libraryPage"','id="librarySearch"','id="libraryFolders"','id="libraryCards"','id="libraryListView"','id="libraryGridView"','id="libraryDocDialog"','id="file3"']){
