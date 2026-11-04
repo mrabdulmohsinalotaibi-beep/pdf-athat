@@ -106,10 +106,10 @@ async function renderLibrary(){
 }
 
 for(const [id,name]of [["showAll","all"],["showFav","fav"],["showTrash","trash"]])$(id).onclick=()=>{filter=name;for(const x of ["showAll","showFav","showTrash"])$(x).classList.toggle("selected",x===id);refresh()};
-function closeDocument(){history=[];redo=[];draft=null;stopContinuous();renderSeq++;loadSeq++;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=null;pdf=null;document.documentElement.classList.remove("reader-open");$("viewer").classList.remove("immersive");$("viewer").hidden=true;$("welcome").hidden=true;if(nativeURL){URL.revokeObjectURL(nativeURL);nativeURL=null}closePanel();toggleSidebar(false);showLibrary()}
+function closeDocument(){history=[];redo=[];draft=null;stopContinuous();renderSeq++;loadSeq++;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=null;pdf=null;document.documentElement.classList.remove("reader-open");$("viewer").classList.remove("immersive","native-reading");$("viewer").hidden=true;$("welcome").hidden=true;if(nativeURL){URL.revokeObjectURL(nativeURL);nativeURL=null}closePanel();toggleSidebar(false);showLibrary()}
 async function addFile(file){if(!file)return;try{if(file.size>75*1024*1024)throw Error("الحد الأقصى 75 ميجابايت");const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");const d={id:crypto.randomUUID(),name:file.name,file,updated:Date.now(),lastPage:1,deleted:false,favorite:false};await save("documents",d);await activate(d)}catch(e){tell(e.message||"تعذر فتح المستند")}}
 for(const id of ["file","file2","file3"])$(id).onchange=e=>{addFile(e.target.files[0]);e.target.value=""};
-async function activate(d){history=[];redo=[];draft=null;chooseTool("pointer");const seq=++loadSeq;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=d;pdf=null;$("libraryPage").hidden=true;page=d.lastPage||1;setImmersive(true);autoFit=true;readerEditing=false;readerZoom=1;applyDesktopReader();$("viewer").classList.add("reading-mode");$("viewer").classList.remove("editing-mode");$("readerOptions").hidden=true;fontMode=desktopSingle()?"pdfjs":"original";$("textReader").hidden=true;$("nativePreview").hidden=true;$("sheet").hidden=false;$("name").textContent=d.name;$("readerFileName").textContent=d.name;$("viewer").hidden=false;$("welcome").hidden=true;$("favorite").textContent=d.favorite?"★":"☆";$("nativePreview").hidden=true;$("sheet").hidden=false;if(nativeURL)URL.revokeObjectURL(nativeURL);nativeURL=URL.createObjectURL(d.file);$("nativeFrame").src=nativeURL;tell("");try{const newpdf=await pdfjs.getDocument({data:new Uint8Array(await d.file.arrayBuffer()),useSystemFonts:false,disableFontFace:false,cMapUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/cmaps/",cMapPacked:true,standardFontDataUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/standard_fonts/",useWasm:true,wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/wasm/"}).promise;if(seq!==loadSeq){newpdf.destroy();return}pdf=newpdf;page=Math.min(Math.max(page,1),pdf.numPages);if(d.totalPages!==pdf.numPages){d.totalPages=pdf.numPages;await save("documents",d)}try{pdfiumImport??=import("./pdfium-adapter.js");const {createPdfiumDocument}=await pdfiumImport;const engine=await createPdfiumDocument(new Uint8Array(await d.file.arrayBuffer()));if(seq!==loadSeq){engine.destroy();return}if(engine.pages!==pdf.numPages){engine.destroy();throw Error("PDFium page count mismatch")}pdfiumDoc=engine}catch(error){console.warn("PDFium unavailable, using PDF.js",error);fontMode="pdfjs";tell("تعذر تشغيل PDFium لهذا الملف؛ تم استخدام PDF.js بدلًا منه")}await startContinuous();refresh()}catch(e){console.error(e);tell("تعذر عرض المستند، جرب فتح الملف الأصلي من خيارات الخط") }}
+async function activate(d){history=[];redo=[];draft=null;chooseTool("pointer");const seq=++loadSeq;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=d;pdf=null;$("libraryPage").hidden=true;page=d.lastPage||1;setImmersive(true);autoFit=true;readerEditing=false;readerZoom=1;applyDesktopReader();$("viewer").classList.add("reading-mode");$("viewer").classList.remove("editing-mode");$("readerOptions").hidden=true;fontMode=isDesktopReader()?"native":"original";$("textReader").hidden=true;$("nativePreview").hidden=true;$("sheet").hidden=false;$("name").textContent=d.name;$("readerFileName").textContent=d.name;$("viewer").hidden=false;$("welcome").hidden=true;$("favorite").textContent=d.favorite?"★":"☆";$("nativePreview").hidden=true;$("sheet").hidden=false;if(nativeURL)URL.revokeObjectURL(nativeURL);nativeURL=URL.createObjectURL(d.file);$("nativeFrame").src=isDesktopReader()?nativeURL+"#view=Fit&page="+page:nativeURL;tell("");try{const newpdf=await pdfjs.getDocument({data:new Uint8Array(await d.file.arrayBuffer()),useSystemFonts:false,disableFontFace:false,cMapUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/cmaps/",cMapPacked:true,standardFontDataUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/standard_fonts/",useWasm:true,wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/wasm/"}).promise;if(seq!==loadSeq){newpdf.destroy();return}pdf=newpdf;page=Math.min(Math.max(page,1),pdf.numPages);if(d.totalPages!==pdf.numPages){d.totalPages=pdf.numPages;await save("documents",d)}if(!isDesktopReader())try{pdfiumImport??=import("./pdfium-adapter.js");const {createPdfiumDocument}=await pdfiumImport;const engine=await createPdfiumDocument(new Uint8Array(await d.file.arrayBuffer()));if(seq!==loadSeq){engine.destroy();return}if(engine.pages!==pdf.numPages){engine.destroy();throw Error("PDFium page count mismatch")}pdfiumDoc=engine}catch(error){console.warn("PDFium unavailable, using PDF.js",error);fontMode="pdfjs";tell("تعذر تشغيل PDFium لهذا الملف؛ تم استخدام PDF.js بدلًا منه")}if(isDesktopReader())showNativeReader();else await startContinuous();refresh()}catch(e){console.error(e);tell("تعذر عرض المستند، جرب فتح الملف الأصلي من خيارات الخط") }}
 function fitWidth(p){const width=$("desk").clientWidth-(isMobile()?16:48)-(isMobile()?44:0);return Math.min(3,Math.max(.3,width/p.getViewport({scale:1}).width))}
 async function render(){if(!pdf)return;if(fontMode==="text"){await renderArabicText();return}const seq=++renderSeq;try{renderTask?.cancel();const p=await pdf.getPage(page);if(seq!==renderSeq)return;if(autoFit)scale=fitWidth(p);const v=p.getViewport({scale}),ratio=Math.min(devicePixelRatio||1,3,Math.sqrt(16000000/Math.max(1,v.width*v.height)));c.width=ink.width=Math.ceil(v.width*ratio);c.height=ink.height=Math.ceil(v.height*ratio);for(const el of [c,ink]){el.style.width=v.width+"px";el.style.height=v.height+"px"}$("sheet").style.width=v.width+"px";$("sheet").style.height=v.height+"px";if(fontMode==="original"&&pdfiumDoc&&v.rotation===0){try{
  const bitmap=await pdfiumDoc.renderPage(page,scale*ratio);
@@ -212,7 +212,35 @@ window.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.
 try{db=await openDB();strokes=await getAll("strokes");await refresh();if((await getAll("documents")).some(d=>!d.deleted))showLibrary();document.documentElement.dataset.ready="yes"}catch(e){console.error(e);tell("التخزين المحلي غير متاح في المتصفح");document.documentElement.dataset.ready="storage-error"}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
 
-function setFontMode(mode){fontMode=mode;const native=mode==="native",text=mode==="text";if(mode==="original"&&!pdfiumDoc){tell("PDFium غير متاح؛ سيتم العرض باستخدام PDF.js");mode="pdfjs";fontMode=mode}$("nativePreview").hidden=!native;$("textReader").hidden=!text;$("sheet").hidden=native||text;chooseTool("pointer");closePanel();$("fontStatus").textContent=mode==="original"?"محرك PDFium نشط":mode==="pdfjs"?"محرك PDF.js البديل نشط":mode==="native"?"يستخدم عارض الجهاز؛ لا يمكن الرسم هنا":"وضع قراءة عربية بخط الجهاز، وقد يختلف ترتيب الفقرات عن PDF";if(text){readerEditing=false;$("viewer").classList.remove("reading-mode");$("viewer").classList.add("editing-mode");renderArabicText()}else if(mode==="original"||mode==="pdfjs"){if(readerEditing)render();else startContinuous()}else tell("عارض الجهاز: إذا لم تظهر الصفحات، نزّل الملف وافتحه بتطبيق PDF على الجهاز")};
+function showNativeReader(){
+ if(!active||!nativeURL)return;
+ stopContinuous();
+ readerEditing=false;
+ fontMode="native";
+ applyDesktopReader();
+ $("viewer").classList.remove("editing-mode");
+ $("viewer").classList.add("reading-mode","native-reading");
+ $("continuousReader").hidden=true;
+ $("sheet").hidden=true;
+ $("textReader").hidden=true;
+ $("nativePreview").hidden=false;
+ $("nativeFrame").src=nativeURL+"#view=Fit&page="+page;
+ $("readerFab").title="الانتقال إلى وضع التعليق على الملف";
+ readerInfo();
+}
+function setFontMode(mode){
+ if(mode==="native"){showNativeReader();closePanel();return}
+ $("viewer").classList.remove("native-reading");
+ fontMode=mode;
+ if(mode==="original"&&!pdfiumDoc){mode="pdfjs";fontMode=mode}
+ $("nativePreview").hidden=true;
+ $("textReader").hidden=mode!=="text";
+ $("sheet").hidden=mode==="text";
+ chooseTool("pointer");closePanel();
+ $("fontStatus").textContent=mode==="original"?"محرك PDFium نشط":mode==="pdfjs"?"محرك PDF.js نشط":"وضع القراءة النصية";
+ if(mode==="text"){readerEditing=false;$("viewer").classList.remove("reading-mode");$("viewer").classList.add("editing-mode");renderArabicText()}
+ else if(readerEditing)render();else startContinuous()
+}
 $("fontFix").onclick=()=>showPanel("fontPanel");
 $("fontNormal").onclick=()=>setFontMode("original");$("fontPdfjs").onclick=()=>setFontMode("pdfjs");
 $("fontText").onclick=()=>setFontMode("text");
@@ -413,6 +441,7 @@ function onContinuousScroll(){
 }
 async function setReaderEditing(enabled){
  if(!pdf||!active)return;
+ if(enabled&&fontMode==="native"){fontMode="pdfjs";$("viewer").classList.remove("native-reading");$("nativePreview").hidden=true}
  if(enabled&&!["original","pdfjs"].includes(fontMode)){tell("اختر عرض PDFium أو PDF.js قبل التحرير");return}
  readerEditing=enabled;
  applyDesktopReader();
@@ -426,7 +455,7 @@ async function setReaderEditing(enabled){
   $("desk").scrollTop=0;
  }else{
   $("viewer").classList.remove("editing-mode");$("viewer").classList.add("reading-mode");
-  $("sheet").hidden=true;await startContinuous()
+  $("sheet").hidden=true;if(isDesktopReader())showNativeReader();else await startContinuous()
  }
  readerInfo();
 }
@@ -467,6 +496,11 @@ $("readerZoomOut").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)
 $("readerZoomIn").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)$("plus").click();else{readerZoom=Math.min(2.5,readerZoom+.15);startContinuous()}};
 $("readerFit").onclick=()=>{$("readerOptions").hidden=true;readerZoom=1;if(readerEditing)$("fit").click();else startContinuous()};
 $("readerPageInfo").onclick=()=>{$("pageJump").click()};
+$("readerOpenNativeTab").onclick=()=>{
+ if(!nativeURL)return;
+ const popup=window.open(nativeURL+"#view=Fit&page="+page,"_blank","noopener,noreferrer");
+ if(!popup)tell("اسمح بفتح التبويبات المنبثقة أو نزّل الملف لفتحه في عارض المتصفح");
+};
 $("viewer").addEventListener("pointermove",event=>{
  if(!desktopSingle()||!desktopReaderSettings.autoHide)return;
  $("viewer").classList.toggle("desktop-controls-visible",event.clientY<=84);
