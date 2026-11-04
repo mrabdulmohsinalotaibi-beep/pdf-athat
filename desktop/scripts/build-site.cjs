@@ -24,10 +24,10 @@ source += '\nif("serviceWorker" in navigator){let refreshing=false;navigator.ser
 // Parse the final client module and guard the continuous-reader controls during deployment.
 require('esbuild').transformSync(source,{loader:'js',format:'esm',target:'es2022'});
 const htmlCheck=fs.readFileSync(htmlFile,'utf8');
-for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"']){
+for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"','id="readerBookmark"']){
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
 }
-for(const marker of ['async function startContinuous()','async function renderDesktopSingle()','async function renderContinuousPage(','async function setReaderEditing(']){
+for(const marker of ['async function startContinuous()','async function renderDesktopSingle()','async function renderContinuousPage(','async function setReaderEditing(','function updateReaderBookmark()']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
 }
 for(const marker of ['id="libraryPage"','id="librarySearch"','id="libraryFolders"','id="libraryCards"','id="libraryListView"','id="libraryGridView"','id="libraryDocDialog"','id="file3"']){
