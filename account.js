@@ -1,7 +1,7 @@
 // Account dialog and explicit permission. Never synchronize without opting in.
 export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  const el=id=>document.getElementById(id);
- let account=null,busy=false;
+ let account=null,busy=false,mode="register";
  const message=t=>{el("accountFeedback").textContent=t||""};
  const call=async(path,options={})=>{
   const response=await fetch("/api/"+path,{credentials:"same-origin",cache:"no-store",...options});
@@ -34,16 +34,25 @@ export function setupAccountUI({getAll,save,refresh,notesRefresh}){
  });
  el("accountClose").onclick=()=>el("accountDialog").close();
  el("welcomeAccount").onclick=()=>el("accountButton").click();
+ const setMode=next=>{
+  mode=next;el("accountModeRegister").classList.toggle("selected",next==="register");
+  el("accountModeLogin").classList.toggle("selected",next==="login");
+  el("accountSendCode").textContent=next==="register"?"إنشاء حساب وإرسال رمز التحقق":"إرسال رمز تسجيل الدخول";
+  el("accountHeading").textContent=next==="register"?"إنشاء حساب جديد":"تسجيل الدخول";
+  el("accountOtpArea").hidden=true;el("accountOtp").value="";message("");
+ };
+ el("accountModeRegister").onclick=()=>setMode("register");
+ el("accountModeLogin").onclick=()=>setMode("login");
  el("accountSendCode").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase();
-  const res=await call("auth/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});
+  const res=await call("auth/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,mode})});
   el("accountOtpArea").hidden=false;message(res.message||"أُرسل الرمز")
  });
  el("accountVerify").onclick=()=>run(async()=>{
   const email=el("accountEmail").value.trim().toLowerCase(),code=el("accountOtp").value.trim();
   const deviceName=/Android/i.test(navigator.userAgent)?"Android":/iPhone|iPad/i.test(navigator.userAgent)?"iPhone / iPad":"حاسوب";
-  await call("auth/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code,deviceName})});
-  await session();message("تم التحقق من البريد. اختر طريقة استخدام ملفاتك.")
+  await call("auth/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,code,deviceName,mode})});
+  await session();message(mode==="register"?"تم إنشاء حسابك بنجاح. اختر طريقة استخدام ملفاتك.":"تم تسجيل دخولك بنجاح. اختر طريقة استخدام ملفاتك.")
  });
  el("accountEnableSync").onclick=()=>{if(!account)return;localStorage.setItem(consentKey(),"yes");draw();message("المزامنة مفعّلة على هذا الجهاز. ابدأها يدويًا من الزر.")};
  el("accountLocalOnly").onclick=()=>{if(!account)return;localStorage.setItem(consentKey(),"no");draw();message("ستبقى الملفات محلية فقط.")};
