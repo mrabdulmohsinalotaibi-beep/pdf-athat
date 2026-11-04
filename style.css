@@ -254,9 +254,8 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
  .reader-open .viewer.desktop-single .continuous-pages .read-page{flex:none;max-width:100%;max-height:100%;scroll-margin-top:0;box-shadow:0 5px 22px #0002}
  .reader-open .viewer.desktop-expanded .reader-topbar{position:absolute;top:0;left:0;right:0;z-index:29}
  .reader-open .viewer.desktop-auto-hide.reading-mode .reader-topbar{opacity:0;transform:translateY(-100%);transition:opacity .2s,transform .2s;pointer-events:none}
- .reader-open .viewer.desktop-auto-hide.reading-mode:hover .reader-topbar,
- .reader-open .viewer.desktop-auto-hide.reading-mode .reader-topbar:focus-within,
- .reader-open .viewer.desktop-auto-hide.reading-mode .reader-topbar:hover{opacity:1;transform:none;pointer-events:auto}
+ .reader-open .viewer.desktop-auto-hide.reading-mode.desktop-controls-visible .reader-topbar,
+ .reader-open .viewer.desktop-auto-hide.reading-mode .reader-topbar:focus-within{opacity:1;transform:none;pointer-events:auto}
  .reader-open .viewer.desktop-expanded .reader-page-info{bottom:16px;right:18px;opacity:.65}
  .reader-open .viewer.desktop-expanded .reader-fab{bottom:16px;left:18px;width:45px;height:45px;min-height:45px;font-size:23px;opacity:.55;transition:opacity .2s}
  .reader-open .viewer.desktop-expanded .reader-fab:hover,
