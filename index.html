@@ -72,6 +72,16 @@
   <button type="button" id="readerOpenFile">＋ فتح ملف PDF آخر</button>
   <button type="button" id="readerOriginal">⇩ تنزيل الملف الأصلي</button>
   <button type="button" id="readerExport">⇩ تنزيل مع التعليقات</button>
+  <label class="reader-mode-label" for="readerModeSelect">طريقة تقليب الصفحات</label>
+  <select id="readerModeSelect" aria-label="طريقة تقليب الصفحات">
+   <option value="single">صفحة واحدة كاملة</option>
+   <option value="spread">كتاب مفتوح — صفحتان</option>
+   <option value="vertical">تمرير رأسي متصل</option>
+   <option value="flip">تقليب ورقي ثلاثي الأبعاد</option>
+   <option value="horizontal">سحب أفقي</option>
+   <option value="grid">شبكة الصفحات المصغرة</option>
+  </select>
+  <label class="reader-rtl-control"><input id="readerRTLToggle" type="checkbox" checked> التقليب العربي من اليمين إلى اليسار</label>
   <button type="button" id="readerEngines">◫ محركات عرض PDF</button>
   <button type="button" id="readerOpenNativeTab">↗ فتح PDF في تبويب المتصفح الأصلي</button>
   <button type="button" id="readerToggleInk">◉ إظهار / إخفاء التعليقات</button>
@@ -108,6 +118,7 @@
  </div>
  </div>
  <button id="readerFab" class="reader-fab" type="button" aria-label="بدء التعليق على الصفحة" title="الكتابة والتظليل">✎</button>
+ <div class="reader-page-navigation" aria-label="التنقل بين الصفحات"><button id="readerPagePrev" type="button" title="الصفحة السابقة" aria-label="الصفحة السابقة">‹</button><button id="readerPageNext" type="button" title="الصفحة التالية" aria-label="الصفحة التالية">›</button></div>
  <button id="readerPageInfo" class="reader-page-info" type="button" title="الانتقال إلى صفحة" aria-label="الانتقال إلى صفحة">1 / 1</button>
  <div id="toolSettings" class="tool-settings" hidden><span id="toolLabel">القلم</span><label class="color-label">اللون <input id="color" type="color" value="#e87824" aria-label="لون الأداة"></label><label class="size-label">السماكة <input id="strokeSize" type="range" min="1" max="18" value="3"></label><button id="undo" class="subtle-btn">↶ تراجع</button><button id="redo" class="subtle-btn">↷ إعادة</button></div>
  <div class="bottom-reader"><button id="bottomFiles">▤<small>الملفات</small></button><button id="bottomSearch">⌕<small>البحث</small></button><button id="bottomRead" class="selected">▣<small>القراءة</small></button><button id="bottomNotes">▧<small>التعليقات</small></button><button id="bottomTools">✎<small>الأدوات</small></button></div>
