@@ -162,10 +162,10 @@ let editing=false;
 async function undo(){if(editing||!active)return;const h=history.at(-1);if(!h||h.stroke.documentId!==active.id)return;editing=true;try{if(h.type==="add")await remove("strokes",h.stroke.id);else await save("strokes",h.stroke);if(h.type==="add")strokes=strokes.filter(s=>s.id!==h.stroke.id);else strokes.push(h.stroke);if(!active||active.id!==h.stroke.documentId)return;history.pop();redo.push(h);paint();updateNotes()}catch(e){console.error(e);tell("تعذر التراجع؛ لم تتغير الكتابات المحفوظة")}finally{editing=false}}
 async function redoOp(){if(editing||!active)return;const h=redo.at(-1);if(!h||h.stroke.documentId!==active.id)return;editing=true;try{if(h.type==="add")await save("strokes",h.stroke);else await remove("strokes",h.stroke.id);if(h.type==="add")strokes.push(h.stroke);else strokes=strokes.filter(s=>s.id!==h.stroke.id);if(!active||active.id!==h.stroke.documentId)return;redo.pop();history.push(h);paint();updateNotes()}catch(e){console.error(e);tell("تعذرت الإعادة؛ لم تتغير الكتابات المحفوظة")}finally{editing=false}}
 $("undo").onclick=undo;$("redo").onclick=redoOp;
-async function go(delta){
+async function go(delta,turn=false){
  if(!pdf||!active)return;
  const previous=page;
- const step=readerMode==="spread"?(delta>=0?2:-2):delta;
+ const step=readerMode==="spread"&&turn?(delta>=0?2:-2):delta;
  page=Math.min(pdf.numPages,Math.max(1,page+step));
  updateReaderBookmark();active.lastPage=page;active.updated=Date.now();await save("documents",active);
  if(!readerEditing&&fontMode==="native"){readerInfo();$("nativeFrame").src=nativeURL+"#view=Fit&page="+page}
@@ -313,7 +313,7 @@ function readerInfo(){
  $("viewer").dataset.readerMode=readerMode;
  $("viewer").classList.toggle("reader-rtl",readerRTL);
  $("readerPagePrev").disabled=page<=1;
- $("readerPageNext").disabled=!pdf||page>=pdf.numPages;
+ $("readerPageNext").disabled=!pdf||(readerMode==="spread"?page+1>=pdf.numPages:page>=pdf.numPages);
  updateReaderBookmark();
  $("readerFab").textContent=readerEditing?"✓":"✎";
  $("readerFab").title=readerEditing?"إنهاء التعليق والعودة للقراءة":"الكتابة والتظليل على الصفحة";
@@ -390,7 +390,7 @@ async function setReaderMode(next){
  if(!pdf||!active||!["single","spread","vertical","flip","horizontal","grid"].includes(next))return;
  readerMode=next;active.readerMode=next;active.readerRTL=readerRTL;
  if(next==="spread"&&page%2===0)page=Math.max(1,page-1);
- await save("documents",active);
+ active.lastPage=page;await save("documents",active);
  $("readerOptions").hidden=true;
  $("viewer").classList.remove("native-reading");
  applyDesktopReader();
@@ -559,8 +559,8 @@ $("readerZoomOut").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)
 $("readerZoomIn").onclick=()=>{$("readerOptions").hidden=true;if(readerEditing)$("plus").click();else{readerZoom=Math.min(2.5,readerZoom+.15);startContinuous()}};
 $("readerFit").onclick=()=>{$("readerOptions").hidden=true;readerZoom=1;if(readerEditing)$("fit").click();else startContinuous()};
 $("readerPageInfo").onclick=()=>{$("pageJump").click()};
-$("readerPagePrev").onclick=()=>void go(-1);
-$("readerPageNext").onclick=()=>void go(1);
+$("readerPagePrev").onclick=()=>void go(-1,true);
+$("readerPageNext").onclick=()=>void go(1,true);
 $("readerModeSelect").onchange=e=>void setReaderMode(e.target.value);
 $("readerRTLToggle").onchange=async e=>{
  readerRTL=e.target.checked;
@@ -578,7 +578,7 @@ $("desk").addEventListener("touchend",e=>{
  const deltaX=e.changedTouches[0].clientX-touchStart.x,deltaY=e.changedTouches[0].clientY-touchStart.y;
  touchStart=null;
  if(Math.abs(deltaX)<65||Math.abs(deltaX)<Math.abs(deltaY)*1.4)return;
- void go(deltaX*(readerRTL?1:-1)>0?1:-1);
+ void go(deltaX*(readerRTL?1:-1)>0?1:-1,true);
 },{passive:true});
 $("readerOpenNativeTab").onclick=()=>{
  if(!nativeURL)return;
@@ -594,8 +594,8 @@ document.addEventListener("keydown",event=>{
  if(!active||!isDesktopReader()||!isPagedLayout()||readerMode==="grid"||readerEditing||event.altKey||event.ctrlKey||event.metaKey)return;
  const target=event.target;
  if(target?.closest?.("input,textarea,select,[contenteditable],dialog[open]"))return;
- if(event.key==="ArrowRight"||event.key==="PageUp"){event.preventDefault();void go(-1)}
- else if(event.key==="ArrowLeft"||event.key==="PageDown"||event.key===" "){event.preventDefault();void go(1)}
+ if(event.key==="ArrowRight"||event.key==="PageUp"){event.preventDefault();void go(-1,true)}
+ else if(event.key==="ArrowLeft"||event.key==="PageDown"||event.key===" "){event.preventDefault();void go(1,true)}
  else if(event.key==="Home"){event.preventDefault();void go(1-page)}
  else if(event.key==="End"){event.preventDefault();void go(pdf.numPages-page)}
 });
@@ -605,7 +605,7 @@ $("desk").addEventListener("wheel",event=>{
  const stamp=performance.now();
  if(stamp-($("desk")._lastPageWheel||0)<450)return;
  $("desk")._lastPageWheel=stamp;
- void go(event.deltaY>0?1:-1);
+ void go(event.deltaY>0?1:-1,true);
 },{passive:false});
 
 // Original PDF viewing does not re-typeset the document or alter embedded fonts.
