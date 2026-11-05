@@ -29,8 +29,9 @@ for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
 }
 // Guard against regression to low-resolution full-page desktop rendering.
-if(!source.includes('fontMode=isDesktopReader()?"native":"original"')||!source.includes('function showNativeReader()')||!source.includes('nativeURL+"#view=Fit&page="'))throw Error('Native browser PDF reader not wired for desktop');
-for(const marker of ['async function startContinuous()','async function renderDesktopSingle()','async function renderContinuousPage(','async function setReaderEditing(','function updateReaderBookmark()']){
+if(!source.includes('function showNativeReader()')||!source.includes('nativeURL+"#view=Fit&page="')||!source.includes('readerMode==="single"'))throw Error('Native browser PDF reader not wired for single-page desktop mode');
+for(const mode of ['single','spread','vertical','flip','horizontal','grid'])if(!html.includes('<option value="'+mode+'">'))throw Error('Missing PDF reading mode '+mode);
+for(const marker of ['async function startContinuous()','async function renderPagedMode()','async function setReaderMode(','async function renderContinuousPage(','async function setReaderEditing(','function updateReaderBookmark()']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
 }
 for(const marker of ['id="libraryPage"','id="librarySearch"','id="libraryFolders"','id="libraryCards"','id="libraryListView"','id="libraryGridView"','id="libraryDocDialog"','id="file3"']){
