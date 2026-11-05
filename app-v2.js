@@ -353,11 +353,14 @@ async function startContinuous(){
 async function renderPagedMode(){
  if(!pdf||!active||readerEditing)return;
  const token=continuousToken,root=$("continuousReader"),numbers=activePagedNumbers();
+ $("desk").scrollTop=readerMode==="grid"?0:$("desk").scrollTop;
  const nodes=document.createDocumentFragment();
+ const sample=readerMode==="grid"?await pdf.getPage(1):null;
+ if(token!==continuousToken)return;
+ const sampleViewport=sample?readerDimensions(sample).viewport:null;
  for(const n of numbers){
-  const p=await pdf.getPage(n);
+  const viewport=sampleViewport||(await pdf.getPage(n).then(p=>readerDimensions(p).viewport));
   if(token!==continuousToken)return;
-  const {viewport}=readerDimensions(p);
   const node=document.createElement("section");
   node.className="read-page";node.dataset.page=String(n);
   node.setAttribute("aria-label","صفحة "+n);
@@ -380,11 +383,13 @@ async function renderPagedMode(){
    for(const entry of entries)if(entry.isIntersecting)readerQueuePage(Number(entry.target.dataset.page),token);
   },{root:$("desk"),rootMargin:"200px",threshold:0});
   for(const n of numbers)readerObserver.observe(readerNodes[n]);
+  readerQueuePage(Math.max(1,Math.min(numbers.length,page)),token,true);
  }else for(const n of numbers)readerQueuePage(n,token,true);
 }
 async function setReaderMode(next){
  if(!pdf||!active||!["single","spread","vertical","flip","horizontal","grid"].includes(next))return;
  readerMode=next;active.readerMode=next;active.readerRTL=readerRTL;
+ if(next==="spread"&&page%2===0)page=Math.max(1,page-1);
  await save("documents",active);
  $("readerOptions").hidden=true;
  $("viewer").classList.remove("native-reading");
