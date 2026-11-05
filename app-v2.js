@@ -86,6 +86,10 @@ function libraryFileCard(d,comments){
 let librarySeq=0;
 async function renderLibrary(){
  if(!db)return;const seq=++librarySeq,docs=await getAll("documents");if(seq!==librarySeq)return;const activeDocs=docs.filter(d=>!d.deleted),notes=await getAll("strokes");if(seq!==librarySeq)return;const noteCount=new Map();for(const n of notes)noteCount.set(n.documentId,(noteCount.get(n.documentId)||0)+1);
+ $("libraryStatsAll").textContent=String(activeDocs.length);
+ $("libraryStatsFolders").textContent=String(folderList().length);
+ $("libraryStatsBookmarks").textContent=String(activeDocs.filter(d=>Number.isInteger(d.bookmarkPage)&&d.bookmarkPage>0).length);
+ $("libraryStatsFav").textContent=String(activeDocs.filter(d=>d.favorite).length);
  const folders=$("libraryFolders");folders.replaceChildren();
  const folderItems=[{name:"كل الملفات",key:"",icon:"▤",count:activeDocs.length},...folderList().map(n=>({name:n,key:n,icon:"▰",count:activeDocs.filter(d=>d.folders?.includes(n)).length}))];
  for(const f of folderItems){const card=libNode("div","library-folder-card"+(libraryTab==="all"&&libraryFolder===f.key?" selected":"")),button=libNode("button","library-folder-open");button.type="button";button.append(libNode("span","library-folder-icon",f.icon),libNode("span","library-folder-label",f.name),libNode("small","library-folder-count",String(f.count)));button.onclick=()=>librarySelect("all",f.key);card.append(button);
