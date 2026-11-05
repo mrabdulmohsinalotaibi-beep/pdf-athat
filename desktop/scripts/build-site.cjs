@@ -24,6 +24,7 @@ source += '\nif("serviceWorker" in navigator){let refreshing=false;navigator.ser
 // Parse the final client module and guard the continuous-reader controls during deployment.
 require('esbuild').transformSync(source,{loader:'js',format:'esm',target:'es2022'});
 const htmlCheck=fs.readFileSync(htmlFile,'utf8');
+for(const marker of ['id="readerModeSelect"','id="readerRTLToggle"','id="readerPagePrev"','id="readerPageNext"'])if(!html.includes(marker))throw Error('Missing page-turning option '+marker);
 for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"','id="readerBookmark"']){
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
 }
