@@ -34,6 +34,7 @@ for(const mode of ['single','spread','vertical','flip','horizontal','grid'])if(!
 for(const marker of ['async function startContinuous()','async function renderPagedMode()','async function setReaderMode(','async function renderContinuousPage(','async function setReaderEditing(','function updateReaderBookmark()']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
 }
+for(const id of ['libraryStatsAll','libraryStatsFolders','libraryStatsBookmarks','libraryStatsFav'])if(!htmlCheck.includes('id="'+id+'"'))throw Error('Library overview missing '+id);
 for(const marker of ['id="libraryPage"','id="librarySearch"','id="libraryFolders"','id="libraryCards"','id="libraryListView"','id="libraryGridView"','id="libraryDocDialog"','id="file3"']){
  if(!htmlCheck.includes(marker))throw Error('Library UI missing '+marker);
 }
