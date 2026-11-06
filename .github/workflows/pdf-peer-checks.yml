@@ -23,7 +23,9 @@ jobs:
           node --check desktop/scripts/build-site.cjs
       - name: Check no cloud PDF storage and isolated scope
         run: node sync/test-guardrails.cjs
-      - name: Build offline site without enabling sync
+      - name: Smoke test Pages auth and device signaling
+        run: node sync/test-api.mjs
+      - name: Build offline site with same-origin device sync
         run: |
           cd desktop
           npm install --ignore-scripts --no-audit --no-fund
