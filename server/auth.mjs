@@ -58,12 +58,13 @@ async function readBody(request) {
 }
 async function limit(db, key, maximum, seconds) {
  const time = now();
- await statement(db, `INSERT INTO pdf_email_limits(key,count,expires_at) VALUES(?,1,?)
+ // One atomic D1 query instead of INSERT/UPDATE plus SELECT, with the same
+ // per-key rolling window and rate limit. Do not remove brute-force protection.
+ const row = await statement(db, `INSERT INTO pdf_email_limits(key,count,expires_at) VALUES(?,1,?)
  ON CONFLICT(key) DO UPDATE SET count=CASE WHEN expires_at<=? THEN 1 ELSE count+1 END,
- expires_at=CASE WHEN expires_at<=? THEN excluded.expires_at ELSE expires_at END`,
- key, time + seconds, time, time).run();
- const row = await statement(db, 'SELECT count FROM pdf_email_limits WHERE key=?', key).first();
- if (row.count > maximum) fail('محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.', 429);
+ expires_at=CASE WHEN expires_at<=? THEN excluded.expires_at ELSE expires_at END
+ RETURNING count`, key, time + seconds, time, time).first();
+ if (!row || row.count > maximum) fail('محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.', 429);
 }
 function cookie(token, seconds = SESSION_SECONDS) {
  return `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${seconds}`;
