@@ -16,6 +16,14 @@ for(const [fileName,attribute] of [['style.css','href'],['icon.svg','href'],['ma
  if(!html.includes(oldValue))throw Error('Expected HTML reference missing: '+oldValue);
  html=html.replace(oldValue,attribute+'="./'+fileName+'?v='+version+'"');
 }
+// Account pairing is web-only: desktop's offline origin remains untouched.
+const peerSource=path.resolve(__dirname,'../../sync/peer-client.js');
+if(!fs.existsSync(peerSource))throw Error('Missing peer transfer client');
+fs.copyFileSync(peerSource,path.join(dist,'peer-client.js'));
+const syncApi=process.env.PDF_ATHAT_SYNC_API||'';
+if(syncApi&&!/^https:\/\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(syncApi))throw Error('Invalid PDF_ATHAT_SYNC_API');
+fs.writeFileSync(path.join(dist,'sync-config.js'),'globalThis.PDF_ATHAT_SYNC_API='+JSON.stringify(syncApi)+';');
+html=html.replace('</body>','<script src="./sync-config.js?v='+version+'"></script><script src="./peer-client.js?v='+version+'"></script></body>');
 fs.writeFileSync(htmlFile,html);
 
 // build:offline removes the Electron-incompatible service-worker call, so the
@@ -51,7 +59,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./','./sync-config.js','./peer-client.js','./sync-config.js?v='+version,'./peer-client.js?v='+version,'./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
