@@ -41,6 +41,8 @@ for(const marker of ['async function startContinuous()','async function renderPa
 }
 for(const id of ['libraryStatsAll','libraryStatsFolders','libraryStatsBookmarks','libraryStatsFav'])if(!htmlCheck.includes('id="'+id+'"'))throw Error('Library overview missing '+id);
 for(const marker of ['id="manageDetail"','id="manageFileList"','id="manageDefaultMode"','id="manageStorageSize"','id="manageCheckDuplicates"'])if(!htmlCheck.includes(marker))throw Error('Management UI missing '+marker);
+for(const marker of ['id="libraryQuickAdd"','id="libraryQuickFolder"','id="libraryQuickContinue"','class="library-hero-art"','class="library-section-heading library-folders-heading"'])if(!htmlCheck.includes(marker))throw Error('Responsive library redesign missing '+marker);
+for(const marker of ['latestResumeDocument','effectiveLayout','library-quick-actions'])if(!(source+cssCheck).includes(marker))throw Error('Responsive library integration missing '+marker);
 for(const marker of ['id="libraryPage"','id="librarySearch"','id="libraryFolders"','id="libraryCards"','id="libraryListView"','id="libraryGridView"','id="libraryDocDialog"','id="file3"']){
  if(!htmlCheck.includes(marker))throw Error('Library UI missing '+marker);
 }
