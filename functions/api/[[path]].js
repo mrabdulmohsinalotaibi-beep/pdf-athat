@@ -159,7 +159,7 @@ export async function onRequest(context){
  const path=parsePath(context),method=request.method;
  if(method!=="GET"&&method!=="HEAD"){
   const origin=request.headers.get("origin");
-  if(origin&&origin!==new URL(request.url).origin)return fail("مصدر الطلب غير مسموح.",403);
+  if(!origin||origin!==new URL(request.url).origin)return fail("مصدر الطلب غير مسموح.",403);
  }
  if(path.join("/")==="health"&&method==="GET")return json({ok:true,otpReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET),signupVerificationReady:Boolean(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET)});
  try{
