@@ -2,7 +2,7 @@ import * as pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pd
 import {PDFDocument,rgb,StandardFonts} from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
 pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs";
 const $=id=>document.getElementById(id),c=$("pdfCanvas"),ink=$("inkCanvas"),ctx=ink.getContext("2d");
-let readerMode="single",readerRTL=true,readerFlipBusy=false,readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="list",librarySearch="",librarySort="recent",libraryFoldersDefault=[],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
+let readerMode="single",readerRTL=true,readerFlipBusy=false,readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="auto",librarySearch="",librarySort="recent",libraryFoldersDefault=[],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
 const tell=t=>{$("message").textContent=t||"";$("message").hidden=!t},isMobile=()=>innerWidth<=700;
 const desktopReaderKey="pdf-athat-desktop-reader-v1";
 const desktopReaderDefaults={view:"single",fit:"page",autoHide:true,expanded:true};
@@ -47,8 +47,9 @@ for(const [id,t]of [["libraryTabAll","all"],["libraryTabRecent","recent"],["libr
 $("libraryOpenTrash").onclick=()=>librarySelect("trash");
 $("librarySearch").oninput=e=>{librarySearch=e.target.value.trim().toLowerCase();void renderLibrary()};
 $("librarySort").onchange=e=>{librarySort=e.target.value;void renderLibrary()};
-$("libraryListView").onclick=()=>{libraryLayout="list";void renderLibrary()};
-$("libraryGridView").onclick=()=>{libraryLayout="grid";void renderLibrary()};
+$("libraryListView").onclick=()=>{libraryLayout="list";try{localStorage.setItem("pdfathat-library-layout-v1",libraryLayout)}catch(_){}void renderLibrary()};
+$("libraryGridView").onclick=()=>{libraryLayout="grid";try{localStorage.setItem("pdfathat-library-layout-v1",libraryLayout)}catch(_){}void renderLibrary()};
+try{const stored=localStorage.getItem("pdfathat-library-layout-v1");if(stored==="grid"||stored==="list")libraryLayout=stored}catch(_){};
 $("libraryBackupExport").onclick=()=>$("backupExport").click();
 $("libraryBackupImport").onclick=()=>$("backupImport").click();
 const manageModeKey="pdfathat-default-reading";
@@ -138,6 +139,10 @@ $("manageCheckDuplicates").onclick=async()=>{
  }catch(error){root.textContent="تعذر فحص الملفات: "+(error.message||"خطأ")}
 };
 
+let latestResumeDocument=null;
+$("libraryQuickAdd").onclick=()=>$("file3").click();
+$("libraryQuickFolder").onclick=()=>$("libraryNewFolder").click();
+$("libraryQuickContinue").onclick=()=>{if(latestResumeDocument)openLibraryDocument(latestResumeDocument)};
 $("libraryNewFolder").onclick=()=>{const raw=prompt("اسم المجلد الجديد");if(raw===null)return;const name=raw.trim().slice(0,40);if(!name)return;if(folderList().includes(name))return tell("اسم المجلد موجود");libraryCustomFolders.push(name);saveFolders();librarySelect("all",name)};
 function libraryCover(d){
  const box=libNode("div","library-cover");box.append(libNode("span","library-cover-symbol","▤"),libNode("span","library-cover-label","PDF"));
@@ -172,7 +177,8 @@ function libraryFileCard(d,comments){
 }
 let librarySeq=0;
 async function renderLibrary(){
- if(!db)return;const seq=++librarySeq,docs=await getAll("documents");if(seq!==librarySeq)return;const activeDocs=docs.filter(d=>!d.deleted),notes=await getAll("strokes");if(seq!==librarySeq)return;const noteCount=new Map();for(const n of notes)noteCount.set(n.documentId,(noteCount.get(n.documentId)||0)+1);
+ if(!db)return;const seq=++librarySeq,docs=await getAll("documents");if(seq!==librarySeq)return;const activeDocs=docs.filter(d=>!d.deleted),notes=await getAll("strokes");if(seq!==librarySeq)return;
+ $("libraryPage").dataset.libraryTab=libraryTab;const noteCount=new Map();for(const n of notes)noteCount.set(n.documentId,(noteCount.get(n.documentId)||0)+1);
  $("manageFilesCount").textContent=String(activeDocs.length);
  $("manageFoldersCount").textContent=String(folderList().length);
  $("manageStorageSize").textContent=readableSize(docs.reduce((sum,d)=>sum+(d.file?.size||0),0));
@@ -186,8 +192,19 @@ async function renderLibrary(){
  for(const f of folderItems){const card=libNode("div","library-folder-card"+(libraryTab==="all"&&libraryFolder===f.key?" selected":"")),button=libNode("button","library-folder-open");button.type="button";button.append(libNode("span","library-folder-icon",f.icon),libNode("span","library-folder-label",f.name),libNode("small","library-folder-count",String(f.count)));button.onclick=()=>librarySelect("all",f.key);card.append(button);
  if(libraryCustomFolders.includes(f.key)){const del=libNode("button","library-folder-delete","×");del.title="حذف مجلد مع إبقاء ملفاته";del.onclick=async()=>{if(!confirm("حذف المجلد دون حذف ملفاته؟"))return;libraryCustomFolders=libraryCustomFolders.filter(n=>n!==f.key);saveFolders();for(const d of activeDocs)if(d.folders?.includes(f.key)){d.folders=d.folders.filter(n=>n!==f.key);await save("documents",d)}if(libraryFolder===f.key)libraryFolder="";void renderLibrary()};card.append(del)}folders.append(card)}
  const managing=libraryTab==="manage";$("libraryManage").hidden=!managing;$("libraryFilesTitle").parentElement.hidden=managing;$("librarySearch").parentElement.hidden=managing;$("libraryCards").hidden=managing;$("libraryFolders").hidden=managing;$("libraryNewFolder").parentElement.hidden=managing;
- const resumeDoc=[...activeDocs].filter(d=>d.lastPage>1).sort((a,b)=>(b.updated||0)-(a.updated||0))[0];$("libraryResume").hidden=!(resumeDoc&&libraryTab==="all"&&!libraryFolder&&!librarySearch);
- if(!$("libraryResume").hidden){const root=$("libraryResumeCard");root.replaceChildren();const btn=libNode("button","library-resume-open");btn.onclick=()=>openLibraryDocument(resumeDoc);btn.append(libraryCover(resumeDoc));const info=libNode("div","library-resume-details");info.append(libNode("strong","",resumeDoc.name),libNode("small","","آخر قراءة: صفحة "+resumeDoc.lastPage+(resumeDoc.totalPages?" من "+resumeDoc.totalPages:"")),libNode("span","library-resume-link","◉ متابعة القراءة"));btn.append(info);root.append(btn)}
+ const resumeDoc=[...activeDocs].filter(d=>d.lastPage>1).sort((a,b)=>(b.updated||0)-(a.updated||0))[0];
+ latestResumeDocument=resumeDoc||null;
+ $("libraryQuickContinue").disabled=!resumeDoc;
+ $("libraryResume").hidden=!(resumeDoc&&libraryTab==="all"&&!libraryFolder&&!librarySearch);
+ if(!$("libraryResume").hidden){
+  const root=$("libraryResumeCard");root.replaceChildren();
+  const btn=libNode("button","library-resume-open");btn.type="button";btn.onclick=()=>openLibraryDocument(resumeDoc);btn.append(libraryCover(resumeDoc));
+  const info=libNode("div","library-resume-details"),percent=resumeDoc.totalPages>0?Math.min(100,Math.round(resumeDoc.lastPage/resumeDoc.totalPages*100)):null;
+  const title=libNode("strong","library-resume-name",resumeDoc.name);title.dir="auto";
+  info.append(title,libNode("small","","آخر قراءة: صفحة "+resumeDoc.lastPage+(resumeDoc.totalPages?" من "+resumeDoc.totalPages:"")));
+  if(percent!==null){const progress=libNode("div","library-resume-progress"),bar=libNode("span");bar.style.width=percent+"%";progress.append(bar);info.append(progress,libNode("small","library-resume-percent",percent+"% مكتمل"))}
+  info.append(libNode("span","library-resume-link","متابعة القراءة ←"));btn.append(info);root.append(btn)
+ }
  if(managing)return;
  let filtered=libraryTab==="trash"?docs.filter(d=>d.deleted):activeDocs;
  if(libraryTab==="fav")filtered=filtered.filter(d=>d.favorite);
@@ -195,8 +212,9 @@ async function renderLibrary(){
  if(librarySearch)filtered=filtered.filter(d=>d.name.toLowerCase().includes(librarySearch));
  filtered.sort((a,b)=>librarySort==="name"?a.name.localeCompare(b.name,"ar"):librarySort==="oldest"?(a.updated||0)-(b.updated||0):(b.updated||0)-(a.updated||0));if(libraryTab==="recent")filtered=filtered.slice(0,20);
  $("libraryFilesTitle").textContent=(libraryTab==="fav"?"المفضلة":libraryTab==="recent"?"الملفات الأخيرة":libraryTab==="trash"?"المحذوفة":libraryFolder==="__none"?"غير مصنف":libraryFolder||"جميع الملفات")+" ("+filtered.length+")";
- $("libraryListView").classList.toggle("selected",libraryLayout==="list");$("libraryGridView").classList.toggle("selected",libraryLayout==="grid");
- const list=$("libraryCards");list.className="library-cards "+(libraryLayout==="grid"?"grid-view":"list-view");libraryThumbObserver?.disconnect();libraryThumbQueue.length=0;list.replaceChildren();
+ const effectiveLayout=libraryLayout==="auto"?(matchMedia("(min-width: 701px)").matches?"grid":"list"):libraryLayout;
+ $("libraryListView").classList.toggle("selected",effectiveLayout==="list");$("libraryGridView").classList.toggle("selected",effectiveLayout==="grid");
+ const list=$("libraryCards");list.className="library-cards "+(libraryLayout==="auto"?"responsive-view":effectiveLayout+"-view");libraryThumbObserver?.disconnect();libraryThumbQueue.length=0;list.replaceChildren();
  const frag=document.createDocumentFragment();for(const d of filtered)frag.append(libraryFileCard(d,noteCount.get(d.id)||0));list.append(frag);$("libraryEmpty").hidden=filtered.length>0
 }
 
