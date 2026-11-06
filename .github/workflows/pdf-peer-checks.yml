@@ -1,0 +1,49 @@
+name: PDF peer-transfer safety checks
+on:
+  pull_request:
+    paths:
+      - 'sync/**'
+      - 'desktop/scripts/build-site.cjs'
+      - '.github/workflows/pdf-peer-checks.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check sync/peer-client.js
+          node --check 'functions/api/[[path]].js'
+          node --check desktop/scripts/build-site.cjs
+      - name: Check no cloud PDF storage and isolated scope
+        run: node sync/test-guardrails.cjs
+      - name: Smoke test Pages auth and device signaling
+        run: node sync/test-api.mjs
+      - name: Build offline site with same-origin device sync
+        run: |
+          cd desktop
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build:offline
+          node scripts/build-site.cjs
+      - name: Install isolated browser test dependency
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.58.2
+          npx playwright install --with-deps chromium webkit
+      - name: Transfer a synthetic PDF between two browser contexts
+        run: node sync/test-two-devices.mjs
+      - name: Transfer synthetic PDF in Safari-like WebKit
+        env:
+          TEST_BROWSER: webkit
+        run: node sync/test-two-devices.mjs
+      - name: Assert offline-safe default build
+        run: |
+          grep -q 'PDF_ATHAT_SYNC_API="/api"' desktop/dist/sync-config.js
+          test -s desktop/dist/peer-client.js
+          test -s desktop/dist/peer.css
+          test -s desktop/dist/index.html

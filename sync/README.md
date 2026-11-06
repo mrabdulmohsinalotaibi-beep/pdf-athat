@@ -1,0 +1,40 @@
+# PDF.ATHAT — حساب واحد، ونقل مباشر بين الأجهزة
+
+## البنية المعتمدة
+- موقع Cloudflare Pages على pdf.athat.app، مع Pages Functions في `functions/api/[[path]].js`.
+- نفس قاعدة حسابات PDF الموجودة: ربط `PDF_AUTH_DB` بقاعدة `pdf-athat-accounts`.
+- جلسات الحساب في كوكي `HttpOnly; Secure`، لا يتم حفظ رمز جلسة الدخول في التخزين المحلي.
+- D1 يحتفظ بالحسابات وأسماء الأجهزة وإشارات WebRTC القصيرة والعلامة المؤقتة لحضور الجهاز فقط؛ **لا تحفظ ملفات PDF على الخادم**.
+- ملفات PDF والتعليقات تحفظ في IndexedDB داخل كل جهاز، والنقل المطلوب عبر قناة WebRTC DataChannel بعد موافقة الطرفين ومقارنة رمز الاقتران.
+- لا يستخدم نظام النقل الجديد ربط `PDF_SYNC_R2`. لا تحذف بيانات R2 القديمة دون جرد وطلب مستقل.
+
+## ما تم تنفيذه
+- الدخول بكلمة المرور للحسابات القائمة، أو رمز البريد للحسابات الجديدة والحالية بعد تفعيل إرسال الرسائل.
+- فهرس الأجهزة المتصلة، إلغاء ربط الأجهزة، خيار إلغاء النقل.
+- الموافقة الصريحة لعرض الفهرس ولنقل الملف واستقباله، وبصمة SHA-256 لضمان سلامة المحتوى.
+- نقل الملف والتعليقات وموضع القراءة والمفضلة وطريقة العرض، مع حفظ نسخ محلية مستقلة.
+- إبقاء قارئ سطح المكتب دون تغييرات على آلية تخزين الملفات.
+
+## إعداد البريد الضروري
+Cloudflare Pages موجود لديه `OTP_SECRET` و`PDF_AUTH_DB`. لا بد من تهيئة `RESEND_API_KEY` و`OTP_FROM_EMAIL` من عنوان إرسال مُثبت في Resend، **أو** إعداد مزود بريد معتمد ومراجعة تكامله.
+حتى تفعيل إرسال البريد، يمكن الدخول بكلمة المرور فقط للحسابات القائمة التي لها كلمة مرور؛ التسجيل الجديد لا يعمل.
+
+## حدود يجب اختبارها قبل اعتماد النشر
+- الحد الحالي لملفات قارئ PDF ونقلها **75 ميجابايت لكل ملف**؛ ملفات PDF الكبيرة جدًا واستئناف النقل لم تُنفذ بعد.
+- الجهازان يجب أن يبقيا متصلين بالتطبيق أثناء النقل؛ لا يمكن نقل ملف من جهاز مغلق دون نسخة سحابية.
+- اتصال STUN وحده قد يفشل بين بعض الشبكات؛ يحتاج TURN مع بيانات اعتماد قصيرة الأجل لزيادة التوافق.
+- التحقق من واجهة iOS Safari وتابلت Android على شبكات مختلفة، ومن فشل الشبكة والتخزين شبه الممتلئ.
+- البناء الآلي يتحقق من سلامة الشيفرة والبناء ومنع التخزين السحابي ولا يغني عن اختبار جهازين حقيقيين.
+
+## قاعدة البيانات
+المخطط الإضافي في `sync/migrations/0002_existing_accounts_peer.sql`. 
+أُنشئت جداول `peer_signals` و`peer_presence` في قاعدة PDF الحالية في 2026-11-06. 
+لا تستبدل الجداول الأصلية `users`, `sessions`, `challenges` أو `limits`.
+
+**تنبيه:** لم تُعتمد بعد الوظيفة للنشر الإنتاجي ما لم تُستكمل اختبارات حسابات فعلية ونقل مستند تجريبي بين جهازين.
+
+## Compatibility test status — 2026-11-06
+- Playwright Chromium two-device simulated transfer: PASS (PDF, annotations, reading metadata).
+- Playwright WebKit (Safari-like): FAILS during IndexedDB insertion of a synthetic PDF Blob in the headless Linux test runner, before any WebRTC transfer. Do not assume real iPhone failure or success; test on real iOS Safari and investigate File/Blob persistence before production release.
+- Cloudflare Email Sending API returned HTTP 401 with current connector authorization; Pages has OTP_SECRET but lacks RESEND_API_KEY and OTP_FROM_EMAIL. Email OTP is not functional yet.
+- Do not merge to production while these blockers are unresolved.
