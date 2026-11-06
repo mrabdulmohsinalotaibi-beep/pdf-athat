@@ -31,6 +31,12 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund
           npm run build:offline
           node scripts/build-site.cjs
+      - name: Install isolated browser test dependency
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.58.2
+          npx playwright install chromium
+      - name: Transfer a synthetic PDF between two browser contexts
+        run: node sync/test-two-devices.mjs
       - name: Assert offline-safe default build
         run: |
           grep -q 'PDF_ATHAT_SYNC_API="/api"' desktop/dist/sync-config.js
