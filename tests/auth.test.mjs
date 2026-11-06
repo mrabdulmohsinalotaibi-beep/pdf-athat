@@ -100,3 +100,15 @@ test('provider delivery failure leaves no usable challenge',()=>withMail(async f
  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM pdf_email_challenges').get().n,0);
  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM pdf_email_users').get().n,0);
 }));
+
+test('daily provider quota failures are explained without leaking database details', async()=>{
+ const f=fixture();
+ f.env.PDF_AUTH_DB.prepare=()=>{throw Error("D1_ERROR: Your account has exceeded D1's free tier daily row read limit. Upgrade to a paid plan or wait until tomorrow (midnight UTC) to continue.");};
+ try{
+  const result=await f.call('signup',{email,password});
+  assert.equal(result.status,503);
+  assert.equal(result.body.code,'ACCOUNT_SERVICE_LIMIT');
+  assert.match(result.body.error,/حد الاستخدام اليومي/);
+  assert.equal(result.body.detail,undefined);
+ }finally{f.sqlite.close();}
+});

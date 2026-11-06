@@ -203,6 +203,9 @@ export async function handleAuth(context) {
  } catch (error) {
   if (error instanceof PublicError) return json({ error: error.message }, error.status);
   console.error(JSON.stringify({ event: 'auth_request_failed', stage: context.data?.authStage, name: error.name, message: error.message }));
-  return json({ error: 'تعذر الاتصال بخدمة الحسابات. حاول لاحقًا.', code: error.name, stage: context.data?.authStage, detail: /^D1[_ ]/.test(error.message || '') ? error.message.slice(0,500) : 'non-database-error' }, 503);
+  if (/exceeded.*(?:free tier|row read|row write).*limit/i.test(error.message || '')) {
+   return json({ error: 'خدمة الحسابات متوقفة مؤقتًا بسبب بلوغ حد الاستخدام اليومي. حاول لاحقًا.', code: 'ACCOUNT_SERVICE_LIMIT' }, 503);
+  }
+  return json({ error: 'تعذر الاتصال بخدمة الحسابات. حاول لاحقًا.' }, 503);
  }
 }
