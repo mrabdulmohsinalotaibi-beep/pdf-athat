@@ -35,7 +35,7 @@ async function call(route,method='GET',body=null,cookie=''){
 const unauth=await call('auth/session');
 assert.equal(unauth.status,200);assert.equal(unauth.body.signedIn,false);
 const health=await call('health');
-assert.equal(health.status,200);assert.equal(health.body.mode,'peer-only');assert.equal(health.body.otpReady,false);
+assert.equal(health.status,200);assert.equal(health.body.ok,true);assert.equal(health.body.otpReady,false);
 const noMailer=await call('auth/request','POST',{email:'test@example.com',mode:'register'});
 assert.equal(noMailer.status,503);
 const forbidden=await call('sync/document/sensitive','POST',{file:'PRIVATE_BYTES'});
