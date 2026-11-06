@@ -6,7 +6,9 @@ const dist=path.resolve(__dirname,'../dist');
 const file=path.join(dist,'app-v2.js');
 if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
-const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
+const root=path.resolve(__dirname,'../..');
+const authFiles=['auth.html','auth.js','auth.css'];
+const hash=crypto.createHash('sha256');for(const name of authFiles)hash.update(fs.readFileSync(path.join(root,'web',name)));for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
 // Version the visual assets to bypass older service-worker caches on mobile devices.
@@ -16,6 +18,7 @@ for(const [fileName,attribute] of [['style.css','href'],['icon.svg','href'],['ma
  if(!html.includes(oldValue))throw Error('Expected HTML reference missing: '+oldValue);
  html=html.replace(oldValue,attribute+'="./'+fileName+'?v='+version+'"');
 }
+html=require('./build-auth.cjs').injectAuth({html,root,dist,version});
 fs.writeFileSync(htmlFile,html);
 
 // build:offline removes the Electron-incompatible service-worker call, so the
@@ -51,7 +54,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./auth.js?v='+version,'./auth.css?v='+version,'./auth.js','./auth.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -59,11 +62,11 @@ self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(
 self.addEventListener('fetch',e=>{
  if(e.request.method!=='GET')return;
  const u=new URL(e.request.url);
- if(u.origin!==self.location.origin)return;
+ if(u.origin!==self.location.origin||u.pathname.startsWith('/api/'))return;
  e.respondWith((async()=>{
   const cache=await caches.open(CACHE);
   const cached=await cache.match(e.request);
-  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/icon.svg','/manifest.webmanifest'].includes(u.pathname);
+  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/icon.svg','/manifest.webmanifest','/auth.js','/auth.css'].includes(u.pathname);
   if(cached&&!revalidate)return cached;
   try{
    const response=await fetch(e.request,revalidate?{cache:'no-store'}:{});
@@ -81,3 +84,4 @@ fs.writeFileSync(path.join(dist,'_headers'),'/\n  Cache-Control: no-cache, must-
 const bundled=fs.readFileSync(file,'utf8');
 if(bundled.includes('cdn.jsdelivr.net'))throw Error('Unexpected CDN reference');
 console.log('Offline-ready website PWA built. Cache version:',version);
+

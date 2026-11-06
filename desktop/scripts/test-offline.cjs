@@ -16,7 +16,7 @@ assert(app.includes('if(!inkVisible)return'),'Annotations visibility is not inde
 assert(!app.includes('https://cdn.jsdelivr.net'),'CDN dependency must not appear in desktop app');
 assert(!app.includes('navigator.serviceWorker.register'),'Desktop must load bundled assets directly without stale PWA caches');
 assert(app.includes('PDF.ATHAT.backup')&&app.includes('base64ToBytes'),'Backup export and restore must be bundled');
-assert(app.includes('version:2,createdAt')&&app.includes('![1,2].includes(backup.version)'),'New backups must enforce hashes and remain backward compatible');
+assert(app.includes('version:3,folders:libraryCustomFolders,createdAt')&&app.includes('![1,2,3].includes(backup.version)'),'New backups must enforce hashes and remain backward compatible');
 assert(app.includes('crypto.subtle.digest("SHA-256"')&&app.includes('sha256:await digestHex'),'Backup exports must include integrity hashes');
 assert(app.includes('(await digestHex(bytes)).toLowerCase()!==d.file.sha256.toLowerCase()'),'Backup imports must verify file hashes');
 assert(app.includes('db.transaction(["documents","strokes"],"readwrite")'),'Backup restore must be atomic');
@@ -25,3 +25,4 @@ assert(app.includes('transaction.objectStore("documents").add(d)'),'Backup must 
 assert(app.includes('await save("strokes",s);strokes.push(s)'),'Ink must be stored before UI state changes');
 assert(app.includes('let editing=false;'),'Undo and redo must have an operation lock');
 console.log('PASS: local PDF engines, original-preserving controls and annotation layer');
+
