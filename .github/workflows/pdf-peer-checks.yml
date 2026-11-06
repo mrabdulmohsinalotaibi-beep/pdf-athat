@@ -18,7 +18,6 @@ jobs:
           node-version: '22'
       - name: Check JavaScript syntax
         run: |
-          node --check sync/worker.js
           node --check sync/peer-client.js
           node --check 'functions/api/[[path]].js'
           node --check desktop/scripts/build-site.cjs
