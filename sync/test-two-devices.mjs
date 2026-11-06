@@ -50,10 +50,10 @@ try{
  browser=await engine.launch({headless:true,...(engine===chromium?{args:['--use-fake-ui-for-media-stream','--no-sandbox']}:{})});
  ({context:contextA,page:globalThis.pageA}=await pageFor('iPhone',idA,idB,{width:390,height:844}));
  ({context:contextB,page:globalThis.pageB}=await pageFor('Tablet',idB,idA,{width:900,height:1200}));
- const injection=await pageA.evaluate(async()=>{try{
+ const injection=await pageA.evaluate(async()=>{let phase='opening database';try{
   const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('pdf-athat-v1',1);r.onupgradeneeded=()=>{for(const n of ['documents','strokes'])if(!r.result.objectStoreNames.contains(n))r.result.createObjectStore(n,{keyPath:'id'})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
-  const bytes=new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n');
-  await new Promise((resolve,reject)=>{const tx=db.transaction(['documents','strokes'],'readwrite');tx.objectStore('documents').put({id:'test-mobile-pdf',name:'اختبار-النقل.pdf',file:new File([bytes],'اختبار-النقل.pdf',{type:'application/pdf'}),lastPage:2,updated:Date.now(),deleted:false,favorite:true});tx.objectStore('strokes').put({id:'test-note',documentId:'test-mobile-pdf',page:1,points:[[0.1,0.2],[0.3,0.4]],color:'#780000',size:2});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();return 'ok'}catch(error){return (error?.name||'error')+': '+(error?.message||String(error))}
+  phase='writing PDF';const bytes=new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n');
+  await new Promise((resolve,reject)=>{const tx=db.transaction(['documents','strokes'],'readwrite');tx.objectStore('documents').put({id:'test-mobile-pdf',name:'اختبار-النقل.pdf',file:new File([bytes],'اختبار-النقل.pdf',{type:'application/pdf'}),lastPage:2,updated:Date.now(),deleted:false,favorite:true});tx.objectStore('strokes').put({id:'test-note',documentId:'test-mobile-pdf',page:1,points:[[0.1,0.2],[0.3,0.4]],color:'#780000',size:2});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();return 'ok'}catch(error){return phase+' -> '+(error?.name||'error')+': '+(error?.message||String(error))}
  });
  assert.equal(injection,'ok',injection);
  await pageA.evaluate(()=>document.querySelector('#peerOpen').click());
