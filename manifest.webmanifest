@@ -3,8 +3,8 @@
   "short_name": "PDF.ATHAT",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#fdf0d5",
-  "theme_color": "#800000",
+  "background_color": "#C7B49C",
+  "theme_color": "#780000",
   "lang": "ar",
   "dir": "rtl",
   "icons": [
