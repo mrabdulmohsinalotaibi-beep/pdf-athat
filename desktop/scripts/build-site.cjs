@@ -7,8 +7,8 @@ const file=path.join(dist,'app-v2.js');
 if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
 const root=path.resolve(__dirname,'../..');
-const authFiles=['auth.html','auth.js','auth.css'];
-const hash=crypto.createHash('sha256');for(const name of authFiles)hash.update(fs.readFileSync(path.join(root,'web',name)));for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
+const localLibrarySource=path.join(root,'web','local-library.js');
+const hash=crypto.createHash('sha256');hash.update(fs.readFileSync(localLibrarySource));for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
 // Version the visual assets to bypass older service-worker caches on mobile devices.
@@ -18,7 +18,12 @@ for(const [fileName,attribute] of [['style.css','href'],['icon.svg','href'],['ma
  if(!html.includes(oldValue))throw Error('Expected HTML reference missing: '+oldValue);
  html=html.replace(oldValue,attribute+'="./'+fileName+'?v='+version+'"');
 }
-html=require('./build-auth.cjs').injectAuth({html,root,dist,version});
+// Public, login-free PDF.ATHAT. Preserve every existing IndexedDB database and
+// select a previously used local library *before* importing the PDF application.
+fs.copyFileSync(localLibrarySource,path.join(dist,'local-library.js'));
+const moduleEntry='<script type="module" src="./app-v2.js?v='+version+'"></script>';
+if(!html.includes(moduleEntry))throw Error('PDF reader entrypoint missing');
+html=html.replace(moduleEntry,'<script src="./local-library.js?v='+version+'"></script>'+moduleEntry);
 fs.writeFileSync(htmlFile,html);
 
 // build:offline removes the Electron-incompatible service-worker call, so the
@@ -54,7 +59,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./auth.js?v='+version,'./auth.css?v='+version,'./auth.js','./auth.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./local-library.js?v='+version,'./local-library.js','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -66,7 +71,7 @@ self.addEventListener('fetch',e=>{
  e.respondWith((async()=>{
   const cache=await caches.open(CACHE);
   const cached=await cache.match(e.request);
-  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/icon.svg','/manifest.webmanifest','/auth.js','/auth.css'].includes(u.pathname);
+  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/icon.svg','/manifest.webmanifest','/local-library.js'].includes(u.pathname);
   if(cached&&!revalidate)return cached;
   try{
    const response=await fetch(e.request,revalidate?{cache:'no-store'}:{});
@@ -81,6 +86,8 @@ self.addEventListener('fetch',e=>{
 });`;
 fs.writeFileSync(path.join(dist,'sw.js'),sw);
 fs.writeFileSync(path.join(dist,'_headers'),'/\n  Cache-Control: no-cache, must-revalidate\n/index.html\n  Cache-Control: no-cache, must-revalidate\n/sw.js\n  Cache-Control: no-cache, must-revalidate\n/style.css\n  Cache-Control: no-cache, must-revalidate\n/icon.svg\n  Cache-Control: no-cache, must-revalidate\n/app-v2.js\n  Cache-Control: no-cache, must-revalidate\n');
+if(htmlCheck.includes('id="authGate"')||htmlCheck.includes('data-app-module='))throw Error('Unexpected account gate in public PDF build');
+if(!htmlCheck.includes('local-library.js?v='))throw Error('Local library selector missing');
 const bundled=fs.readFileSync(file,'utf8');
 if(bundled.includes('cdn.jsdelivr.net'))throw Error('Unexpected CDN reference');
 console.log('Offline-ready website PWA built. Cache version:',version);
