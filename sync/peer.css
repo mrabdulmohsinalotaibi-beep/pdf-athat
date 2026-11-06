@@ -1,0 +1,12 @@
+.peer-sync{position:fixed;left:16px;top:75px;z-index:70;direction:rtl;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;color:var(--ink)}
+.peer-open{background:var(--green);color:white;border:1px solid var(--green);padding:8px 12px;font-weight:700;box-shadow:var(--shadow)}
+.peer-panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;width:min(370px,calc(100vw - 24px));max-height:calc(100dvh - 105px);overflow:auto;box-shadow:var(--shadow)}
+.peer-panel[hidden],.peer-panel [hidden]{display:none!important}
+.peer-panel h2{font-size:19px;margin:0 0 8px;color:var(--green)}
+.peer-panel p{line-height:1.7;font-size:12px}
+.peer-panel input{display:block;width:100%;background:var(--panel-soft);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px;margin:9px 0}
+.peer-panel button{padding:8px 10px;margin:4px 2px}
+.peer-panel #peerSend,.peer-panel #peerVerify{background:var(--green);color:#fff}
+.peer-device{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding:9px 0}
+#peerStatus{color:var(--green);overflow-wrap:anywhere}
+@media(max-width:700px){.peer-sync{top:auto;left:8px;bottom:calc(70px + env(safe-area-inset-bottom))}.peer-panel{max-height:65dvh}.peer-open{font-size:12px}}
