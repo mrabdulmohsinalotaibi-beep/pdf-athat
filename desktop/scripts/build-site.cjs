@@ -24,6 +24,11 @@ source += '\nif("serviceWorker" in navigator){let refreshing=false;navigator.ser
 // Parse the final client module and guard the continuous-reader controls during deployment.
 require('esbuild').transformSync(source,{loader:'js',format:'esm',target:'es2022'});
 const htmlCheck=fs.readFileSync(htmlFile,'utf8');
+const cssCheck=fs.readFileSync(path.join(dist,'style.css'),'utf8');
+for(const color of ['--page:#C7B49C','--panel:#EFE3D4','--green:#780000'])if(!cssCheck.includes(color))throw Error('Sandstone theme variable missing '+color);
+const manifestCheck=JSON.parse(fs.readFileSync(path.join(dist,'manifest.webmanifest'),'utf8'));
+if(manifestCheck.background_color!=='#C7B49C'||manifestCheck.theme_color!=='#780000')throw Error('Manifest theme colors are not synchronized with sandstone palette');
+if(!htmlCheck.includes('name="theme-color" content="#780000"'))throw Error('Browser theme color does not match the PDF.ATHAT logo');
 for(const marker of ['id="readerModeSelect"','id="readerRTLToggle"','id="readerPagePrev"','id="readerPageNext"'])if(!html.includes(marker))throw Error('Missing page-turning option '+marker);
 for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"','id="readerPageInfo"','id="readerBookmark"']){
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
