@@ -197,10 +197,12 @@ export async function onRequest(context){
    const valid=await db.prepare("SELECT 1 FROM sessions WHERE user_id=? AND device_id=? AND expires_at>?").bind(uid,x.recipient,stamp).first();
    if(!valid)return fail("الجهاز غير مرتبط بهذا الحساب.",404);
    if(!await throttle(db,"peer-signal:"+uid+":"+device,400,3600))return fail("طلبات الاتصال كثيرة.",429);
+   await db.prepare("DELETE FROM peer_signals WHERE expires_at<?").bind(stamp).run();
    await db.prepare("INSERT INTO peer_signals(user_id,recipient,sender,kind,payload,expires_at) VALUES(?,?,?,?,?,?)").bind(uid,x.recipient,device,x.kind,x.payload,stamp+120).run();
    return json({ok:true});
   }
   if(path.join("/") === "signals" && method==="GET"){
+   await db.prepare("DELETE FROM peer_presence WHERE last_seen<?").bind(stamp-86400).run();
    await db.prepare("INSERT INTO peer_presence(user_id,device_id,last_seen) VALUES(?,?,?) ON CONFLICT(user_id,device_id) DO UPDATE SET last_seen=excluded.last_seen").bind(uid,device,stamp).run();
    const rows=await db.prepare("SELECT id,sender,kind,payload FROM peer_signals WHERE user_id=? AND recipient=? AND expires_at>? ORDER BY id LIMIT 50").bind(uid,device,stamp).all();
    if(rows.results?.length)await db.prepare("DELETE FROM peer_signals WHERE user_id=? AND recipient=? AND id<=?").bind(uid,device,rows.results.at(-1).id).run();
