@@ -20,6 +20,7 @@ jobs:
         run: |
           node --check sync/worker.js
           node --check sync/peer-client.js
+          node --check 'functions/api/[[path]].js'
           node --check desktop/scripts/build-site.cjs
       - name: Check no cloud PDF storage and isolated scope
         run: node sync/test-guardrails.cjs
@@ -31,7 +32,7 @@ jobs:
           node scripts/build-site.cjs
       - name: Assert offline-safe default build
         run: |
-          grep -q 'PDF_ATHAT_SYNC_API=""' desktop/dist/sync-config.js
+          grep -q 'PDF_ATHAT_SYNC_API="/api"' desktop/dist/sync-config.js
           test -s desktop/dist/peer-client.js
           test -s desktop/dist/peer.css
           test -s desktop/dist/index.html
