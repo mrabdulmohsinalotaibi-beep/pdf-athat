@@ -2,7 +2,7 @@ const $ = id => document.getElementById(id);
 const gate = $('authGate'), app = $('app'), form = $('authForm');
 const channel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('pdf-athat-auth') : null;
 let mode = 'login', busy = false, challengeId = '', verifiedEmail = '', user = null, loaded = false, signupReady = false;
-let checking = null;
+let checking = null, sessionOutage = false;
 const messages = {
  login: ['أهلًا بعودتك', 'سجّل الدخول إلى مساحتك بالإيميل وكلمة المرور.', 'تسجيل الدخول'],
  signup: ['أنشئ حسابك', 'سجّل بإيميلك، ثم أكّد ملكيته برمز يصلك في رسالة.', 'إنشاء الحساب'],
@@ -81,12 +81,19 @@ async function checkSession() {
  checking = (async () => {
   try {
    const result = await api('session');
-   if (result.user) await unlock(result.user);
-   else lock(loaded ? 'انتهت الجلسة. سجّل الدخول مجددًا.' : '');
+   if (result.user) {
+    await unlock(result.user);
+    if (sessionOutage) {
+     sessionOutage = false;
+     $('authService').hidden = true;
+     $('authService').textContent = '';
+    }
+   } else lock(loaded ? 'انتهت الجلسة. سجّل الدخول مجددًا.' : '');
   } catch (error) {
    // A transient outage or exhausted D1 quota is NOT proof of logout.
    // Do not unmount a locally-open library or discard its verified account.
    if (loaded && user) {
+    sessionOutage = true;
     $('authService').hidden = false;
     $('authService').textContent = 'خدمة الحسابات غير متاحة مؤقتًا؛ يمكنك مواصلة القراءة في الملفات المحلية. ستُراجع الجلسة عند عودة الاتصال.';
    } else {
