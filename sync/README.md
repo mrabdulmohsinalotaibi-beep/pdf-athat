@@ -32,3 +32,9 @@ Cloudflare Pages موجود لديه `OTP_SECRET` و`PDF_AUTH_DB`. لا بد م�
 لا تستبدل الجداول الأصلية `users`, `sessions`, `challenges` أو `limits`.
 
 **تنبيه:** لم تُعتمد بعد الوظيفة للنشر الإنتاجي ما لم تُستكمل اختبارات حسابات فعلية ونقل مستند تجريبي بين جهازين.
+
+## Compatibility test status — 2026-11-06
+- Playwright Chromium two-device simulated transfer: PASS (PDF, annotations, reading metadata).
+- Playwright WebKit (Safari-like): FAILS during IndexedDB insertion of a synthetic PDF Blob in the headless Linux test runner, before any WebRTC transfer. Do not assume real iPhone failure or success; test on real iOS Safari and investigate File/Blob persistence before production release.
+- Cloudflare Email Sending API returned HTTP 401 with current connector authorization; Pages has OTP_SECRET but lacks RESEND_API_KEY and OTP_FROM_EMAIL. Email OTP is not functional yet.
+- Do not merge to production while these blockers are unresolved.
