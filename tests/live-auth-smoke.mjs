@@ -20,11 +20,14 @@ for (let attempt = 0; attempt < 30; attempt++) {
   assert.equal(csrf.status,403);
   const invalid = await fetch(base + '/api/auth/signup', {method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:JSON.stringify({email:'check@example.invalid',password:'short'}),signal:AbortSignal.timeout(10000)});
   const invalidBody = await invalid.json();
-  if(invalid.status !== 400 && invalidBody.stage){ console.error('POST_VALIDATION_FAILURE', JSON.stringify(invalidBody)); process.exit(1); }
+  if(invalid.status !== 400 && invalidBody.stage && attempt >= 6){ console.error('POST_VALIDATION_FAILURE', JSON.stringify(invalidBody)); process.exit(1); }
   assert.equal(invalid.status,400,JSON.stringify(invalidBody));
+  const rejectedLogin = await fetch(base + '/api/auth/login', {method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:JSON.stringify({email:'runtime-check@example.invalid',password:'not-a-real-password-000000'}),signal:AbortSignal.timeout(10000)});
+  const loginBody = await rejectedLogin.json();
+  assert.equal(rejectedLogin.status,401,JSON.stringify(loginBody));
   console.log('PASS: production login gate, email configuration readiness, anonymous session and CSRF rejection. No email sent or account created.');
   process.exit(0);
- } catch(error) {lastError=error;console.log(`Waiting for production deployment (${attempt+1}/30).`);}
+ } catch(error) {lastError=error;console.log(`Waiting for production deployment (${attempt+1}/30): ${error.message}`);}
  await new Promise(resolve=>setTimeout(resolve,10000));
 }
 console.error('Production authentication smoke check failed:',lastError.message);
