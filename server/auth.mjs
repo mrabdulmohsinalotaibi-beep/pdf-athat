@@ -58,10 +58,11 @@ async function readBody(request) {
 }
 async function limit(db, key, maximum, seconds) {
  const time = now();
- const row = await statement(db, `INSERT INTO pdf_email_limits(key,count,expires_at) VALUES(?,1,?)
+ await statement(db, `INSERT INTO pdf_email_limits(key,count,expires_at) VALUES(?,1,?)
  ON CONFLICT(key) DO UPDATE SET count=CASE WHEN expires_at<=? THEN 1 ELSE count+1 END,
- expires_at=CASE WHEN expires_at<=? THEN excluded.expires_at ELSE expires_at END RETURNING count`,
- key, time + seconds, time, time).first();
+ expires_at=CASE WHEN expires_at<=? THEN excluded.expires_at ELSE expires_at END`,
+ key, time + seconds, time, time).run();
+ const row = await statement(db, 'SELECT count FROM pdf_email_limits WHERE key=?', key).first();
  if (row.count > maximum) fail('محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.', 429);
 }
 function cookie(token, seconds = SESSION_SECONDS) {
@@ -115,12 +116,13 @@ async function challenge(env, db, email, purpose, credentials = {}) {
 }
 async function consume(env, db, body, purpose) {
  if (typeof body.challengeId !== 'string' || !/^[a-f0-9]{64}$/.test(body.challengeId) || !/^\d{6}$/.test(body.code)) fail('أدخل رمز التحقق المكوّن من 6 أرقام.');
- const row = await statement(db, `UPDATE pdf_email_challenges SET attempts=attempts+1
- WHERE id=? AND purpose=? AND expires_at>? AND attempts<5 RETURNING *`, body.challengeId, purpose, now()).first();
- if (!row || !await crypto.subtle.verify('HMAC', await macKey(env.OTP_SECRET), unhex(row.code_hash), encoder.encode(`${row.id}:${body.code}`))) fail('الرمز غير صحيح أو انتهت صلاحيته. اطلب رمزًا جديدًا.');
- // The delete elects exactly one winner even when requests race.
- const result = await statement(db, 'DELETE FROM pdf_email_challenges WHERE id=? RETURNING id', row.id).first();
- if (!result) fail('استُخدم الرمز بالفعل. اطلب رمزًا جديدًا.');
+ const row = await statement(db, 'SELECT * FROM pdf_email_challenges WHERE id=? AND purpose=? AND expires_at>? AND attempts<5', body.challengeId, purpose, now()).first();
+ if (!row) fail('الرمز غير صحيح أو انتهت صلاحيته. اطلب رمزًا جديدًا.');
+ const attempt = await statement(db, 'UPDATE pdf_email_challenges SET attempts=attempts+1 WHERE id=? AND expires_at>? AND attempts<5', row.id, now()).run();
+ if (!attempt.meta.changes || !await crypto.subtle.verify('HMAC', await macKey(env.OTP_SECRET), unhex(row.code_hash), encoder.encode(`${row.id}:${body.code}`))) fail('الرمز غير صحيح أو انتهت صلاحيته. اطلب رمزًا جديدًا.');
+ // Only the request that deletes the challenge may complete the operation.
+ const result = await statement(db, 'DELETE FROM pdf_email_challenges WHERE id=?', row.id).run();
+ if (!result.meta.changes) fail('استُخدم الرمز بالفعل. اطلب رمزًا جديدًا.');
  return row;
 }
 async function route(context) {
