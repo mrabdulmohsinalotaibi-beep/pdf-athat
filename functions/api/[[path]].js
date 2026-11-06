@@ -110,8 +110,9 @@ async function requestCode(context){
  if(!mode)return fail("اختر إنشاء حساب أو تسجيل الدخول.",400);
  if(!emailValid(email))return fail("أدخل بريدًا إلكترونيًا صحيحًا.",400);
  const existing=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
- if(mode==="register")return fail("أنشئ الحساب باستخدام كلمة المرور ثم أكد البريد الإلكتروني.",400);
+ 
  if(mode==="login"&&!existing)return fail("لا يوجد حساب بهذا البريد. اختر إنشاء حساب جديد.",404);
+ if(mode==="register"&&existing)return fail("هذا البريد مسجل بالفعل؛ اختر تسجيل الدخول.",409);
  const ip=request.headers.get("cf-connecting-ip")||"unknown";
  const ipKey=await hmac(env.OTP_SECRET,"ip:"+ip);
  if(!await throttle(env.PDF_AUTH_DB,"otp-ip:"+ipKey,12,3600)||!await throttle(env.PDF_AUTH_DB,"otp-mail:"+await hmac(env.OTP_SECRET,email),4,3600))return fail("طلبات كثيرة، حاول لاحقًا.",429);
@@ -135,7 +136,8 @@ async function verifyCode(context){
  let user=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first();
  if(mode==="login"&&!user)return fail("لا يوجد حساب بهذا البريد. اختر إنشاء حساب جديد.",404);
  if(mode==="register"&&user)return fail("الحساب موجود بالفعل. اختر تسجيل الدخول.",409);
- if(!user)return fail("أنشئ حسابًا جديدًا أولًا.",404)
+ if(!user&&mode==="register"){const id=crypto.randomUUID();await env.PDF_AUTH_DB.prepare("INSERT OR IGNORE INTO users(id,email,created_at) VALUES(?,?,?)").bind(id,email,now()).run();user=await env.PDF_AUTH_DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first()}
+ if(!user)return fail("لا يوجد حساب بهذا البريد.",404)
  const token=random(),device=crypto.randomUUID();
  const deviceName=String(data?.deviceName||"جهاز جديد").slice(0,70);
  await env.PDF_AUTH_DB.prepare("INSERT INTO sessions(token_hash,user_id,device_id,device_name,expires_at,created_at) VALUES(?,?,?,?,?,?)").bind(await digest(token),user.id,device,deviceName,now()+2592000,now()).run();
