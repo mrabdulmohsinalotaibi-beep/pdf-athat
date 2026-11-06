@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import {chromium} from 'playwright';
+import {chromium,webkit} from 'playwright';
 
 const root=path.resolve('desktop/dist');
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.mjs':'text/javascript','.json':'application/json','.svg':'image/svg+xml','.wasm':'application/wasm','.webmanifest':'application/manifest+json'};
@@ -46,7 +46,8 @@ async function pageFor(name,id,other,viewport){
  return {context,page};
 }
 try{
- browser=await chromium.launch({headless:true,args:['--use-fake-ui-for-media-stream','--no-sandbox']});
+ const engine=process.env.TEST_BROWSER==='webkit'?webkit:chromium;
+ browser=await engine.launch({headless:true,...(engine===chromium?{args:['--use-fake-ui-for-media-stream','--no-sandbox']}:{})});
  ({context:contextA,page:globalThis.pageA}=await pageFor('iPhone',idA,idB,{width:390,height:844}));
  ({context:contextB,page:globalThis.pageB}=await pageFor('Tablet',idB,idA,{width:900,height:1200}));
  await pageA.evaluate(async()=>{
@@ -66,7 +67,7 @@ try{
   db.close();return Boolean(found?.file?.size>10&&found.favorite===true&&found.lastPage===2&&notes.some(n=>n.documentId===found.id&&n.page===1&&n.points?.length===2));
  },{timeout:45000});
  assert.equal(failures.length,0,failures.join('\n'));
- console.log('PASS: two simulated mobile Chromium contexts transferred and locally saved PDF + annotations + reading metadata');
+ console.log('PASS: two simulated mobile '+(process.env.TEST_BROWSER||'chromium')+' contexts transferred and locally saved PDF + annotations + reading metadata');
 }finally{
  await contextA?.close().catch(()=>{});await contextB?.close().catch(()=>{});await browser?.close().catch(()=>{});await new Promise(resolve=>server.close(resolve))
 }
