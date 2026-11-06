@@ -40,7 +40,7 @@ function setMode(next, message = '') {
   $('auth' + name).disabled = !visible;
   $('auth' + name).required = visible;
  }
- $('authPassword').minLength = hasConfirm ? 12 : 1;
+ $('authPassword').minLength = hasConfirm ? 6 : 1;
  $('authPassword').autocomplete = hasConfirm ? 'new-password' : 'current-password';
  $('authPasswordHint').hidden = !hasConfirm;
  for (const button of document.querySelectorAll('[data-auth-mode]')) button.setAttribute('aria-pressed', String(button.dataset.authMode === mode));
