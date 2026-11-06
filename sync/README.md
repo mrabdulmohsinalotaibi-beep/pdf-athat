@@ -24,3 +24,6 @@ A direct WebRTC DataChannel sends the PDF and associated annotations after sende
 - Desktop app remains separate/fully offline; its sync implementation would be a separate follow-up.
 
 **Never deploy without security review.** Standard WebRTC DataChannels are encrypted on the wire, but sender confirmation and email login do not independently guarantee peer identity. A server does not retain the original PDF.
+
+## Production dependency checked 2026-11-06
+Cloudflare Pages pdf-athat has OTP_SECRET configured but no verified outbound email provider secret was confirmed. Account activation must remain off until a verified email sender and token have been provisioned. Database pdf-athat-accounts already exists with a distinct legacy users/sessions schema; do not point sync/worker.js at it without a compatible migration and identity reconciliation.
