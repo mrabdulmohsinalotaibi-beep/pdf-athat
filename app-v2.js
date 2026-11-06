@@ -221,7 +221,7 @@ function drawAnnotationLines(context,lines,x,y,fontSize,color){
  for(let i=0;i<lines.length;i++)context.fillText(lines[i],x,y+i*fontSize*1.4);
  context.restore()
 }
-function paint(){ctx.clearRect(0,0,ink.width,ink.height);if(!inkVisible)return;for(const s of [...strokes.filter(x=>x.documentId===active?.id&&x.page===page),...(draft?[draft]:[])]){ctx.strokeStyle=s.color||"#e87824";ctx.fillStyle=s.color||"#e87824";ctx.globalAlpha=s.tool==="highlight"?.4:1;ctx.lineWidth=(s.size||(s.tool==="highlight"?16:3))*ink.width/Math.max(1,ink.clientWidth);ctx.lineCap="round";ctx.lineJoin="round";if(s.tool==="text"||s.tool==="comment"){ctx.globalAlpha=1;drawAnnotationLines(ctx,annotationLines(s.text),s.points[0][0]*ink.width,s.points[0][1]*ink.height,Math.round((s.size||15)*ink.width/Math.max(1,ink.clientWidth)),s.color||"#e87824");continue}if(s.tool==="rect"){const a=s.points[0],b=s.points.at(-1);if(a&&b)ctx.strokeRect(a[0]*ink.width,a[1]*ink.height,(b[0]-a[0])*ink.width,(b[1]-a[1])*ink.height);continue}if(s.points.length<2)continue;ctx.beginPath();s.points.forEach(([x,y],i)=>i?ctx.lineTo(x*ink.width,y*ink.height):ctx.moveTo(x*ink.width,y*ink.height));ctx.stroke()}ctx.globalAlpha=1}
+function paint(){ctx.clearRect(0,0,ink.width,ink.height);if(!inkVisible)return;for(const s of [...strokes.filter(x=>x.documentId===active?.id&&x.page===page),...(draft?[draft]:[])]){ctx.strokeStyle=s.color||"#780000";ctx.fillStyle=s.color||"#780000";ctx.globalAlpha=s.tool==="highlight"?.4:1;ctx.lineWidth=(s.size||(s.tool==="highlight"?16:3))*ink.width/Math.max(1,ink.clientWidth);ctx.lineCap="round";ctx.lineJoin="round";if(s.tool==="text"||s.tool==="comment"){ctx.globalAlpha=1;drawAnnotationLines(ctx,annotationLines(s.text),s.points[0][0]*ink.width,s.points[0][1]*ink.height,Math.round((s.size||15)*ink.width/Math.max(1,ink.clientWidth)),s.color||"#780000");continue}if(s.tool==="rect"){const a=s.points[0],b=s.points.at(-1);if(a&&b)ctx.strokeRect(a[0]*ink.width,a[1]*ink.height,(b[0]-a[0])*ink.width,(b[1]-a[1])*ink.height);continue}if(s.points.length<2)continue;ctx.beginPath();s.points.forEach(([x,y],i)=>i?ctx.lineTo(x*ink.width,y*ink.height):ctx.moveTo(x*ink.width,y*ink.height));ctx.stroke()}ctx.globalAlpha=1}
 function pos(e){const r=ink.getBoundingClientRect();return [Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))]}
 function chooseTool(t){if(!inkVisible&&t!=="pointer"){tell("أظهر طبقة الكتابة أولًا");return}if(!["original","pdfjs"].includes(fontMode)&&t!=="pointer"){tell("للرسم على PDF، ارجع إلى العرض الأصلي");return}tool=t;ink.style.pointerEvents=t==="pointer"?"none":"auto";for(const b of document.querySelectorAll("[data-tool]"))b.classList.toggle("active",b.dataset.tool===t);$("toolSettings").hidden=t==="pointer";$("toolLabel").textContent=({pen:"القلم",signature:"التوقيع",highlight:"التظليل",eraser:"ممحاة",text:"إضافة نص",comment:"تعليق",rect:"مستطيل"})[t]||"التصفح";if(t!=="pointer")closePanel()}
 for(const [id,t]of [["pointer","pointer"],["pen","pen"],["highlight","highlight"],["eraser","eraser"],["textTool","text"],["commentTool","comment"],["shapeTool","rect"],["signatureTool","signature"]])$(id).onclick=()=>chooseTool(t);chooseTool("pointer");
@@ -292,7 +292,7 @@ async function saveBlob(blob,name){
 }
 $("toggleInk").onclick=()=>{inkVisible=!inkVisible;if(!inkVisible&&tool!=="pointer")chooseTool("pointer");$("toggleInk").textContent=inkVisible?"◉":"◎";$("toggleInk").title=inkVisible?"إخفاء الكتابة":"إظهار الكتابة";$("toggleInk").setAttribute("aria-pressed",String(inkVisible));paint()};
 $("downloadOriginal").onclick=async()=>{if(!active)return;const file=active.file;try{const saved=await saveBlob(file,active.name);tell(saved?"تم حفظ نسخة من الملف الأصلي":"أُلغِي حفظ الملف")}catch(e){console.error(e);tell("تعذر حفظ الملف الأصلي: "+(e.message||"خطأ غير معروف"))}};
-async function download(){if(!active||docBusy)return;const selected=active;docBusy=true;tell("تجهيز الملف للتنزيل...");try{const doc=await PDFDocument.load(await selected.file.arrayBuffer());const maxPages=doc.getPageCount();const invalid=strokes.filter(x=>x.documentId===selected.id&&(!Number.isInteger(x.page)||x.page<1||x.page>maxPages));if(invalid.length)throw Error("تعليقات مرتبطة بصفحات غير صالحة: "+invalid.length);const baseFont=await doc.embedFont(StandardFonts.Helvetica);for(const s of strokes.filter(x=>x.documentId===selected.id)){const p=doc.getPage(s.page-1),{width,height}=p.getSize(),hex=(s.color||"#e87824").replace("#",""),color=rgb(parseInt(hex.slice(0,2),16)/255,parseInt(hex.slice(2,4),16)/255,parseInt(hex.slice(4,6),16)/255);if(s.tool==="text"||s.tool==="comment"){
+async function download(){if(!active||docBusy)return;const selected=active;docBusy=true;tell("تجهيز الملف للتنزيل...");try{const doc=await PDFDocument.load(await selected.file.arrayBuffer());const maxPages=doc.getPageCount();const invalid=strokes.filter(x=>x.documentId===selected.id&&(!Number.isInteger(x.page)||x.page<1||x.page>maxPages));if(invalid.length)throw Error("تعليقات مرتبطة بصفحات غير صالحة: "+invalid.length);const baseFont=await doc.embedFont(StandardFonts.Helvetica);for(const s of strokes.filter(x=>x.documentId===selected.id)){const p=doc.getPage(s.page-1),{width,height}=p.getSize(),hex=(s.color||"#780000").replace("#",""),color=rgb(parseInt(hex.slice(0,2),16)/255,parseInt(hex.slice(2,4),16)/255,parseInt(hex.slice(4,6),16)/255);if(s.tool==="text"||s.tool==="comment"){
  const lines=annotationLines(s.text);
  if(!lines.some(line=>line.length))continue;
  const fontSize=s.size||13,ratio=3,pad=fontSize*.5;
@@ -302,7 +302,7 @@ async function download(){if(!active||docBusy)return;const selected=active;docBu
  canvas.width=Math.min(16000,Math.ceil(measured+2*pad*ratio));
  canvas.height=Math.min(16000,Math.ceil((fontSize*1.2+(lines.length-1)*fontSize*1.4+fontSize*.35+pad)*ratio));
  const cc=canvas.getContext("2d");
- drawAnnotationLines(cc,lines,canvas.width-pad*ratio,fontSize*1.2*ratio,fontSize*ratio,s.color||"#e87824");
+ drawAnnotationLines(cc,lines,canvas.width-pad*ratio,fontSize*1.2*ratio,fontSize*ratio,s.color||"#780000");
  const png=await doc.embedPng(canvas.toDataURL("image/png"));
  const imgW=canvas.width/ratio,imgH=canvas.height/ratio;
  const anchorX=s.points[0][0]*width,anchorY=(1-s.points[0][1])*height;
@@ -562,11 +562,11 @@ function paintReaderOverlay(canvas,n){
  context.clearRect(0,0,w,h);if(!inkVisible)return;
  for(const s of strokes.filter(x=>x.documentId===active?.id&&x.page===n)){
   const points=s.points||[];if(!points.length)continue;
-  context.save();context.strokeStyle=s.color||"#a22b20";context.fillStyle=s.color||"#a22b20";
+  context.save();context.strokeStyle=s.color||"#780000";context.fillStyle=s.color||"#780000";
   context.globalAlpha=s.tool==="highlight"?.36:1;
   context.lineWidth=(s.size||(s.tool==="highlight"?16:3))*w/Math.max(1,canvas.getBoundingClientRect().width);
   context.lineJoin="round";context.lineCap="round";
-  if(s.tool==="text"||s.tool==="comment"){context.globalAlpha=1;drawAnnotationLines(context,annotationLines(s.text),points[0][0]*w,points[0][1]*h,Math.round((s.size||15)*w/Math.max(1,canvas.getBoundingClientRect().width)),s.color||"#a22b20")}
+  if(s.tool==="text"||s.tool==="comment"){context.globalAlpha=1;drawAnnotationLines(context,annotationLines(s.text),points[0][0]*w,points[0][1]*h,Math.round((s.size||15)*w/Math.max(1,canvas.getBoundingClientRect().width)),s.color||"#780000")}
   else if(s.tool==="rect"){const a=points[0],b=points.at(-1);context.strokeRect(a[0]*w,a[1]*h,(b[0]-a[0])*w,(b[1]-a[1])*h)}
   else if(points.length>1){context.beginPath();points.forEach(([x,y],i)=>i?context.lineTo(x*w,y*h):context.moveTo(x*w,y*h));context.stroke()}
   context.restore()
