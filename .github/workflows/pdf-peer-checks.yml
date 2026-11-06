@@ -34,8 +34,12 @@ jobs:
       - name: Install isolated browser test dependency
         run: |
           npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.58.2
-          npx playwright install chromium
+          npx playwright install chromium webkit
       - name: Transfer a synthetic PDF between two browser contexts
+        run: node sync/test-two-devices.mjs
+      - name: Transfer synthetic PDF in Safari-like WebKit
+        env:
+          TEST_BROWSER: webkit
         run: node sync/test-two-devices.mjs
       - name: Assert offline-safe default build
         run: |
