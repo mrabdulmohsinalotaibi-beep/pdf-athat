@@ -32,6 +32,10 @@ async function call(route,method='GET',body=null,cookie=''){
  const response=await onRequest(context);
  return {status:response.status,body:await response.json()};
 }
+// Every state-changing endpoint must reject requests without a same-origin header.
+const csrfContext={request:new Request('https://pdf.athat.app/api/presence',{method:'POST',headers:{cookie:'pdf_session='+'a'.repeat(64),'content-type':'application/json'},body:'{}'}),env:{PDF_AUTH_DB:fakeDb},params:{path:['presence']}};
+const csrfResponse=await onRequest(csrfContext);
+assert.equal(csrfResponse.status,403);
 const unauth=await call('auth/session');
 assert.equal(unauth.status,200);assert.equal(unauth.body.signedIn,false);
 const health=await call('health');
