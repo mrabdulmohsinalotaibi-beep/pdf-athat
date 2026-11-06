@@ -65,7 +65,51 @@
   </div>
   <div id="libraryCards" class="library-cards list-view" aria-live="polite"></div>
   <p id="libraryEmpty" class="library-empty" hidden>لا توجد ملفات في هذا القسم. أضف ملف PDF أو اختر مجلدًا آخر.</p>
-  <section id="libraryManage" class="library-manage" hidden><h2>إدارة المكتبة</h2><p>يمكنك حفظ نسخة احتياطية تشمل ملفات PDF وتعليقاتك، أو استعادتها دون حذف الملفات الحالية.</p><div class="library-manage-actions"><button id="libraryBackupExport" type="button">⇩ نسخة احتياطية</button><button id="libraryBackupImport" type="button">↥ استعادة نسخة</button><button id="libraryOpenTrash" type="button">♻ الملفات المحذوفة</button></div></section>
+  <section id="libraryManage" class="library-manage" hidden aria-labelledby="libraryManageTitle">
+   <div class="manage-head"><h2 id="libraryManageTitle">إدارة مكتبتي</h2><p>تحكم في ملفاتك وقراءتك وخصوصيتك — كل شيء محفوظ على هذا الجهاز.</p></div>
+   <div class="manage-summary" aria-label="إحصاءات التخزين"><div><strong id="manageFilesCount">0</strong><small>ملف PDF</small></div><div><strong id="manageFoldersCount">0</strong><small>مجلدات</small></div><div><strong id="manageStorageSize">—</strong><small>حجم الملفات</small></div></div>
+   <div class="manage-grid" aria-label="أقسام الإدارة">
+    <button type="button" data-manage="files"><span>▤</span><strong>إدارة الملفات</strong><small>تحديد جماعي، نقل، مفضلة، حذف</small></button>
+    <button type="button" data-manage="backup"><span>⇩</span><strong>النسخ الاحتياطي</strong><small>حفظ مكتبتك واستعادتها</small></button>
+    <button type="button" data-manage="reading"><span>▣</span><strong>إعدادات القراءة</strong><small>التقليب، الاتجاه، الأدوات</small></button>
+    <button type="button" data-manage="storage"><span>▰</span><strong>المساحة والتخزين</strong><small>الحجم والملفات المكررة</small></button>
+    <button type="button" data-manage="appearance"><span>◐</span><strong>المظهر</strong><small>الوضع الفاتح أو الداكن</small></button>
+    <button type="button" data-manage="privacy"><span>♙</span><strong>الخصوصية</strong><small>التخزين المحلي وحماية النسخ</small></button>
+   </div>
+   <section id="manageDetail" class="manage-detail" hidden aria-live="polite">
+    <div class="manage-detail-title"><h3 id="manageDetailTitle"></h3><button id="manageDetailClose" type="button" aria-label="إغلاق القسم">×</button></div>
+    <div id="manageFiles" class="manage-pane" hidden>
+     <div class="manage-controls"><button id="manageSelectAll" type="button">تحديد الكل</button><button id="manageClearSelection" type="button">إلغاء التحديد</button><span id="manageSelectedCount">0 محدد</span></div>
+     <div id="manageFileList" class="manage-file-list"></div>
+     <div class="manage-controls"><select id="manageDestination" aria-label="اختر المجلد"><option value="">بدون مجلد</option></select><button id="manageMove" type="button">نقل المحدد</button><button id="manageFavorite" type="button">إضافة للمفضلة</button><button id="manageDelete" type="button" class="danger">نقل للمحذوفات</button></div>
+    </div>
+    <div id="manageBackup" class="manage-pane" hidden>
+     <p>النسخة الاحتياطية تشمل ملفات PDF والتعليقات والفواصل والمجلدات. احفظها في مكان آمن خارج بيانات المتصفح.</p>
+     <div class="manage-controls"><button id="libraryBackupExport" type="button">⇩ تنزيل نسخة احتياطية</button><button id="libraryBackupImport" type="button">↥ استعادة نسخة</button><button id="libraryOpenTrash" type="button">♻ الملفات المحذوفة</button></div>
+     <p id="manageBackupInfo" class="manage-hint"></p>
+    </div>
+    <div id="manageReading" class="manage-pane" hidden>
+     <label>طريقة التقليب الافتراضية للكتب الجديدة<select id="manageDefaultMode"><option value="single">صفحة واحدة</option><option value="spread">صفحتان متقابلتان</option><option value="vertical">تمرير رأسي</option><option value="flip">تقليب ورقي</option><option value="horizontal">سحب أفقي</option><option value="grid">شبكة الصفحات</option></select></label>
+     <label class="manage-checkbox"><input id="manageDefaultRTL" type="checkbox" checked> اتجاه القراءة العربي من اليمين لليسار</label>
+     <label class="manage-checkbox"><input id="manageAutoHide" type="checkbox" checked> إخفاء أدوات الكمبيوتر أثناء القراءة</label>
+     <p class="manage-hint">هذه الإعدادات للكتب التي لم تختر لها إعدادات خاصة. لكل كتاب اختياراته المحفوظة.</p>
+    </div>
+    <div id="manageStorage" class="manage-pane" hidden>
+     <p id="manageQuotaInfo">جاري حساب المساحة…</p>
+     <button id="manageRequestPersistence" type="button">طلب الحفاظ على بيانات الموقع من المتصفح</button>
+     <button id="manageCheckDuplicates" type="button">فحص نسخ PDF المتطابقة</button>
+     <div id="manageDuplicates" class="manage-duplicates" aria-live="polite"></div>
+    </div>
+    <div id="manageAppearance" class="manage-pane" hidden>
+     <label>مظهر الموقع<select id="manageTheme"><option value="light">فاتح — عنابي وكريمي</option><option value="dark">داكن</option></select></label>
+    </div>
+    <div id="managePrivacy" class="manage-pane" hidden>
+     <p>لا يتطلب PDF.ATHAT حسابًا، ولا يرسل ملفات PDF أو تعليقاتك إلى خدمة مزامنة. تبقى ملفاتك داخل مساحة الموقع في متصفح هذا الجهاز.</p>
+     <p>مسح بيانات الموقع أو إزالة التطبيق قد يحذف هذه الملفات؛ لذلك احتفظ بنسخة احتياطية خارج المتصفح. عند استخدام عارض PDF الأصلي قد يعرض المتصفح الملف داخليًا دون رفعه إلى خادم الموقع.</p>
+     <button id="managePrivacyBackup" type="button">تنزيل نسخة احتياطية الآن</button>
+    </div>
+   </section>
+  </section>
  </div>
  <nav class="library-bottom-nav" aria-label="أقسام مكتبتي"><button id="libraryTabAll" type="button" class="selected"><span>▤</span><small>مكتبتي</small></button><button id="libraryTabRecent" type="button"><span>◷</span><small>الأخيرة</small></button><button id="libraryTabFav" type="button"><span>☆</span><small>المفضلة</small></button><button id="libraryTabManage" type="button"><span>⚙</span><small>إدارة</small></button></nav>
 </section>
