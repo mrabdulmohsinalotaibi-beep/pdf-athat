@@ -34,7 +34,7 @@ function emailAddress(value) {
  return email;
 }
 function strongPassword(value) {
- if (typeof value !== 'string' || value.length < 12 || value.length > 128) fail('استخدم كلمة مرور من 12 إلى 128 حرفًا.');
+ if (typeof value !== 'string' || value.length < 6 || value.length > 128) fail('استخدم كلمة مرور من 6 إلى 128 حرفًا.');
  return value;
 }
 async function readBody(request) {
