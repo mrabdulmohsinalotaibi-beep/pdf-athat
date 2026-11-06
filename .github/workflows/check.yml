@@ -22,3 +22,6 @@ jobs:
         working-directory: desktop
       - run: npm run test:offline && node scripts/build-site.cjs
         working-directory: desktop
+      - name: Verify production authentication after deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node tests/live-auth-smoke.mjs
