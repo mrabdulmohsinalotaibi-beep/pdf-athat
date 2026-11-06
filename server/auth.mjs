@@ -125,6 +125,8 @@ async function consume(env, db, body, purpose) {
 }
 async function route(context) {
  const { request, env } = context;
+ context.data ||= {};
+ context.data.authStage = 'request';
  const url = new URL(request.url), action = url.pathname.replace(/^\/api\/auth\//, '');
  const db = env.PDF_AUTH_DB;
  if (!db) fail('خدمة الحسابات غير مهيأة بعد.', 503);
@@ -134,6 +136,7 @@ async function route(context) {
  if (request.headers.get('Origin') !== url.origin || request.headers.get('Sec-Fetch-Site') === 'cross-site') fail('الطلب غير مسموح.', 403);
  if (!['signup','verify','login','forgot','reset','logout'].includes(action)) fail('الطلب غير موجود.', 404);
  const body = await readBody(request);
+ context.data.authStage = 'ip-limit';
  await limit(db, 'ip:' + await digest(request.headers.get('CF-Connecting-IP') || 'local'), 60, 900);
  if (action === 'logout') {
   await statement(db, 'DELETE FROM pdf_email_sessions WHERE token_hash=?', await tokenHash(request) || '').run();
@@ -141,13 +144,17 @@ async function route(context) {
  }
  if (['signup','forgot','verify','reset'].includes(action) && !mailReady(env)) fail('إرسال رسائل الحسابات غير مفعّل بعد. حاول لاحقًا.', 503);
  if (action === 'signup' || action === 'forgot') {
+  context.data.authStage = 'signup-validation';
   const email = emailAddress(body.email);
   const password = action === 'signup' ? strongPassword(body.password) : null;
+  context.data.authStage = 'email-limit';
   await limit(db, 'mail:' + await digest(email), 3, 900);
+  context.data.authStage = 'signup-user-lookup';
   const user = await statement(db, 'SELECT id FROM pdf_email_users WHERE email=?', email).first();
   // Return the same response for existing and unknown addresses.
   let challengeId = random();
   if (action === 'signup' && !user) {
+   context.data.authStage = 'signup-password';
    const salt = random();
    challengeId = await challenge(env, db, email, 'signup', { salt, hash: await passwordHash(password, salt) });
   } else if (action === 'forgot' && user) challengeId = await challenge(env, db, email, 'reset');
@@ -193,7 +200,7 @@ export async function handleAuth(context) {
   return response;
  } catch (error) {
   if (error instanceof PublicError) return json({ error: error.message }, error.status);
-  console.error(JSON.stringify({ event: 'auth_request_failed' }));
-  return json({ error: 'تعذر الاتصال بخدمة الحسابات. حاول لاحقًا.' }, 503);
+  console.error(JSON.stringify({ event: 'auth_request_failed', stage: context.data?.authStage, name: error.name, message: error.message }));
+  return json({ error: 'تعذر الاتصال بخدمة الحسابات. حاول لاحقًا.', code: error.name, stage: context.data?.authStage }, 503);
  }
 }
