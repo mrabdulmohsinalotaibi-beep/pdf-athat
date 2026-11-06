@@ -194,11 +194,9 @@ async function route(context) {
 export async function handleAuth(context) {
  try {
   const response = await route(context);
-  if (context.env.PDF_AUTH_DB && context.waitUntil) context.waitUntil(context.env.PDF_AUTH_DB.batch([
-   statement(context.env.PDF_AUTH_DB, 'DELETE FROM pdf_email_sessions WHERE expires_at<=?', now()),
-   statement(context.env.PDF_AUTH_DB, 'DELETE FROM pdf_email_challenges WHERE expires_at<=?', now()),
-   statement(context.env.PDF_AUTH_DB, 'DELETE FROM pdf_email_limits WHERE expires_at<=?', now())
-  ]).catch(() => console.error(JSON.stringify({ event: 'auth_cleanup_failed' }))));
+  // Expiration is enforced by indexed queries. Do not run three D1 DELETEs
+  // on every request: free-tier write quotas are shared across this account.
+  // Expired rows may be pruned separately during scheduled maintenance.
   return response;
  } catch (error) {
   if (error instanceof PublicError) return json({ error: error.message }, error.status);
