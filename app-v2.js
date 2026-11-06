@@ -20,7 +20,7 @@ function applyDesktopReader(){
  $("viewer").classList.toggle("desktop-auto-hide",enabled&&desktopReaderSettings.autoHide);
  $("viewer").classList.toggle("desktop-single",enabled&&desktopSingle());
 }
-function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open("pdf-athat-v1",1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains("documents"))r.result.createObjectStore("documents",{keyPath:"id"});if(!r.result.objectStoreNames.contains("strokes"))r.result.createObjectStore("strokes",{keyPath:"id"})};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open(window.__pdfAccountId?"pdf-athat-account-"+window.__pdfAccountId:"pdf-athat-v1",1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains("documents"))r.result.createObjectStore("documents",{keyPath:"id"});if(!r.result.objectStoreNames.contains("strokes"))r.result.createObjectStore("strokes",{keyPath:"id"})};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 function tx(stores,mode,fn){return new Promise((ok,no)=>{const t=db.transaction(stores,mode);let result;const r=fn(t);if(r&&"onsuccess"in r)r.onsuccess=()=>result=r.result;t.oncomplete=()=>ok(result);t.onerror=()=>no(t.error);t.onabort=()=>no(t.error||Error("Transaction aborted"))})}
 const getAll=s=>tx(s,"readonly",t=>t.objectStore(s).getAll()),save=(s,v)=>tx(s,"readwrite",t=>t.objectStore(s).put(v)),remove=(s,id)=>tx(s,"readwrite",t=>t.objectStore(s).delete(id));
 // A portable backup contains original PDF bytes and the independent writing layer.
