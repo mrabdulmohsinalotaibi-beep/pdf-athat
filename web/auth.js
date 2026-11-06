@@ -83,7 +83,16 @@ async function checkSession() {
    const result = await api('session');
    if (result.user) await unlock(result.user);
    else lock(loaded ? 'انتهت الجلسة. سجّل الدخول مجددًا.' : '');
-  } catch { lock('تعذر التحقق من الجلسة. تحقق من اتصالك ثم سجّل الدخول مجددًا.'); }
+  } catch (error) {
+   // A transient outage or exhausted D1 quota is NOT proof of logout.
+   // Do not unmount a locally-open library or discard its verified account.
+   if (loaded && user) {
+    $('authService').hidden = false;
+    $('authService').textContent = 'خدمة الحسابات غير متاحة مؤقتًا؛ يمكنك مواصلة القراءة في الملفات المحلية. ستُراجع الجلسة عند عودة الاتصال.';
+   } else {
+    lock('تعذر التحقق من الجلسة حاليًا. لا تُحذف ملفاتك المحلية؛ أعد المحاولة عند عودة خدمة الحسابات.');
+   }
+  }
   finally { checking = null; }
  })();
  return checking;
@@ -118,10 +127,17 @@ form.onsubmit = async event => {
   $('authSubmit').disabled = ['signup','forgot'].includes(mode) && !signupReady;
  }
 };
-channel?.addEventListener('message', () => { if (loaded) location.reload(); else void checkSession(); });
+channel?.addEventListener('message', () => { void checkSession(); });
 window.addEventListener('pageshow', event => { if (event.persisted) void checkSession(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && loaded) void checkSession(); });
-setInterval(() => { if (!document.hidden && loaded) void checkSession(); }, 60000);
+let lastSessionCheck = 0;
+const refreshSession = () => {
+ if (!loaded || document.hidden || Date.now() - lastSessionCheck < 10 * 60 * 1000) return;
+ lastSessionCheck = Date.now();
+ void checkSession();
+};
+document.addEventListener('visibilitychange', refreshSession);
+window.addEventListener('online', () => { if (loaded) { lastSessionCheck = 0; refreshSession(); } });
+setInterval(refreshSession, 10 * 60 * 1000);
 setMode('login');
 $('authSubmit').disabled = true;
 try {
