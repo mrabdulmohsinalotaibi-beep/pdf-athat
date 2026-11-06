@@ -570,3 +570,10 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
  .library-page .library-overview-item small{font-size:8px}
 }
 @media(prefers-reduced-motion:reduce){.library-page .library-book-card{transition:none}}
+
+/* Higher-specificity light variant after the existing sandstone overrides. */
+:root:not(.dark) .library-page .library-hero-modern{background:linear-gradient(112deg,#EFE3D4 0%,#dec6aa 62%,#bca388 100%);border-color:#ac8870}
+:root:not(.dark) .library-page .library-hero-modern .library-hero-copy h1{color:#640b0b}
+:root:not(.dark) .library-page .library-hero-modern .library-hero-copy p{color:#48352b}
+:root:not(.dark) .library-page .library-hero-modern .library-hero-kicker{color:#780000}
+:root:not(.dark) .library-page .library-hero-modern .library-add{background:#780000;color:white}
