@@ -20,6 +20,7 @@ for (let attempt = 0; attempt < 30; attempt++) {
   assert.equal(csrf.status,403);
   const invalid = await fetch(base + '/api/auth/signup', {method:'POST',headers:{'Content-Type':'application/json',Origin:base},body:JSON.stringify({email:'check@example.invalid',password:'short'}),signal:AbortSignal.timeout(10000)});
   const invalidBody = await invalid.json();
+  if(invalid.status !== 400 && invalidBody.stage){ console.error('POST_VALIDATION_FAILURE', JSON.stringify(invalidBody)); process.exit(1); }
   assert.equal(invalid.status,400,JSON.stringify(invalidBody));
   console.log('PASS: production login gate, email configuration readiness, anonymous session and CSRF rejection. No email sent or account created.');
   process.exit(0);
