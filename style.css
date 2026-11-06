@@ -388,3 +388,41 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
  .library-book-name{font-size:12px}
 }
 @media(max-width:365px){.library-hero-book{display:none}.library-folders{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Six-section library management center, local-only and mobile first. */
+.library-manage{padding:15px;border:0;background:transparent}
+.manage-head h2{font-size:22px;margin:0 0 6px}
+.manage-head p{margin:0 0 16px}
+.manage-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.manage-summary>div{display:flex;flex-direction:column;align-items:center;padding:15px 5px;background:var(--panel);border:1px solid var(--line);border-radius:13px;gap:5px}
+.manage-summary strong{font-size:19px;color:var(--ink)}
+.manage-summary small{font-size:11px;color:var(--mute)}
+.manage-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.manage-grid button{display:flex;flex-direction:column;align-items:flex-start;text-align:right;gap:7px;min-height:119px;padding:15px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.manage-grid button:hover,.manage-grid button.selected{border-color:#800000;background:var(--panel-soft)}
+.manage-grid button span{font-size:27px;color:#800000}
+.manage-grid button strong{font-size:14px}
+.manage-grid button small{font-size:11px;color:var(--mute)}
+.manage-detail{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:15px}
+.manage-detail-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.manage-detail-title h3{font-size:17px;margin:0}
+.manage-detail-title button{border:0;background:transparent;font-size:26px;color:var(--ink)}
+.manage-pane{display:flex;flex-direction:column;gap:12px}
+.manage-pane[hidden]{display:none!important}
+.manage-pane label:not(.manage-checkbox){display:flex;flex-direction:column;gap:7px}
+.manage-pane select{width:100%;background:var(--panel-soft);border:1px solid var(--line);border-radius:9px;color:var(--ink);padding:10px}
+.manage-checkbox{display:flex;align-items:center;gap:8px}
+.manage-checkbox input{accent-color:#800000}
+.manage-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.manage-controls button,.manage-pane>button{background:var(--panel-soft);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 12px;min-height:40px}
+.manage-controls .danger{color:#ac2424;border-color:#bb7777}
+.manage-controls span,.manage-hint{font-size:12px;color:var(--mute)}
+.manage-file-list{display:flex;flex-direction:column;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:11px}
+.manage-file-row{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--line);min-width:0}
+.manage-file-row:last-child{border-bottom:0}
+.manage-file-row input{accent-color:#800000}
+.manage-file-row span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.manage-file-row small{white-space:nowrap;font-size:10px;color:var(--mute)}
+.manage-duplicates{font-size:12px;overflow-wrap:anywhere}
+@media(min-width:960px){.manage-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.library-manage{max-width:1000px;margin:auto}}
+@media(max-width:420px){.manage-grid{gap:8px}.manage-grid button{min-height:112px;padding:11px}.manage-grid button strong{font-size:12px}.manage-grid button small{font-size:10px}}
