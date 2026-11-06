@@ -1,29 +1,34 @@
-# PDF.ATHAT secure peer transfer — deployment checklist
+# PDF.ATHAT — حساب واحد، ونقل مباشر بين الأجهزة
 
-Status: **prototype on a feature branch, NOT production-ready / NOT deployed**.
-PDF bytes, annotations, and all document contents remain on devices.
-D1 stores only verified email sessions, device names and **short-lived signaling messages**.
-A direct WebRTC DataChannel sends the PDF and associated annotations after sender confirmation.
+## البنية المعتمدة
+- موقع Cloudflare Pages على pdf.athat.app، مع Pages Functions في `functions/api/[[path]].js`.
+- نفس قاعدة حسابات PDF الموجودة: ربط `PDF_AUTH_DB` بقاعدة `pdf-athat-accounts`.
+- جلسات الحساب في كوكي `HttpOnly; Secure`، لا يتم حفظ رمز جلسة الدخول في التخزين المحلي.
+- D1 يحتفظ بالحسابات وأسماء الأجهزة وإشارات WebRTC القصيرة والعلامة المؤقتة لحضور الجهاز فقط؛ **لا تحفظ ملفات PDF على الخادم**.
+- ملفات PDF والتعليقات تحفظ في IndexedDB داخل كل جهاز، والنقل المطلوب عبر قناة WebRTC DataChannel بعد موافقة الطرفين ومقارنة رمز الاقتران.
+- لا يستخدم نظام النقل الجديد ربط `PDF_SYNC_R2`. لا تحذف بيانات R2 القديمة دون جرد وطلب مستقل.
 
-## Provision separate service
-1. Create a **new isolated D1** database, e.g. `pdf-athat-peer`; never use the original ATHAT data store. Add its ID to `wrangler.toml`.
-2. In `sync/`, run `npx wrangler d1 migrations apply pdf-athat-peer --remote`.
-3. Configure secrets using `npx wrangler secret put RESEND_API_KEY`,
-   `npx wrangler secret put MAIL_FROM` (a verified sender),
-   and `npx wrangler secret put OTP_PEPPER` (random high-entropy value).
-4. Deploy via `npx wrangler deploy`; configure `pdf-sync.athat.app` DNS/Worker route for a separate API host.
-5. Set website build variable `PDF_ATHAT_SYNC_API=https://pdf-sync.athat.app` in Cloudflare Pages and deploy site. Without this variable, all sync UI is disabled and existing offline reader stays unchanged.
+## ما تم تنفيذه
+- الدخول بكلمة المرور للحسابات القائمة، أو رمز البريد للحسابات الجديدة والحالية بعد تفعيل إرسال الرسائل.
+- فهرس الأجهزة المتصلة، إلغاء ربط الأجهزة، خيار إلغاء النقل.
+- الموافقة الصريحة لعرض الفهرس ولنقل الملف واستقباله، وبصمة SHA-256 لضمان سلامة المحتوى.
+- نقل الملف والتعليقات وموضع القراءة والمفضلة وطريقة العرض، مع حفظ نسخ محلية مستقلة.
+- إبقاء قارئ سطح المكتب دون تغييرات على آلية تخزين الملفات.
 
-## Required quality/security work before production
-- Apply per-IP and per-email rate limits, abuse prevention and lifecycle cleanup for expired OTP, sessions and signals.
-- Verify both endpoints and end-to-end transfer in iPhone Safari and Android tablet; test WiFi/mobile data and network interruptions.
-- Handle resumable transfers and large files without retaining all received chunks in JS memory.
-- Add session/device revocation, cancel controls and download conflict handling, account switching protection, and clearer transfer progress.
-- Add authenticated TURN credential issuance for NAT-restricted networks if direct P2P fails.
-- Restrict device signaling to explicitly approved peer sessions; add stronger device pairing and shared short authentication phrase or QR verification.
-- Desktop app remains separate/fully offline; its sync implementation would be a separate follow-up.
+## إعداد البريد الضروري
+Cloudflare Pages موجود لديه `OTP_SECRET` و`PDF_AUTH_DB`. لا بد من تهيئة `RESEND_API_KEY` و`OTP_FROM_EMAIL` من عنوان إرسال مُثبت في Resend، **أو** إعداد مزود بريد معتمد ومراجعة تكامله.
+حتى تفعيل إرسال البريد، يمكن الدخول بكلمة المرور فقط للحسابات القائمة التي لها كلمة مرور؛ التسجيل الجديد لا يعمل.
 
-**Never deploy without security review.** Standard WebRTC DataChannels are encrypted on the wire, but sender confirmation and email login do not independently guarantee peer identity. A server does not retain the original PDF.
+## حدود يجب اختبارها قبل اعتماد النشر
+- الحد الحالي لملفات قارئ PDF ونقلها **75 ميجابايت لكل ملف**؛ ملفات PDF الكبيرة جدًا واستئناف النقل لم تُنفذ بعد.
+- الجهازان يجب أن يبقيا متصلين بالتطبيق أثناء النقل؛ لا يمكن نقل ملف من جهاز مغلق دون نسخة سحابية.
+- اتصال STUN وحده قد يفشل بين بعض الشبكات؛ يحتاج TURN مع بيانات اعتماد قصيرة الأجل لزيادة التوافق.
+- التحقق من واجهة iOS Safari وتابلت Android على شبكات مختلفة، ومن فشل الشبكة والتخزين شبه الممتلئ.
+- البناء الآلي يتحقق من سلامة الشيفرة والبناء ومنع التخزين السحابي ولا يغني عن اختبار جهازين حقيقيين.
 
-## Production dependency checked 2026-11-06
-Cloudflare Pages pdf-athat has OTP_SECRET configured but no verified outbound email provider secret was confirmed. Account activation must remain off until a verified email sender and token have been provisioned. Database pdf-athat-accounts already exists with a distinct legacy users/sessions schema; do not point sync/worker.js at it without a compatible migration and identity reconciliation.
+## قاعدة البيانات
+المخطط الإضافي في `sync/migrations/0002_existing_accounts_peer.sql`. 
+أُنشئت جداول `peer_signals` و`peer_presence` في قاعدة PDF الحالية في 2026-11-06. 
+لا تستبدل الجداول الأصلية `users`, `sessions`, `challenges` أو `limits`.
+
+**تنبيه:** لم تُعتمد بعد الوظيفة للنشر الإنتاجي ما لم تُستكمل اختبارات حسابات فعلية ونقل مستند تجريبي بين جهازين.
