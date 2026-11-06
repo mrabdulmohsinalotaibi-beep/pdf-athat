@@ -40,11 +40,11 @@
  <div class="library-content">
   <div class="library-hero library-hero-modern">
    <div class="library-hero-copy">
-    <span class="library-hero-kicker">مكتبتي الرقمية</span>
-    <h1>كتبي في مكان واحد</h1>
-    <p>اقرأ، رتّب، وواصل من حيث توقفت. ملفاتك محفوظة على جهازك.</p>
+    <span class="library-hero-kicker">PDF.ATHAT · مكتبتي الرقمية</span>
+    <h1>مكتبتك، أينما تقرأ</h1>
+    <p>كل كتبك في مكان واحد. رتّب ملفاتك واستكمل القراءة بسهولة — محفوظة على جهازك.</p>
    </div>
-   <div class="library-hero-book" aria-hidden="true"><span>📖</span></div>
+   <div class="library-hero-art" aria-hidden="true"><span class="library-art-shelf"></span><span class="library-art-book"></span><span class="library-art-book"></span><span class="library-art-book"></span><span class="library-art-book"></span><span class="library-art-book"></span></div>
    <label class="library-add">＋ إضافة PDF<input id="file3" type="file" accept=".pdf,application/pdf" hidden></label>
   </div>
   <div class="library-overview" aria-label="ملخص مكتبتي">
@@ -54,14 +54,19 @@
    <div class="library-overview-item"><span class="library-overview-icon">☆</span><strong id="libraryStatsFav">0</strong><small>المفضلة</small></div>
   </div>
   <div class="library-search-row"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="ابحث عن كتاب أو ملف..." aria-label="البحث في الملفات"></div>
-  <div class="library-section-heading"><h2>مجلداتي</h2><button id="libraryNewFolder" class="library-text-button" type="button">＋ مجلد جديد</button></div>
+  <div class="library-quick-actions" aria-label="إجراءات سريعة">
+   <button id="libraryQuickAdd" type="button" class="library-quick-primary">＋ إضافة ملف PDF</button>
+   <button id="libraryQuickFolder" type="button">▱ مجلد جديد</button>
+   <button id="libraryQuickContinue" type="button" disabled>↩ متابعة القراءة</button>
+  </div>
+  <div class="library-section-heading library-folders-heading"><h2>مجلداتي</h2><button id="libraryNewFolder" class="library-text-button" type="button">＋ مجلد جديد</button></div>
   <div id="libraryFolders" class="library-folders" aria-label="مجلدات مكتبتي"></div>
   <section id="libraryResume" class="library-resume" hidden aria-label="متابعة القراءة">
    <h2>أكمل القراءة</h2>
    <div id="libraryResumeCard"></div>
   </section>
-  <div class="library-section-heading library-files-heading"><h2 id="libraryFilesTitle">آخر الملفات</h2>
-   <div class="library-view-actions"><select id="librarySort" aria-label="ترتيب الملفات"><option value="recent">الأحدث</option><option value="name">الاسم</option><option value="oldest">الأقدم</option></select><div class="library-view-switch" role="group" aria-label="طريقة العرض"><button id="libraryListView" class="selected" type="button" aria-label="عرض القائمة" title="قائمة">☷</button><button id="libraryGridView" type="button" aria-label="عرض الأغلفة" title="أغلفة">▦</button></div></div>
+  <div class="library-section-heading library-files-heading"><h2 id="libraryFilesTitle">مكتبة الكتب</h2>
+   <div class="library-view-actions"><select id="librarySort" aria-label="ترتيب الملفات"><option value="recent">الأحدث</option><option value="name">الاسم</option><option value="oldest">الأقدم</option></select><div class="library-view-switch" role="group" aria-label="طريقة العرض"><button id="libraryListView" type="button" aria-label="عرض القائمة" title="قائمة">☷</button><button id="libraryGridView" type="button" aria-label="عرض الأغلفة" title="أغلفة">▦</button></div></div>
   </div>
   <div id="libraryCards" class="library-cards list-view" aria-live="polite"></div>
   <p id="libraryEmpty" class="library-empty" hidden>لا توجد ملفات في هذا القسم. أضف ملف PDF أو اختر مجلدًا آخر.</p>
