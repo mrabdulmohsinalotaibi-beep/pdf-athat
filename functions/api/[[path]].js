@@ -189,7 +189,7 @@ export async function onRequest(context){
   }
   if(path.join("/") === "devices" && method==="GET"){
    const rows=await db.prepare("SELECT s.device_id,s.device_name,MAX(COALESCE(p.last_seen,0)) AS last_seen FROM sessions s LEFT JOIN peer_presence p ON p.user_id=s.user_id AND p.device_id=s.device_id WHERE s.user_id=? AND s.expires_at>? GROUP BY s.device_id,s.device_name ORDER BY MAX(s.created_at) DESC").bind(uid,stamp).all();
-   return json({devices:(rows.results||[]).filter(x=>x.device_id!==device).map(x=>({device_id:x.device_id,device_name:x.device_name,online:x.last_seen>stamp-20}))});
+   return json({devices:(rows.results||[]).filter(x=>x.device_id!==device).map(x=>({device_id:x.device_id,device_name:x.device_name,online:x.last_seen>stamp-45}))});
   }
   if(path.join("/") === "signal" && method==="POST"){
    const x=await input(request,11000);
@@ -201,9 +201,11 @@ export async function onRequest(context){
    await db.prepare("INSERT INTO peer_signals(user_id,recipient,sender,kind,payload,expires_at) VALUES(?,?,?,?,?,?)").bind(uid,x.recipient,device,x.kind,x.payload,stamp+120).run();
    return json({ok:true});
   }
-  if(path.join("/") === "signals" && method==="GET"){
-   await db.prepare("DELETE FROM peer_presence WHERE last_seen<?").bind(stamp-86400).run();
+  if(path.join("/") === "presence" && method==="POST"){
    await db.prepare("INSERT INTO peer_presence(user_id,device_id,last_seen) VALUES(?,?,?) ON CONFLICT(user_id,device_id) DO UPDATE SET last_seen=excluded.last_seen").bind(uid,device,stamp).run();
+   return json({ok:true});
+  }
+  if(path.join("/") === "signals" && method==="GET"){
    const rows=await db.prepare("SELECT id,sender,kind,payload FROM peer_signals WHERE user_id=? AND recipient=? AND expires_at>? ORDER BY id LIMIT 50").bind(uid,device,stamp).all();
    if(rows.results?.length)await db.prepare("DELETE FROM peer_signals WHERE user_id=? AND recipient=? AND id<=?").bind(uid,device,rows.results.at(-1).id).run();
    return json({signals:rows.results||[]});
