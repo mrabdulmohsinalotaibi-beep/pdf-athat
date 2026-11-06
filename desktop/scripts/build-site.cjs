@@ -21,8 +21,8 @@ const peerSource=path.resolve(__dirname,'../../sync/peer-client.js');
 if(!fs.existsSync(peerSource))throw Error('Missing peer transfer client');
 fs.copyFileSync(peerSource,path.join(dist,'peer-client.js'));
 fs.copyFileSync(path.resolve(__dirname,'../../sync/peer.css'),path.join(dist,'peer.css'));
-const syncApi=process.env.PDF_ATHAT_SYNC_API||'';
-if(syncApi&&!/^https:\/\/[a-z0-9.-]+(?::[0-9]+)?$/i.test(syncApi))throw Error('Invalid PDF_ATHAT_SYNC_API');
+const syncApi='/api';
+
 fs.writeFileSync(path.join(dist,'sync-config.js'),'globalThis.PDF_ATHAT_SYNC_API='+JSON.stringify(syncApi)+';');
 html=html.replace('</head>','<link rel="stylesheet" href="./peer.css?v='+version+'"></head>');
 html=html.replace('</body>','<script src="./sync-config.js?v='+version+'"></script><script src="./peer-client.js?v='+version+'"></script></body>');
@@ -69,11 +69,11 @@ self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(
 self.addEventListener('fetch',e=>{
  if(e.request.method!=='GET')return;
  const u=new URL(e.request.url);
- if(u.origin!==self.location.origin)return;
+ if(u.origin!==self.location.origin||u.pathname.startsWith('/api/'))return;
  e.respondWith((async()=>{
   const cache=await caches.open(CACHE);
   const cached=await cache.match(e.request);
-  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/icon.svg','/manifest.webmanifest'].includes(u.pathname);
+  const revalidate=e.request.mode==='navigate'||['/sync-config.js','/peer-client.js','/peer.css','/index.html','/style.css','/app-v2.js','/icon.svg','/manifest.webmanifest'].includes(u.pathname);
   if(cached&&!revalidate)return cached;
   try{
    const response=await fetch(e.request,revalidate?{cache:'no-store'}:{});
