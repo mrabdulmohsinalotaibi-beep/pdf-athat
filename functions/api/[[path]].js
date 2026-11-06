@@ -1,5 +1,5 @@
 // PDF.ATHAT private account and opt-in device sync API.
-// Cloudflare Pages Functions; D1: PDF_AUTH_DB, private R2: PDF_SYNC_R2.
+// Cloudflare Pages Functions; existing PDF_AUTH_DB only. No PDF file storage.
 // Requires OTP_SECRET, RESEND_API_KEY and OTP_FROM_EMAIL. No code is ever returned to the browser.
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 const fail=(message,status)=>json({error:message},status);
