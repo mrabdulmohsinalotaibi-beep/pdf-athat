@@ -52,7 +52,7 @@ try{
  await pageA.evaluate(async()=>{
   const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('pdf-athat-v1',1);r.onupgradeneeded=()=>{for(const n of ['documents','strokes'])if(!r.result.objectStoreNames.contains(n))r.result.createObjectStore(n,{keyPath:'id'})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
   const bytes=new TextEncoder().encode('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n');
-  await new Promise((resolve,reject)=>{const tx=db.transaction('documents','readwrite');tx.objectStore('documents').put({id:'test-mobile-pdf',name:'اختبار-النقل.pdf',file:new File([bytes],'اختبار-النقل.pdf',{type:'application/pdf'}),lastPage:2,updated:Date.now(),deleted:false,favorite:true});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();
+  await new Promise((resolve,reject)=>{const tx=db.transaction(['documents','strokes'],'readwrite');tx.objectStore('documents').put({id:'test-mobile-pdf',name:'اختبار-النقل.pdf',file:new File([bytes],'اختبار-النقل.pdf',{type:'application/pdf'}),lastPage:2,updated:Date.now(),deleted:false,favorite:true});tx.objectStore('strokes').put({id:'test-note',documentId:'test-mobile-pdf',page:1,points:[[0.1,0.2],[0.3,0.4]],color:'#780000',size:2});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();
  });
  await pageA.evaluate(()=>document.querySelector('#peerOpen').click());
  await pageB.evaluate(()=>document.querySelector('#peerOpen').click());
@@ -62,10 +62,11 @@ try{
  await pageB.waitForFunction(async()=>{
   const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('pdf-athat-v1',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
   const found=await new Promise(resolve=>{const tx=db.transaction('documents');const r=tx.objectStore('documents').getAll();r.onsuccess=()=>resolve(r.result.find(d=>d.name==='اختبار-النقل.pdf'))});
-  db.close();return Boolean(found?.file?.size>10&&found.favorite===true&&found.lastPage===2);
+  const notes=await new Promise(resolve=>{const tx=db.transaction('strokes');const r=tx.objectStore('strokes').getAll();r.onsuccess=()=>resolve(r.result)});
+  db.close();return Boolean(found?.file?.size>10&&found.favorite===true&&found.lastPage===2&&notes.some(n=>n.documentId===found.id&&n.page===1&&n.points?.length===2));
  },{timeout:45000});
  assert.equal(failures.length,0,failures.join('\n'));
- console.log('PASS: two simulated mobile Chromium contexts transferred and locally saved PDF + reading metadata');
+ console.log('PASS: two simulated mobile Chromium contexts transferred and locally saved PDF + annotations + reading metadata');
 }finally{
  await contextA?.close().catch(()=>{});await contextB?.close().catch(()=>{});await browser?.close().catch(()=>{});await new Promise(resolve=>server.close(resolve))
 }
