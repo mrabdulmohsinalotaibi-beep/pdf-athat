@@ -14,3 +14,9 @@ CREATE TABLE IF NOT EXISTS peer_signals (
  kind TEXT NOT NULL, payload TEXT NOT NULL, expires_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS signals_recipient_idx ON peer_signals(email,recipient,id);
+
+-- Sliding-window abuse protection for code issuance and verification.
+CREATE TABLE IF NOT EXISTS rate_limits (
+ bucket TEXT PRIMARY KEY, counter INTEGER NOT NULL, resets_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS rate_limits_expiry_idx ON rate_limits(resets_at);
