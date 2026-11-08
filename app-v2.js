@@ -221,8 +221,65 @@ async function renderLibrary(){
 
 for(const [id,name]of [["showAll","all"],["showFav","fav"],["showTrash","trash"]])$(id).onclick=()=>{filter=name;for(const x of ["showAll","showFav","showTrash"])$(x).classList.toggle("selected",x===id);refresh()};
 function closeDocument(){history=[];redo=[];draft=null;stopContinuous();renderSeq++;loadSeq++;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=null;pdf=null;document.documentElement.classList.remove("reader-open");$("viewer").classList.remove("immersive","native-reading");$("viewer").hidden=true;$("welcome").hidden=true;if(nativeURL){URL.revokeObjectURL(nativeURL);nativeURL=null}closePanel();toggleSidebar(false);showLibrary()}
-async function addFile(file){if(!file)return;try{if(file.size>75*1024*1024)throw Error("الحد الأقصى 75 ميجابايت");const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");const d={id:crypto.randomUUID(),name:file.name,file,updated:Date.now(),lastPage:1,deleted:false,favorite:false};await save("documents",d);await activate(d)}catch(e){tell(e.message||"تعذر فتح المستند")}}
-for(const id of ["file","file2","file3"])$(id).onchange=e=>{addFile(e.target.files[0]);e.target.value=""};
+// Compare the SHA-256 of the PDF bytes, not just the filename, so renamed copies
+// are recognized. Never delete or overwrite an existing PDF or its annotations.
+async function findMatchingPdf(file,sha256){
+ const documents=await getAll("documents");
+ for(const doc of documents){
+  if(!doc.file||doc.file.size!==file.size)continue;
+  const previousHash=typeof doc.sha256==="string"&&/^[a-f0-9]{64}$/i.test(doc.sha256)
+   ? doc.sha256.toLowerCase():await digestHex(await doc.file.arrayBuffer());
+  if(previousHash===sha256)return doc;
+ }
+ return null;
+}
+function confirmDuplicatePdf(existing,newName){
+ return new Promise(resolve=>{
+  const dialog=document.createElement("dialog");
+  dialog.dir="rtl";dialog.setAttribute("aria-label","الملف موجود سابقًا");
+  dialog.style.cssText="width:min(92vw,430px);max-width:430px;padding:20px;border:1px solid #b9a389;border-radius:18px;background:#efe3d4;color:#35271e;box-shadow:0 16px 50px #0005";
+  const heading=document.createElement("h2");
+  heading.textContent="هذا الملف موجود سابقًا";heading.style.cssText="margin:0 0 12px;font-size:19px";
+  const details=document.createElement("p");
+  details.textContent="وجدنا نسخة مطابقة داخل "+(existing.deleted?"المحذوفات":"مكتبتك")+" باسم «"+existing.name+"». الملف المختار «"+newName+"» يحتوي على نفس المحتوى. هل تريد إضافة نسخة أخرى؟";
+  details.style.cssText="line-height:1.9;font-size:14px;overflow-wrap:anywhere";
+  const actions=document.createElement("div");actions.style.cssText="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px";
+  const add=document.createElement("button");add.type="button";add.textContent="إضافة نسخة أخرى";
+  add.style.cssText="flex:1;min-width:135px;background:#780000;color:white;border:0;padding:10px;border-radius:10px";
+  const cancel=document.createElement("button");cancel.type="button";cancel.textContent="إلغاء التحميل";
+  cancel.style.cssText="flex:1;min-width:135px;padding:10px;border-radius:10px";
+  actions.append(add,cancel);dialog.append(heading,details,actions);document.body.append(dialog);
+  let done=false;
+  const finish=allow=>{if(done)return;done=true;dialog.close();dialog.remove();resolve(allow)};
+  add.onclick=()=>finish(true);cancel.onclick=()=>finish(false);
+  dialog.addEventListener("cancel",event=>{event.preventDefault();finish(false)});
+  dialog.addEventListener("close",()=>finish(false));
+  try{dialog.showModal()}catch{finish(false)}
+ });
+}
+// Serialize uploads so two simultaneous selections cannot evade the duplicate check.
+let pendingPdfUpload=Promise.resolve();
+async function addFile(file){
+ if(!file)return;
+ try{
+  if(file.size>75*1024*1024)throw Error("الحد الأقصى 75 ميجابايت");
+  const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());
+  if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");
+  const sha256=await digestHex(await file.arrayBuffer());
+  const existing=await findMatchingPdf(file,sha256);
+  if(existing&&!await confirmDuplicatePdf(existing,file.name)){
+   tell("أُلغيت إضافة النسخة المكررة، وملفك السابق محفوظ كما هو.");
+   return;
+  }
+  const d={id:crypto.randomUUID(),name:file.name,file,sha256,updated:Date.now(),lastPage:1,deleted:false,favorite:false};
+  await save("documents",d);
+  await activate(d);
+ }catch(e){console.error("PDF import failed",e);tell(e.message||"تعذر فتح المستند")}
+}
+for(const id of ["file","file2","file3"])$(id).onchange=e=>{
+ const file=e.target.files?.[0];e.target.value="";
+ pendingPdfUpload=pendingPdfUpload.then(()=>addFile(file)).catch(error=>{console.error("PDF import queue",error);tell("تعذر إضافة الملف")});
+};
 async function activate(d){history=[];redo=[];draft=null;chooseTool("pointer");const seq=++loadSeq;renderTask?.cancel();pdfiumDoc?.destroy();pdfiumDoc=null;active=d;pdf=null;$("libraryPage").hidden=true;page=d.lastPage||1;readerMode=["single","spread","vertical","flip","horizontal","grid"].includes(d.readerMode)?d.readerMode:(localStorage.getItem(manageModeKey)||"single");readerRTL=d.readerRTL===undefined?localStorage.getItem(manageRTLKey)!=="false":d.readerRTL!==false;setImmersive(true);autoFit=true;readerEditing=false;readerZoom=1;applyDesktopReader();$("viewer").classList.add("reading-mode");$("viewer").classList.remove("editing-mode");$("readerOptions").hidden=true;fontMode="pdfjs";$("textReader").hidden=true;$("nativePreview").hidden=true;$("sheet").hidden=false;$("name").textContent=d.name;$("readerFileName").textContent=d.name;$("viewer").hidden=false;$("welcome").hidden=true;$("favorite").textContent=d.favorite?"★":"☆";$("nativePreview").hidden=true;$("sheet").hidden=false;if(nativeURL)URL.revokeObjectURL(nativeURL);nativeURL=URL.createObjectURL(d.file);$("nativeFrame").removeAttribute("src");tell("");try{const newpdf=await pdfjs.getDocument({data:new Uint8Array(await d.file.arrayBuffer()),useSystemFonts:false,disableFontFace:false,cMapUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/cmaps/",cMapPacked:true,standardFontDataUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/standard_fonts/",useWasm:true,wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/wasm/"}).promise;if(seq!==loadSeq){newpdf.destroy();return}pdf=newpdf;page=Math.min(Math.max(page,1),pdf.numPages);if(d.totalPages!==pdf.numPages){d.totalPages=pdf.numPages;await save("documents",d)}try{pdfiumImport??=import("./pdfium-adapter.js");const {createPdfiumDocument}=await pdfiumImport;const engine=await createPdfiumDocument(new Uint8Array(await d.file.arrayBuffer()));if(seq!==loadSeq){engine.destroy();return}if(engine.pages!==pdf.numPages){engine.destroy();throw Error("PDFium page count mismatch")}pdfiumDoc=engine;/* Keep the embedded Arabic text in its original PDF layout. PDF.js may reshape complex fonts. */fontMode="original"}catch(error){console.warn("PDFium unavailable, using PDF.js",error);fontMode="pdfjs";tell("تعذر تشغيل PDFium لهذا الملف؛ تم استخدام PDF.js بدلًا منه")}await startContinuous();refresh()}catch(e){console.error(e);tell("تعذر عرض المستند، جرب فتح الملف الأصلي من خيارات الخط") }}
 function fitWidth(p){const width=$("desk").clientWidth-(isMobile()?16:48)-(isMobile()?44:0);return Math.min(3,Math.max(.3,width/p.getViewport({scale:1}).width))}
 async function render(){if(!pdf)return;if(fontMode==="text"){await renderArabicText();return}const seq=++renderSeq;try{renderTask?.cancel();const p=await pdf.getPage(page);if(seq!==renderSeq)return;if(autoFit)scale=fitWidth(p);const v=p.getViewport({scale}),ratio=Math.min(devicePixelRatio||1,3,Math.sqrt(16000000/Math.max(1,v.width*v.height)));c.width=ink.width=Math.ceil(v.width*ratio);c.height=ink.height=Math.ceil(v.height*ratio);for(const el of [c,ink]){el.style.width=v.width+"px";el.style.height=v.height+"px"}$("sheet").style.width=v.width+"px";$("sheet").style.height=v.height+"px";if(fontMode==="original"&&pdfiumDoc&&v.rotation===0){try{
