@@ -50,7 +50,7 @@
   <div class="library-overview" aria-label="ملخص مكتبتي">
    <div class="library-overview-item"><span class="library-overview-icon">▤</span><strong id="libraryStatsAll">0</strong><small>كل الملفات</small></div>
    <div class="library-overview-item"><span class="library-overview-icon">▱</span><strong id="libraryStatsFolders">0</strong><small>المجلدات</small></div>
-   <div class="library-overview-item"><span class="library-overview-icon">🔖</span><strong id="libraryStatsBookmarks">0</strong><small>الفواصل</small></div>
+   <button id="libraryBookmarksShortcut" type="button" class="library-overview-item library-overview-action" aria-label="عرض الكتب التي تحتوي على فواصل قراءة"><span class="library-overview-icon">🔖</span><strong id="libraryStatsBookmarks">0</strong><small>الفواصل</small></button>
    <div class="library-overview-item"><span class="library-overview-icon">☆</span><strong id="libraryStatsFav">0</strong><small>المفضلة</small></div>
   </div>
   <div class="library-search-row"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="ابحث عن كتاب أو ملف..." aria-label="البحث في الملفات"></div>
@@ -116,7 +116,7 @@
    </section>
   </section>
  </div>
- <nav class="library-bottom-nav" aria-label="أقسام مكتبتي"><button id="libraryTabAll" type="button" class="selected"><span>▤</span><small>مكتبتي</small></button><button id="libraryTabRecent" type="button"><span>◷</span><small>الأخيرة</small></button><button id="libraryTabFav" type="button"><span>☆</span><small>المفضلة</small></button><button id="libraryTabManage" type="button"><span>⚙</span><small>إدارة</small></button></nav>
+ <nav class="library-bottom-nav" aria-label="أقسام مكتبتي"><button id="libraryTabAll" type="button" class="selected"><span>▤</span><small>مكتبتي</small></button><button id="libraryTabRecent" type="button"><span>◷</span><small>الأخيرة</small></button><button id="libraryTabBookmarks" type="button"><span>🔖</span><small>الفواصل</small></button><button id="libraryTabFav" type="button"><span>☆</span><small>المفضلة</small></button><button id="libraryTabManage" type="button"><span>⚙</span><small>إدارة</small></button></nav>
 </section>
 <section id="viewer" class="viewer reading-mode" hidden>
  <nav id="readerTopbar" class="reader-topbar" aria-label="أدوات قراءة المستند">
