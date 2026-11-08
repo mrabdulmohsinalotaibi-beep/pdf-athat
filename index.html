@@ -48,10 +48,10 @@
    <label class="library-add">＋ إضافة PDF<input id="file3" type="file" accept=".pdf,application/pdf" hidden></label>
   </div>
   <div class="library-overview" aria-label="ملخص مكتبتي">
-   <div class="library-overview-item"><span class="library-overview-icon">▤</span><strong id="libraryStatsAll">0</strong><small>كل الملفات</small></div>
-   <div class="library-overview-item"><span class="library-overview-icon">▱</span><strong id="libraryStatsFolders">0</strong><small>المجلدات</small></div>
-   <button id="libraryBookmarksShortcut" type="button" class="library-overview-item library-overview-action" aria-label="عرض الكتب التي تحتوي على فواصل قراءة"><span class="library-overview-icon">🔖</span><strong id="libraryStatsBookmarks">0</strong><small>الفواصل</small></button>
-   <div class="library-overview-item"><span class="library-overview-icon">☆</span><strong id="libraryStatsFav">0</strong><small>المفضلة</small></div>
+   <button id="libraryAllShortcut" type="button" class="library-overview-item library-overview-action" aria-label="عرض جميع ملفات PDF" aria-pressed="true"><span class="library-overview-icon">▤</span><strong id="libraryStatsAll">0</strong><small>كل الملفات</small></button>
+   <button id="libraryFoldersShortcut" type="button" class="library-overview-item library-overview-action" aria-label="الانتقال إلى مجلداتي" aria-pressed="false"><span class="library-overview-icon">▱</span><strong id="libraryStatsFolders">0</strong><small>المجلدات</small></button>
+   <button id="libraryBookmarksShortcut" type="button" class="library-overview-item library-overview-action" aria-label="عرض الكتب التي تحتوي على فواصل قراءة" aria-pressed="false"><span class="library-overview-icon">🔖</span><strong id="libraryStatsBookmarks">0</strong><small>الفواصل</small></button>
+   <button id="libraryFavShortcut" type="button" class="library-overview-item library-overview-action" aria-label="عرض الملفات المفضلة" aria-pressed="false"><span class="library-overview-icon">☆</span><strong id="libraryStatsFav">0</strong><small>المفضلة</small></button>
   </div>
   <div class="library-search-row"><span aria-hidden="true">⌕</span><input id="librarySearch" type="search" placeholder="ابحث عن كتاب أو ملف..." aria-label="البحث في الملفات"></div>
   <div class="library-quick-actions" aria-label="إجراءات سريعة">
