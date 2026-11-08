@@ -426,7 +426,14 @@ $("nativeToggle").onclick=()=>setFontMode(fontMode==="native"?"original":"native
 $("thumbToggle").onclick=()=>toggleThumbs($("thumbs").hidden);$("closeThumbs").onclick=()=>toggleThumbs(false);
 async function toggleThumbs(show){$("thumbs").hidden=!show;if(!show||!pdf)return;const holder=$("thumbList");holder.replaceChildren();for(let i=1;i<=Math.min(pdf.numPages,40);i++){const b=document.createElement("button");b.className="thumb-card"+(i===page?" selected":"");b.textContent="صفحة "+i;b.onclick=()=>{go(i-page);toggleThumbs(false)};holder.append(b)}}
 window.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="s"){e.preventDefault();download()}if(e.key==="Escape"){closePanel();chooseTool("pointer");toggleSidebar(false)}});
-try{db=await openDB();await backfillLegacyUploadDates();strokes=await getAll("strokes");await refresh();if((await getAll("documents")).some(d=>!d.deleted))showLibrary();document.documentElement.dataset.ready="yes"}catch(e){console.error(e);tell("التخزين المحلي غير متاح في المتصفح");document.documentElement.dataset.ready="storage-error"}
+try{db=await openDB();
+ const migrationKey="pdfathat-upload-dates-migrated-v1"+(window.__pdfAccountId?":"+window.__pdfAccountId:"");
+ let migrated=false;try{migrated=localStorage.getItem(migrationKey)==="yes"}catch(_){}
+ if(!migrated){
+  try{await backfillLegacyUploadDates();try{localStorage.setItem(migrationKey,"yes")}catch(_){}}
+  catch(error){console.warn("Could not backfill older PDF upload dates; keep library accessible",error)}
+ }
+ strokes=await getAll("strokes");await refresh();if((await getAll("documents")).some(d=>!d.deleted))showLibrary();document.documentElement.dataset.ready="yes"}catch(e){console.error(e);tell("التخزين المحلي غير متاح في المتصفح");document.documentElement.dataset.ready="storage-error"}
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
 
 function showNativeReader(){
