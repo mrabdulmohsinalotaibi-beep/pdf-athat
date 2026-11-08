@@ -45,4 +45,9 @@ fs.writeFileSync(path.join(out,'app-v2.js'),js);
 const html=fs.readFileSync(path.join(out,'index.html'),'utf8');
 if(!html.includes('id="downloadOriginal"')||!html.includes('id="toggleInk"'))throw new Error('Original PDF protection controls are missing');
 if(!js.includes('saveBlob(file,active.name)'))throw new Error('Original PDF export is missing');
+// The offline desktop build uses the internal renderer by default, not the browser's PDF plugin.
+for(const unwanted of ['fontMode=isDesktopReader()&&readerMode==="single"?"native":"pdfjs"', 'if(isDesktopReader()&&readerMode==="single")showNativeReader()', 'if(next==="single"&&isDesktopReader())showNativeReader()']){
+ if(js.includes(unwanted))throw new Error('Default desktop PDF viewer must remain inside PDF.ATHAT');
+}
+if(!js.includes('if(fontMode==="original"&&pdfiumDoc&&viewport.rotation===0)'))throw new Error('Embedded PDFium desktop renderer missing');
 console.log('PDF.ATHAT fully bundled assets ready: '+out);
