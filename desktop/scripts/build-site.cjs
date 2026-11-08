@@ -42,7 +42,13 @@ for(const marker of ['id="continuousReader"','id="readerFab"','id="readerTopbar"
  if(!htmlCheck.includes(marker))throw Error('Reader UI missing '+marker);
 }
 // Guard against regression to low-resolution full-page desktop rendering.
-if(!source.includes('function showNativeReader()')||!source.includes('nativeURL+"#view=Fit&page="')||!source.includes('readerMode==="single"'))throw Error('Native browser PDF reader not wired for single-page desktop mode');
+// The browser's built-in PDF viewer remains optional; on desktop the default
+// must always be our in-app PDFium/PDF.js reader (including after ink edits).
+if(!source.includes('function showNativeReader()')||!source.includes('nativeURL+"#view=Fit&page="'))throw Error('Optional native PDF viewer missing');
+for(const unintended of ['fontMode=isDesktopReader()&&readerMode==="single"?"native":"pdfjs"', 'if(isDesktopReader()&&readerMode==="single")showNativeReader()', 'if(next==="single"&&isDesktopReader())showNativeReader()', 'if(!isDesktopReader())try{pdfiumImport']){
+ if(source.includes(unintended))throw Error('Desktop PDF must open inside PDF.ATHAT, not native viewer: '+unintended);
+}
+if(!source.includes('if(fontMode==="original"&&pdfiumDoc&&viewport.rotation===0)'))throw Error('Desktop embedded PDFium render path is missing');
 for(const mode of ['single','spread','vertical','flip','horizontal','grid'])if(!html.includes('<option value="'+mode+'">'))throw Error('Missing PDF reading mode '+mode);
 for(const marker of ['async function startContinuous()','async function renderPagedMode()','async function setReaderMode(','async function renderContinuousPage(','async function setReaderEditing(','function updateReaderBookmark()']){
  if(!source.includes(marker))throw Error('Reader controller missing '+marker);
