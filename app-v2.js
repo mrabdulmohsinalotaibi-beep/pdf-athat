@@ -64,10 +64,39 @@ const folderList=()=>[...new Set(libraryCustomFolders)];
 const saveFolders=()=>{try{localStorage.setItem(folderStorageKey,JSON.stringify(libraryCustomFolders))}catch(e){console.warn(e)}};
 function libNode(tag,cls,txt){const n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n}
 function showLibrary(){if(active){closeDocument();return}document.documentElement.classList.remove("reader-open");$("viewer").hidden=true;$("welcome").hidden=true;$("libraryPage").hidden=false;$("sidebar").classList.remove("open");$("backdrop").hidden=true;void renderLibrary()}
-function librarySelect(tab,folder=""){libraryTab=tab;libraryFolder=folder;for(const [id,t]of [["libraryTabAll","all"],["libraryTabRecent","recent"],["libraryTabBookmarks","bookmarks"],["libraryTabFav","fav"],["libraryTabManage","manage"]])$(id).classList.toggle("selected",tab===t);void renderLibrary()}
+function updateOverviewQuickSelection(){
+ const state={libraryAllShortcut:libraryTab==="all"&&!libraryFolder,libraryFoldersShortcut:libraryTab==="all"&&!!libraryFolder,libraryBookmarksShortcut:libraryTab==="bookmarks",libraryFavShortcut:libraryTab==="fav"};
+ for(const [id,selected] of Object.entries(state)){
+  const el=$(id);if(!el)continue;
+  el.classList.toggle("selected",selected);
+  el.setAttribute("aria-pressed",String(selected));
+ }
+}
+function librarySelect(tab,folder=""){
+ libraryTab=tab;libraryFolder=folder;
+ for(const [id,t]of [["libraryTabAll","all"],["libraryTabRecent","recent"],["libraryTabBookmarks","bookmarks"],["libraryTabFav","fav"],["libraryTabManage","manage"]])$(id).classList.toggle("selected",tab===t);
+ updateOverviewQuickSelection();
+ return renderLibrary();
+}
+async function openLibraryQuick(tab,section){
+ // Filters use the same IndexedDB library and never alter saved files.
+ await librarySelect(tab);
+ const target=$(section);if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+}
 for(const [id,t]of [["libraryTabAll","all"],["libraryTabRecent","recent"],["libraryTabBookmarks","bookmarks"],["libraryTabFav","fav"],["libraryTabManage","manage"]])$(id).onclick=()=>librarySelect(t);
 $("libraryOpenTrash").onclick=()=>librarySelect("trash");
-$("libraryBookmarksShortcut").onclick=()=>librarySelect("bookmarks");
+$("libraryAllShortcut").onclick=()=>void openLibraryQuick("all","libraryFilesTitle");
+$("libraryFoldersShortcut").onclick=async()=>{
+ await librarySelect("all");
+ const folders=$("libraryFolders");
+ folders?.scrollIntoView({behavior:"smooth",block:"start"});
+ $("libraryFoldersShortcut").classList.add("selected");
+ $("libraryFoldersShortcut").setAttribute("aria-pressed","true");
+ $("libraryAllShortcut").classList.remove("selected");
+ $("libraryAllShortcut").setAttribute("aria-pressed","false");
+};
+$("libraryBookmarksShortcut").onclick=()=>void openLibraryQuick("bookmarks","libraryFilesTitle");
+$("libraryFavShortcut").onclick=()=>void openLibraryQuick("fav","libraryFilesTitle");
 $("librarySearch").oninput=e=>{librarySearch=e.target.value.trim().toLowerCase();void renderLibrary()};
 const librarySortStorageKey="pdfathat-library-sort-v1"+(window.__pdfAccountId?":"+window.__pdfAccountId:"");
 try{const savedSort=localStorage.getItem(librarySortStorageKey);if(savedSort==="date"||savedSort==="name")librarySort=savedSort}catch(_){}
