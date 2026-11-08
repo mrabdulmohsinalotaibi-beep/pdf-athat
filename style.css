@@ -334,7 +334,10 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 .library-hero-modern .library-add{position:relative;z-index:3;min-height:42px;padding:10px 14px;border-radius:12px;box-shadow:0 5px 15px #58090925}
 .library-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:0 0 15px}
 .library-overview-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:5px 7px;text-align:center;min-height:68px;padding:9px 5px;background:var(--panel);border:1px solid var(--line);border-radius:13px;box-shadow:0 2px 7px #40101008}
-.library-overview-action{cursor:pointer;color:var(--ink);font:inherit;width:100%;transition:border-color .15s,box-shadow .15s}\n.library-overview-action:hover,.library-overview-action:focus-visible{border-color:var(--green);box-shadow:0 0 0 2px #78000022}\n.library-overview-action:focus-visible{outline:2px solid var(--green);outline-offset:2px}\n.library-overview-item:first-child{border-color:#b87e75;background:var(--panel-soft)}
+.library-overview-action{cursor:pointer;color:var(--ink);font:inherit;width:100%;transition:border-color .15s,box-shadow .15s}
+.library-overview-action.selected,.library-overview-action[aria-pressed="true"]{border-color:#780000;background:var(--panel-soft);box-shadow:inset 0 0 0 1px #78000055,0 3px 10px #78000012}
+.library-overview-action:active{transform:translateY(1px)}
+.library-folders,.library-files-heading{scroll-margin-top:18px}\n.library-overview-action:hover,.library-overview-action:focus-visible{border-color:var(--green);box-shadow:0 0 0 2px #78000022}\n.library-overview-action:focus-visible{outline:2px solid var(--green);outline-offset:2px}\n.library-overview-item:first-child{border-color:#b87e75;background:var(--panel-soft)}
 .library-overview-item .library-overview-icon{font-size:19px;color:var(--green)}
 .library-overview-item strong{font-size:16px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
 .library-overview-item small{font-size:11px;color:var(--mute);width:100%}
