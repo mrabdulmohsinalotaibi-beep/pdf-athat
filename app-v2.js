@@ -555,7 +555,7 @@ async function renderContinuousPage(n,token){
  const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;canvas.style.width=viewport.width+"px";canvas.style.height=viewport.height+"px";
  el.style.width=viewport.width+"px";el.style.height=viewport.height+"px";
  let ok=false;
- if(fontMode==="original"&&!desktopSingle()&&pdfiumDoc&&viewport.rotation===0){
+ if(fontMode==="original"&&pdfiumDoc&&viewport.rotation===0){
   try{
    const bitmap=await pdfiumDoc.renderPage(n,viewport.scale*ratio);
    if(token!==continuousToken)return;
