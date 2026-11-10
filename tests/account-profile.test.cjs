@@ -140,6 +140,23 @@ test('reader guest mode has no authentication, no cloud sync, and uses existing 
  assert.match(entry,/if\(!guestMode\)\{/);
  assert.match(entry,/delete window\.__pdfAccountId/);
  assert.match(entry,/if\(user\)\{[\s\S]*import\('\.\/peer-sync\.js'\)/);
- assert.match(reader,/window\.__pdfAccountId\?"pdf-athat-account-"\+window\.__pdfAccountId:"pdf-athat-v1"/);
+ assert.match(reader,/window\.__pdfGuestDBName\|\|"pdf-athat-v1"/);
  assert.doesNotMatch(entry,/indexedDB\.deleteDatabase/);
+});
+
+test('linking visitor library rotates guest database only after verifying account copies',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const importer=fs.readFileSync(path.resolve(__dirname,'../legacy-import.js'),'utf8');
+ const reader=fs.readFileSync(path.resolve(__dirname,'../app-v2.js'),'utf8');
+ const entry=fs.readFileSync(path.resolve(__dirname,'../site-entry.js'),'utf8');
+ assert.match(importer,/const target='pdf-athat-account-'\+userId/);
+ assert.match(importer,/const source=window\.__pdfGuestDBName\|\|'pdf-athat-v1'/);
+ assert.match(importer,/await transfer\(oldDB,newDB\)/);
+ assert.match(importer,/for\(const item of checks\)/);
+ assert.match(importer,/localStorage\.setItem\(guestKey,next\)/);
+ assert.ok(importer.indexOf('await transfer(oldDB,newDB)')<importer.indexOf('localStorage.setItem(guestKey,next)'));
+ assert.doesNotMatch(importer,/deleteDatabase|objectStore\(['"]documents['"]\)\.clear\(/);
+ assert.match(reader,/window\.__pdfAccountId\?"pdf-athat-account-"\+window\.__pdfAccountId:\(window\.__pdfGuestDBName\|\|"pdf-athat-v1"\)/);
+ assert.match(entry,/if\(guestMode\)window\.addEventListener\('storage'/);
+ assert.match(entry,/event\.key==='pdf-athat-active-guest-library'/);
 });
