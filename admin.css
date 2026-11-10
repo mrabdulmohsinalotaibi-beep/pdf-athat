@@ -45,3 +45,100 @@ body{min-height:100vh}
 .admin-audit-entry small{font-size:11px;color:#654c3d;line-height:1.6;overflow-wrap:anywhere}
 #healthStatus{font-size:13px;color:var(--wine);font-weight:700}
 @media(max-width:600px){#exportUsers{width:100%}}
+
+
+/* 2026 responsive management redesign: prevent over-wide cards/tables and giant text. */
+html{max-width:100%;overflow-x:hidden;scroll-behavior:smooth}
+body{width:100%;max-width:100%;overflow-x:hidden;font-size:14px;line-height:1.7}
+.container{width:min(100%,1240px);max-width:1240px;margin:16px auto;padding:0 clamp(10px,2.5vw,24px);min-width:0}
+.container *{min-width:0}
+.bar{padding:12px clamp(12px,3vw,28px);flex-wrap:wrap}
+.heading{align-items:center;margin-bottom:14px}
+.heading h1{font-size:clamp(21px,3vw,30px);line-height:1.35}
+.heading p{font-size:12px;color:#715c49;overflow-wrap:anywhere;margin:4px 0}
+.panel{padding:clamp(15px,2vw,22px);min-width:0;box-shadow:0 3px 10px #4a30140b}
+.panel h2{font-size:clamp(17px,2vw,21px);line-height:1.45}
+.panel h3{font-size:16px;margin:18px 0 10px}
+.panel p{font-size:13px;line-height:1.75;overflow-wrap:anywhere}
+.stats{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.stat-card{padding:14px;min-height:112px}
+.stat-card small{font-size:12px;line-height:1.5}
+.stat-card strong{font-size:clamp(24px,3vw,32px);line-height:1.2}
+.stat-card span{font-size:11px}
+.sections{grid-template-columns:minmax(0,1fr);gap:14px}
+.admin-side{grid-template-columns:repeat(2,minmax(0,1fr))}
+.admin-side #transferPanel{grid-column:span 2}
+.admin-users,.ad-manager{width:100%}
+.search-controls{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px}
+.search-controls button{font-size:13px;padding:10px 13px;white-space:nowrap}
+input,textarea,select{max-width:100%;box-sizing:border-box;font:inherit}
+input:not([type=checkbox]),textarea{width:100%;font-size:14px;min-height:42px;padding:10px 12px;background:#fff}
+input::placeholder{color:#73695f}
+textarea{resize:vertical;min-height:85px}
+.tableWrap{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:12px}
+.tableWrap table{min-width:620px}
+.tableWrap th,.tableWrap td{font-size:12px;padding:10px;overflow-wrap:anywhere}
+.tableWrap th{background:#e7d6c1}
+.sub-email{font-size:11px;overflow-wrap:anywhere}
+.user-actions{gap:5px}
+.user-actions select{min-width:105px}
+.user-actions button{white-space:nowrap}
+.admin-sections{position:sticky;top:0;z-index:10;background:var(--sand);gap:7px;scrollbar-width:none;padding:8px 0}
+.admin-sections a{font-size:12px;padding:8px 12px}
+.ad-form{display:grid;gap:10px}
+.ad-form label{margin:0;font-size:13px}
+.ad-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ad-form-actions{display:flex;gap:8px;flex-wrap:wrap}
+.ad-form-actions button{flex:1 1 130px;font-size:13px}
+.ad-form .ad-check{display:flex;align-items:center;gap:9px}
+.ad-check input{width:18px;height:18px;accent-color:var(--wine)}
+.ad-list{display:grid;gap:10px}
+.ad-item{border:1px solid var(--line);background:#f6ecdf;border-radius:13px;padding:13px;display:grid;gap:6px}
+.ad-item-header{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.ad-item strong{font-size:14px;overflow-wrap:anywhere}
+.ad-item small{font-size:11px;color:#745b49;overflow-wrap:anywhere}
+.ad-item p{margin:3px 0;color:#594336;font-size:12px}
+.ad-item-actions{display:flex;gap:6px;flex-wrap:wrap}
+.ad-item-actions button{font-size:12px;padding:8px 11px}
+.ad-tag{border-radius:99px;padding:3px 10px;border:1px solid var(--line);font-size:11px}
+.ad-tag.live{color:#14633b;background:#e1eddf}
+.ad-tag.paused{color:#795a38;background:#f3e6d3}
+@media(max-width:900px){.admin-side{grid-template-columns:1fr}.admin-side #transferPanel{grid-column:auto}.bar{gap:9px}}
+@media(max-width:650px){
+ .container{padding:0 10px;margin:10px auto}
+ .bar{padding:10px 12px}
+ .brand img{width:32px;height:32px}
+ .brand strong{font-size:14px}
+ .bar-links{gap:10px;font-size:12px}
+ .panel{padding:14px;border-radius:15px}
+ .heading h1{font-size:22px}
+ .heading-actions{display:flex;gap:8px}
+ .heading-actions button{flex:1;padding:9px}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .stat-card{min-height:104px;padding:12px}
+ .stat-card strong{font-size:27px}
+ .stat-card small{font-size:12px}
+ .stat-card span{font-size:10px}
+ .panel-heading{gap:8px}
+ .search-controls{grid-template-columns:minmax(0,1fr) auto}
+ .search-controls #exportUsers{grid-column:1/-1;width:100%}
+ .search-controls input{font-size:13px}
+ .tableWrap{border:0;overflow:visible}
+ .tableWrap table,.tableWrap tbody,.tableWrap tr,.tableWrap td{display:block;min-width:0;width:100%}
+ .tableWrap thead{display:none}
+ .tableWrap tbody{display:grid;gap:10px}
+ .tableWrap tr{background:#f5eadb;border:1px solid var(--line);border-radius:12px;padding:9px 12px}
+ .tableWrap td{padding:7px 0;border-bottom:1px dashed #cebda7;font-size:12px}
+ .tableWrap td:last-child{border-bottom:0}
+ .tableWrap td[data-label]:before{content:attr(data-label);display:block;font-size:11px;color:#745f4e;margin-bottom:4px}
+ .tableWrap td:first-child{font-size:13px}
+ .tableWrap .sub-email{direction:ltr;text-align:right;font-size:12px}
+ .user-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+ .user-actions select{grid-column:1/-1;max-width:none;width:100%}
+ .user-actions button{width:100%}
+ .ad-form-grid{grid-template-columns:1fr;gap:10px}
+ .admin-sections{top:0}
+ .admin-sections a{flex-shrink:0}
+ .pagination{gap:8px}
+ .pagination button{font-size:12px}
+}
