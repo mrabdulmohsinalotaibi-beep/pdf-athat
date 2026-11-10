@@ -16,6 +16,12 @@
   }
   if(user)window.__pdfAccountId=user.id;
   else delete window.__pdfAccountId;
+  // Each completed guest-to-account link closes that guest library and opens a
+  // fresh anonymous library. Previous files remain as local recovery archives,
+  // never shown again to a guest after they have been linked to an account.
+  const guestLibrary=localStorage.getItem('pdf-athat-active-guest-library');
+  window.__pdfGuestDBName=guestLibrary && /^pdf-athat-guest-[a-f0-9-]{36}$/.test(guestLibrary)
+   ? guestLibrary : 'pdf-athat-v1';
   window.__pdfGuestMode=guestMode;
   if(panel)panel.hidden=false;
   const actions=document.querySelector('.header-actions');
