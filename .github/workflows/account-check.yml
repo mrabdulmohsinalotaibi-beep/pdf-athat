@@ -22,6 +22,7 @@ on:
       - 'app-v2.js'
       - 'index.html'
       - 'tests/header-layout.test.cjs'
+      - 'tests/cover-quality.test.cjs'
       - 'style.css'
       - 'tests/reader-hardening.test.cjs'
       - 'legacy-import.js'
@@ -46,6 +47,8 @@ jobs:
         run: node --test tests/auth.test.mjs
       - name: Responsive header and original logo regression tests
         run: node --test tests/header-layout.test.cjs
+      - name: Sharp PDF covers and full-page preview regression tests
+        run: node --test tests/cover-quality.test.cjs
       - name: Ad scheduling, access and safe rendering tests
         run: node --test tests/ads.test.mjs
       - name: Private traffic analytics, security headers and appearance button tests
