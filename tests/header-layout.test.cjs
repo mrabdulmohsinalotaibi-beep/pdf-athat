@@ -24,7 +24,7 @@ test('mobile/tablet header has independent action row and prayer strip never ove
 test('old-library import remains available in backup management; no extra admin dotted menu',()=>{
  const legacy=file('legacy-import.js');
  const builder=file('desktop/scripts/build-site.cjs');
- assert.match(legacy,/document\.querySelector\('#manageBackup \.manage-controls'\)/);
+ assert.match(legacy,/const bar=\$\('#manageBackup \.manage-controls'\)/);
  assert.doesNotMatch(legacy,/document\.querySelector\('\.header-actions'\)/);
  assert.doesNotMatch(builder,/<script defer src=\\"\.\/admin-entry\.js/);
 });
