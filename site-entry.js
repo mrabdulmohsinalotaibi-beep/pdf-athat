@@ -12,6 +12,9 @@
   if(panel)panel.hidden=false;
   const actions=document.querySelector('.header-actions');
   if(actions){
+   if(data.user.role==='admin'){
+    const adminLink=document.createElement('a');adminLink.href='/admin.html';adminLink.className='subtle-btn';adminLink.textContent='لوحة الإدارة';adminLink.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';actions.prepend(adminLink);
+   }
    const link=document.createElement('a');link.href='/account.html';link.className='subtle-btn';
    link.textContent='حسابي: '+(data.user.username||data.user.email);
    link.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';
