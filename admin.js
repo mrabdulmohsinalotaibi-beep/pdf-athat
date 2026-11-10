@@ -52,6 +52,33 @@ async function refresh(){
  $('mailStatus').textContent='خدمة رسائل التحقق: '+(data.mailConfigured?'إعداداتها مفعّلة':'الإعدادات غير مكتملة');
  await loadUsers();
 }
+let transferChallengeId='';
+const transferStatus=message=>$('transferStatus').textContent=message;
+$('transferStartForm').onsubmit=async event=>{
+ event.preventDefault();
+ const form=event.currentTarget,button=form.querySelector('button[type=submit]');
+ const values=Object.fromEntries(new FormData(form));button.disabled=true;transferStatus('');
+ try{
+  const result=await post('/api/admin/transfer-start',values);
+  transferChallengeId=result.challengeId;
+  $('transferConfirmForm').hidden=false;
+  form.querySelector('input[name=password]').value='';
+  transferStatus('تم إرسال رمز التحقق إلى البريد الجديد. أكد الرمز خلال عشر دقائق.');
+ }catch(error){transferStatus(error.message)}finally{button.disabled=false}
+};
+$('transferConfirmForm').onsubmit=async event=>{
+ event.preventDefault();
+ const form=event.currentTarget,button=form.querySelector('button[type=submit]');
+ if(!transferChallengeId)return transferStatus('اطلب رمز النقل أولًا');
+ if(!confirm('هل تؤكد نقل صلاحية المدير إلى البريد الجديد وإلغاء صلاحية الحساب الحالي؟'))return;
+ button.disabled=true;
+ try{
+  const data=await post('/api/admin/transfer-confirm',{challengeId:transferChallengeId,code:form.querySelector('input[name=code]').value});
+  transferChallengeId='';
+  alert(data.message);
+  location.replace('/account.html');
+ }catch(error){transferStatus(error.message)}finally{button.disabled=false}
+};
 $('userSearchForm').onsubmit=event=>{event.preventDefault();query=$('userSearch').value.trim();page=0;loadUsers().catch(e=>notify(e.message))};
 $('pagePrev').onclick=()=>{if(page>0){page--;loadUsers().catch(e=>notify(e.message))}};
 $('pageNext').onclick=()=>{page++;loadUsers().catch(e=>notify(e.message))};
