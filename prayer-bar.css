@@ -31,3 +31,41 @@
 .prayer-alert-control{display:flex;align-items:center;gap:8px;padding:10px 0;font-size:13px;line-height:1.6}
 .prayer-alert-control input{accent-color:var(--green);width:17px;height:17px;flex:none}
 @media(max-width:680px){.prayer-hijri{font-size:9px}.prayer-place{gap:0}}
+
+
+/* Two-row prayer summary on phones/tablets; never force the reading area under a fixed bar. */
+#app>.prayer-bar{flex:0 0 auto;height:auto;min-height:52px;max-height:none}
+#app:has(.prayer-bar:not([hidden]))>.workspace{height:auto!important}
+#app .prayer-times{min-width:0}
+#app .prayer-place{min-width:0;max-width:none}
+#app .prayer-city{min-width:0;font-size:12px!important;min-height:20px!important}
+#app .prayer-time{min-width:0}
+@media(max-width:980px){
+ #app>.prayer-bar{display:grid;grid-template-columns:minmax(0,1fr) 34px 34px;grid-template-areas:"place settings close" "times times times";column-gap:8px;row-gap:5px;align-items:center;padding:8px 12px 9px}
+ #app .prayer-place{grid-area:place;min-width:0;max-width:none;display:flex;flex-direction:row;align-items:center;gap:6px 12px;flex-wrap:wrap}
+ #app .prayer-city{font-size:13px!important;min-width:0;flex:0 1 auto}
+ #app .prayer-soon{font-size:11px;white-space:nowrap}
+ #app .prayer-hijri{font-size:10px;flex:1 1 100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #app .prayer-times{grid-area:times;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:2px;align-items:center;overflow:visible;width:100%}
+ #app .prayer-time{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px 2px;min-height:45px;line-height:1.25;min-width:0}
+ #app .prayer-time b{font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+ #app .prayer-settings{grid-area:settings}
+ #app .prayer-dismiss{grid-area:close}
+ #app .prayer-settings,#app .prayer-dismiss{display:grid;place-items:center;min-height:32px;min-width:32px;font-size:17px}
+}
+@media(max-width:460px){
+ #app>.prayer-bar{padding:6px 8px 8px;grid-template-columns:minmax(0,1fr) 30px 30px;gap:3px 5px}
+ #app .prayer-place{gap:1px 8px}
+ #app .prayer-city{font-size:12px!important}
+ #app .prayer-soon{font-size:10px}
+ #app .prayer-hijri{font-size:9px}
+ #app .prayer-time{gap:3px;padding:3px 0;min-height:40px;font-size:10px}
+ #app .prayer-time b{font-size:10px}
+ #app .prayer-settings,#app .prayer-dismiss{min-height:30px;min-width:29px;font-size:15px}
+}
+@media(min-width:981px){
+ #app>.prayer-bar{display:flex;align-items:center;gap:12px;padding:7px 16px;min-height:56px}
+ #app .prayer-place{flex:0 1 250px;max-width:250px}
+ #app .prayer-times{flex:1 1 auto;display:flex;justify-content:space-around;overflow:visible}
+ #app .prayer-time{min-width:65px}
+}
