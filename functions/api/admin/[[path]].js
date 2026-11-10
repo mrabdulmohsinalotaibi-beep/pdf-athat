@@ -23,6 +23,42 @@ export async function onRequest({request,env}) {
    const pending=await sql(env.PDF_AUTH_DB,"SELECT COUNT(*) AS total FROM pdf_email_challenges WHERE purpose='signup' AND expires_at>?",time).first();
    return response({users:Number(users?.total||0),admins:Number(users?.admins||0),activeSessions:Number(sessions?.total||0),recentUsers:Number(recent?.total||0),pendingVerifications:Number(pending?.total||0),mailConfigured:!!(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET),localFiles:'لا تُرفع ملفات PDF إلى الخادم'});
   }
+  if(action==='ads' && request.method==='GET'){
+   const rows=await sql(env.PDF_AUTH_DB,'SELECT id,title,body,link_url,starts_at,ends_at,duration_seconds,enabled,created_at FROM pdf_site_ads ORDER BY updated_at DESC LIMIT 100').all();
+   return response({ads:rows.results||[]});
+  }
+  if(action==='ad-save' && request.method==='POST'){
+   if(request.headers.get('Origin')!==url.origin || request.headers.get('Sec-Fetch-Site')==='cross-site')return response({error:'الطلب غير مسموح'},403);
+   if(!request.headers.get('Content-Type')?.startsWith('application/json'))return response({error:'نوع الطلب غير مدعوم'},415);
+   const body=await request.json();
+   const title=typeof body.title==='string'?body.title.trim():'';
+   const description=typeof body.body==='string'?body.body.trim():'';
+   const link=typeof body.link_url==='string'?body.link_url.trim():'';
+   const start=body.starts_at,end=body.ends_at,duration=body.duration_seconds;
+   if(!title||title.length>90||description.length>400||link.length>500||!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>=end||end-start>366*86400||!Number.isSafeInteger(duration)||duration<0||duration>3600)return response({error:'تحقق من النص والتواريخ والمدة (حتى ساعة)'},400);
+   if(link && (!/^https:\/\//i.test(link)||!(()=>{try{const target=new URL(link);return target.protocol==='https:'&&!target.username&&!target.password}catch{return false}})()))return response({error:'رابط الإعلان يجب أن يبدأ بـ HTTPS'},400);
+   const enabled=body.enabled===false?0:1;
+   const stamp=Math.floor(Date.now()/1000);
+   const id=typeof body.id==='string'&&/^[0-9a-f-]{36}$/i.test(body.id)?body.id:crypto.randomUUID();
+   if(body.id){
+    const saved=await sql(env.PDF_AUTH_DB,'UPDATE pdf_site_ads SET title=?,body=?,link_url=?,starts_at=?,ends_at=?,duration_seconds=?,enabled=?,updated_at=? WHERE id=?',title,description,link,start,end,duration,enabled,stamp,id).run();
+    if(!saved.meta?.changes)return response({error:'الإعلان غير موجود'},404);
+   }else{
+    await sql(env.PDF_AUTH_DB,'INSERT INTO pdf_site_ads(id,title,body,link_url,starts_at,ends_at,duration_seconds,enabled,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)',id,title,description,link,start,end,duration,enabled,stamp,stamp).run();
+   }
+   return response({ok:true,id});
+  }
+  if((action==='ad-toggle'||action==='ad-delete')&&request.method==='POST'){
+   if(request.headers.get('Origin')!==url.origin||request.headers.get('Sec-Fetch-Site')==='cross-site')return response({error:'الطلب غير مسموح'},403);
+   if(!request.headers.get('Content-Type')?.startsWith('application/json'))return response({error:'نوع الطلب غير مدعوم'},415);
+   const body=await request.json();
+   if(typeof body?.id!=='string'||!/^[0-9a-f-]{36}$/i.test(body.id))return response({error:'معرف الإعلان غير صالح'},400);
+   const result=action==='ad-delete'
+    ?await sql(env.PDF_AUTH_DB,'DELETE FROM pdf_site_ads WHERE id=?',body.id).run()
+    :await sql(env.PDF_AUTH_DB,'UPDATE pdf_site_ads SET enabled=CASE WHEN enabled=1 THEN 0 ELSE 1 END,updated_at=? WHERE id=?',Math.floor(Date.now()/1000),body.id).run();
+   if(!result.meta?.changes)return response({error:'الإعلان غير موجود'},404);
+   return response({ok:true});
+  }
   if(request.method==='GET' && action==='audit') {
    const result=await sql(env.PDF_AUTH_DB,`SELECT a.action,a.details,a.created_at,
     COALESCE(actor.username,actor.email,'حساب غير موجود') AS actor,
