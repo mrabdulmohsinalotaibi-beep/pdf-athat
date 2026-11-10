@@ -5,7 +5,7 @@ const file=name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8');
 test('one visible mobile/desktop appearance button cycles three saved themes',()=>{
  const index=file('index.html'),reader=file('app-v2.js'),css=file('style.css');
  assert.match(index,/id="themeToggle" class="icon-btn theme-cycle-btn"/);
- assert.match(index,/<option value="ocean">أزرق هادئ<\/option>/);
+ assert.match(index,/<option value="sketch">المرسمة — رصاصي وورقي<\/option>/);
  assert.match(reader,/const appearanceModes=\["light","dark","ocean"\]/);
  assert.match(reader,/\$\("themeToggle"\)\.onclick=/);
  assert.match(reader,/localStorage\.setItem\("athat-theme",mode\)/);
