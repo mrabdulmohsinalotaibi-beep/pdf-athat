@@ -8,6 +8,8 @@ on:
       - 'desktop/scripts/build-site.cjs'
       - 'account.*'
       - 'admin.*'
+      - 'site-ads.*'
+      - 'tests/ads.test.mjs'
       - 'site-entry.js'
       - 'prayer-bar.*'
       - 'peer-sync.js'
@@ -35,6 +37,8 @@ jobs:
         run: node --test tests/auth.test.mjs
       - name: Responsive header and original logo regression tests
         run: node --test tests/header-layout.test.cjs
+      - name: Ad scheduling, access and safe rendering tests
+        run: node --test tests/ads.test.mjs
       - name: Peer-to-peer signaling and same-account isolation tests
         run: node --test tests/peer-sync.test.mjs
       - name: Encrypted backup, search and local privacy tests
@@ -42,6 +46,8 @@ jobs:
       - name: Check admin and prayer scripts
         run: |
           node --check admin.js
+          node --check site-ads.js
+          node --check functions/api/ads.js
           node --check prayer-bar.js
           node --check peer-sync.js
           node --check 'functions/api/sync/[[path]].js'
@@ -57,6 +63,9 @@ jobs:
         run: |
           test -f desktop/dist/account.html
           test -f desktop/dist/admin.html
+          test -f desktop/dist/site-ads.js
+          test -f desktop/dist/site-ads.css
+          grep -q 'site-ads.js' desktop/dist/site-entry.js
           test -f desktop/dist/prayer-bar.js
           test -f desktop/dist/peer-sync.js
           grep -q 'peer-sync.js' desktop/dist/site-entry.js
