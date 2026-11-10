@@ -6,12 +6,27 @@
  if(!window.__pdfAccountId||!('indexedDB' in window))return;
  const open=(name,version)=>new Promise((resolve,reject)=>{const r=version?indexedDB.open(name,version):indexedDB.open(name);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
  const existing=()=>new Promise(resolve=>{if(!indexedDB.databases)return resolve(false);indexedDB.databases().then(x=>resolve(x.some(i=>i.name===source))).catch(()=>resolve(false))});
- function copyStore(oldDB,newDB,name){return new Promise((resolve,reject)=>{
-  if(!oldDB.objectStoreNames.contains(name)||!newDB.objectStoreNames.contains(name))return resolve(0);
-  let count=0;const read=oldDB.transaction(name,'readonly').objectStore(name).openCursor();
-  read.onerror=()=>reject(read.error);
-  read.onsuccess=()=>{const cursor=read.result;if(!cursor)return resolve(count);const item=cursor.value;const tx=newDB.transaction(name,'readwrite');const store=tx.objectStore(name);const get=store.get(cursor.key);get.onsuccess=()=>{if(get.result===undefined){const put=store.add(item);put.onerror=()=>reject(put.error);put.onsuccess=()=>{count++}}};tx.oncomplete=()=>cursor.continue();tx.onerror=()=>reject(tx.error)};
- })}
+ async function copyStore(oldDB,newDB,name){
+  if(!oldDB.objectStoreNames.contains(name)||!newDB.objectStoreNames.contains(name))return 0;
+  // Complete the source transaction before starting writes; cursor transactions
+  // cannot be paused while awaiting a different database's transactions.
+  const entries=await new Promise((resolve,reject)=>{
+   const tx=oldDB.transaction(name,'readonly'),req=tx.objectStore(name).getAll();
+   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+  });
+  let count=0;
+  // Adding without overwriting preserves any new annotations created by the account.
+  for(const record of entries){
+   const added=await new Promise((resolve,reject)=>{
+    const tx=newDB.transaction(name,'readwrite'),store=tx.objectStore(name);
+    const request=store.add(record);request.onsuccess=()=>resolve(true);
+    request.onerror=event=>{if(request.error?.name==='ConstraintError'){event.preventDefault();event.stopPropagation();resolve(false)}else reject(request.error)};
+    tx.onerror=()=>reject(tx.error);
+   });
+   if(added)count++;
+  }
+  return count;
+ }
  async function offer(){
   if(!(await existing()))return;
   const bar=document.querySelector('.header-actions');if(!bar)return;
