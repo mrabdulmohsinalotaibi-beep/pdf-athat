@@ -29,6 +29,13 @@ function showAuth(){
 function forward(user){
  location.replace(user?.role==='admin'?'/admin.html':'/');
 }
+function enterGuest(){
+ try{localStorage.setItem('pdf-athat-guest-mode','yes')}
+ catch{status('تعذر حفظ وضع الزائر في المتصفح. تأكد من السماح بالتخزين المحلي.');return}
+ location.replace('/');
+}
+$('guestLogin').onclick=enterGuest;
+$('profileGuest').onclick=enterGuest;
 const back=document.createElement('button');
 back.id='returnToProfile';back.type='button';back.className='secondary';back.hidden=true;
 back.textContent='العودة إلى بيانات حسابي';
@@ -180,7 +187,7 @@ $('profileLogout').onclick=async()=>{
   status('تم تسجيل الخروج. ملفاتك المحلية محفوظة على هذا الجهاز.');
  }catch(error){profileStatus(error.message)}finally{button.disabled=false}
 };
-guard($('loginForm'),async values=>{const result=await post('login',values);forward(result.user)});
+guard($('loginForm'),async values=>{const result=await post('login',values);localStorage.removeItem('pdf-athat-guest-mode');forward(result.user)});
 guard($('signupForm'),async values=>{
  if(values.password.length<8)throw Error('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
  const result=await post('signup',values);
@@ -190,6 +197,7 @@ guard($('signupForm'),async values=>{
 guard($('verifyForm'),async values=>{
  if(!state.signupChallenge)throw Error('ابدأ بإنشاء الحساب أولًا');
  const result=await post('verify',{challengeId:state.signupChallenge,code:values.code});
+ localStorage.removeItem('pdf-athat-guest-mode');
  forward(result.user);
 });
 guard($('recoverForm'),async values=>{

@@ -31,15 +31,16 @@ function fixture(user){
   if(url==='/api/auth/logout')return {ok:true,async json(){return {ok:true}}};
   throw Error('Unexpected request: '+url);
  };
+ const localValues=new Map();
  const sandbox={
   document:doc,fetch,location:{replace(value){redirects.push(value)}},
   indexedDB:{databases:async()=>[]},
-  localStorage:{getItem(){return null}},
+  localStorage:{getItem(key){return localValues.get(key)||null},setItem(key,value){localValues.set(key,value)},removeItem(key){localValues.delete(key)}},
   console,FormData:class {},Promise
  };
  vm.runInNewContext(source,sandbox,{filename:'account.js'});
  const settle=async()=>{await new Promise(resolve=>setImmediate(resolve));await new Promise(resolve=>setImmediate(resolve))};
- return {node,redirects,requests,settle};
+ return {node,redirects,requests,settle,localValues};
 }
 test('signed-in ordinary user gets personal account page, not login or redirect',async()=>{
  const user={id:'user-id-01',username:'reader5',email:'reader@example.com',role:'user'};
@@ -114,4 +115,31 @@ test('profile validation errors are shown beside visible settings rather than hi
  assert.match(source,/if\(errorTarget\)messageFor\(errorTarget,error.message\)/);
  assert.match(source,/\},'usernameSettingStatus'\)/);
  assert.match(source,/\},'emailSettingStatus'\)/);
+});
+
+test('guest access works without account, and persists local mode before opening reader',async()=>{
+ const f=fixture(null);await f.settle();
+ assert.equal(f.node('authPane').hidden,false);
+ f.node('guestLogin').onclick();
+ assert.equal(f.localValues.get('pdf-athat-guest-mode'),'yes');
+ assert.equal(f.redirects.at(-1),'/');
+ assert.match(html,/id="guestLogin"/);
+});
+test('signed-in user may opt into a separate anonymous local library without changing account data',async()=>{
+ const user={id:'user-id-01',username:'reader5',email:'reader@example.com',role:'user'};
+ const f=fixture(user);await f.settle();
+ f.node('profileGuest').onclick();
+ assert.equal(f.localValues.get('pdf-athat-guest-mode'),'yes');
+ assert.equal(f.redirects.at(-1),'/');
+ assert.match(html,/id="profileGuest"/);
+});
+test('reader guest mode has no authentication, no cloud sync, and uses existing anonymous database',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const entry=fs.readFileSync(path.resolve(__dirname,'../site-entry.js'),'utf8');
+ const reader=fs.readFileSync(path.resolve(__dirname,'../app-v2.js'),'utf8');
+ assert.match(entry,/if\(!guestMode\)\{/);
+ assert.match(entry,/delete window\.__pdfAccountId/);
+ assert.match(entry,/if\(user\)\{[\s\S]*import\('\.\/peer-sync\.js'\)/);
+ assert.match(reader,/window\.__pdfAccountId\?"pdf-athat-account-"\+window\.__pdfAccountId:"pdf-athat-v1"/);
+ assert.doesNotMatch(entry,/indexedDB\.deleteDatabase/);
 });
