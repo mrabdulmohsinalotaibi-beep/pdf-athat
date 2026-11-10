@@ -160,3 +160,15 @@ test('linking visitor library rotates guest database only after verifying accoun
  assert.match(entry,/if\(guestMode\)window\.addEventListener\('storage'/);
  assert.match(entry,/event\.key==='pdf-athat-active-guest-library'/);
 });
+
+test('linking old guest files is discoverable in personal profile and home, including empty source',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const importer=fs.readFileSync(path.resolve(__dirname,'../legacy-import.js'),'utf8');
+ assert.match(html,/id="profileLinkGuest"[^>]*|href="\.\/\?link-guest=1" id="profileLinkGuest"/);
+ assert.match(importer,/const quick=\$\('\.library-quick-actions'\)/);
+ assert.match(importer,/button\.id='guestAccountLinkButton'/);
+ assert.match(importer,/if\(!\(await hasDatabase\(source\)\)\)/);
+ assert.match(importer,/مكتبة الزائر الحالية فارغة/);
+ assert.match(importer,/new URLSearchParams\(location\.search\)\.get\('link-guest'\)/);
+ assert.ok(importer.indexOf('const result=await transfer(oldDB,newDB)')<importer.indexOf('localStorage.setItem(guestKey,next)'));
+});
