@@ -12,6 +12,7 @@ function fixture() {
  sqlite.exec(readFileSync(new URL('../migrations/0003_admin_invites.sql', import.meta.url), 'utf8'));
  sqlite.exec(readFileSync(new URL('../migrations/0004_usernames.sql', import.meta.url), 'utf8'));
  sqlite.exec(readFileSync(new URL('../migrations/0005_admin_audit.sql', import.meta.url), 'utf8'));
+ sqlite.exec(readFileSync(new URL('../migrations/0006_p2p_sync.sql', import.meta.url), 'utf8'));
  const db = { prepare(sql) {
   return { bind(...args) {
    const stmt = sqlite.prepare(sql);
@@ -142,3 +143,76 @@ test('admin audit schema records only allowed administrative action types',()=>{
   assert.throws(()=>stmt.run('audit2','admin1','user2','read_pdf','forbidden',1790000000));
  }finally{f.sqlite.close()}
 });
+
+test('profile username edit is authenticated, password-protected, unique and preserves account ID',()=>withMail(async f=>{
+ const registered=await register(f),cookie=registered.cookie,original=registered.body.user.id;
+ assert.equal((await f.call('profile-username',{username:'reader_new',password})).status,401);
+ assert.equal((await f.call('profile-username',{username:'reader_new',password:'wrong'},cookie)).status,401);
+ const updated=await f.call('profile-username',{username:'reader_new',password},cookie);
+ assert.equal(updated.status,200);
+ assert.equal(updated.body.user.id,original);
+ assert.equal(updated.body.user.username,'reader_new');
+ assert.equal((await f.call('session',undefined,cookie)).body.user.username,'reader_new');
+ assert.equal((await f.call('login',{identifier:'reader_new',password})).status,200);
+ assert.equal((await f.call('login',{identifier:username,password})).status,401);
+ assert.equal((await f.call('profile-username',{username:'abc*?',password},cookie)).status,400);
+ const already=await f.call('signup',{email:'second@example.com',username:'secondname',password});
+ assert.equal((await f.call('verify',{challengeId:already.body.challengeId,code:code(f)})).status,200);
+ assert.equal((await f.call('profile-username',{username:'secondname',password},cookie)).status,409);
+}));
+test('changing email requires password and OTP at new mailbox; old sessions revoked',()=>withMail(async f=>{
+ const reg=await register(f),cookie=reg.cookie,newEmail='new-reader@example.com';
+ assert.equal((await f.call('profile-email-start',{email:newEmail,password})).status,401);
+ assert.equal((await f.call('profile-email-start',{email:newEmail,password:'wrong'},cookie)).status,401);
+ const started=await f.call('profile-email-start',{email:newEmail,password},cookie);
+ assert.equal(started.status,200);assert.equal(f.mail.at(-1).to[0],newEmail);
+ assert.equal((await f.call('session',undefined,cookie)).body.user.email,email);
+ assert.equal((await f.call('profile-email-confirm',{challengeId:started.body.challengeId,code:'999999'},cookie)).status,400);
+ const confirm=await f.call('profile-email-confirm',{challengeId:started.body.challengeId,code:code(f)},cookie);
+ assert.equal(confirm.status,200);assert.match(confirm.headers.get('Set-Cookie'),/Max-Age=0/);
+ assert.equal((await f.call('session',undefined,cookie)).body.user,null);
+ assert.equal(f.sqlite.prepare('SELECT email FROM pdf_email_users WHERE id=?').get(reg.body.user.id).email,newEmail);
+ assert.equal((await f.call('login',{email,password})).status,401);
+ const logged=await f.call('login',{email:newEmail,password});
+ assert.equal(logged.status,200);assert.equal(logged.body.user.id,reg.body.user.id);
+ assert.equal((await f.call('profile-email-confirm',{challengeId:started.body.challengeId,code:code(f)},logged.cookie)).status,403);
+}));
+test('admin changing email retains role and moves approved admin email',()=>withMail(async f=>{
+ const reg=await register(f);
+ f.sqlite.prepare("UPDATE pdf_email_users SET role='admin' WHERE id=?").run(reg.body.user.id);
+ f.sqlite.prepare('INSERT INTO pdf_admin_allowed_emails(email) VALUES(?)').run(email);
+ const target='admin-new@example.com';
+ const start=await f.call('profile-email-start',{email:target,password},reg.cookie);
+ assert.equal(start.status,200);
+ const confirm=await f.call('profile-email-confirm',{challengeId:start.body.challengeId,code:code(f)},reg.cookie);
+ assert.equal(confirm.status,200);
+ const row=f.sqlite.prepare('SELECT email,role FROM pdf_email_users WHERE id=?').get(reg.body.user.id);
+ assert.equal(row.email,target);assert.equal(row.role,'admin');
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_admin_allowed_emails WHERE email=?').get(email).count,0);
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_admin_allowed_emails WHERE email=?').get(target).count,1);
+}));
+test('account deletion requires confirmation and password, revokes sessions, leaves local PDF storage untouched',()=>withMail(async f=>{
+ const reg=await register(f),cookie=reg.cookie,id=reg.body.user.id;
+ const stamp=Math.floor(Date.now()/1000);
+ f.sqlite.prepare('INSERT INTO pdf_sync_peers(user_id,device_id,device_name,last_seen) VALUES(?,?,?,?)').run(id,'device1','Test device',stamp);
+ f.sqlite.prepare("INSERT INTO pdf_sync_signals(id,user_id,from_device,to_device,kind,payload,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?)")
+ .run('sig1',id,'device1','device2','offer','{"type":"offer","sdp":"test"}',stamp,stamp+120);
+ assert.equal((await f.call('profile-delete',{password,confirmation:'حذف حسابي',acknowledge:true})).status,401);
+ assert.equal((await f.call('profile-delete',{password,confirmation:'حذف',acknowledge:true},cookie)).status,400);
+ assert.equal((await f.call('profile-delete',{password:'wrong',confirmation:'حذف حسابي',acknowledge:true},cookie)).status,401);
+ const deleted=await f.call('profile-delete',{password,confirmation:'حذف حسابي',acknowledge:true},cookie);
+ assert.equal(deleted.status,200);assert.match(deleted.headers.get('Set-Cookie'),/Max-Age=0/);
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_email_users').get().count,0);
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_email_sessions').get().count,0);
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_sync_signals').get().count,0);
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_sync_peers').get().count,0);
+ assert.equal((await f.call('session',undefined,cookie)).body.user,null);
+ assert.equal((await f.call('login',{email,password})).status,401);
+}));
+test('self deletion of administrator is blocked until ownership transfers',()=>withMail(async f=>{
+ const reg=await register(f);
+ f.sqlite.prepare("UPDATE pdf_email_users SET role='admin' WHERE id=?").run(reg.body.user.id);
+ const result=await f.call('profile-delete',{password,confirmation:'حذف حسابي',acknowledge:true},reg.cookie);
+ assert.equal(result.status,403);
+ assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_email_users').get().count,1);
+}));

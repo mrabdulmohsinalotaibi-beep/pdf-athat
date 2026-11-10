@@ -88,3 +88,23 @@ test('profile uses authenticated session and account-scoped local database; no p
  assert.match(html,/id="profileEmail"/);
  assert.match(html,/id="profileAdminLink"/);
 });
+
+test('all signed-in account types see edit username and email actions',async()=>{
+ const user={id:'account-02',username:'reader7',email:'reader7@example.com',role:'user'};
+ const f=fixture(user);await f.settle();
+ assert.equal(f.node('newProfileUsername').value,'reader7');
+ assert.equal(f.node('accountDeleteTrigger').disabled,false);
+ assert.match(html,/id="profileUsernameForm"/);
+ assert.match(html,/id="profileEmailStartForm"/);
+ assert.match(html,/id="profileEmailConfirmForm"/);
+ assert.match(html,/id="accountDeleteDialog"/);
+ assert.match(html,/id="accountDeleteForm"/);
+ assert.match(html,/id="accountDeleteError"/);
+ assert.doesNotMatch(source,/indexedDB\.deleteDatabase/);
+});
+test('administrator profile cannot start self-deletion',async()=>{
+ const user={id:'admin-02',username:'owner2',email:'admin2@example.com',role:'admin'};
+ const f=fixture(user);await f.settle();
+ assert.equal(f.node('accountDeleteTrigger').disabled,true);
+ assert.match(f.node('deleteSettingStatus').textContent,/انقل صلاحية الإدارة/);
+});
