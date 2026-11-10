@@ -13,7 +13,7 @@ const deviceId=localStorage.getItem(peerKey)||crypto.randomUUID();
 localStorage.setItem(peerKey,deviceId);
 let enabled=localStorage.getItem(enabledKey)==='yes', live=false, working=false;
 const connections=new Map(), nick='PDF.ATHAT '+(navigator.platform||'جهاز').slice(0,20);
-let heartbeatTimer=null,pollTimer=null,onlineCount=0,lastStatus='',lastChange=0;
+let heartbeatTimer=null,pollTimer=null,onlineCount=0,lastStatus='';
 const status=(text)=>{
  if(text===lastStatus)return;lastStatus=text;
  statusLine.textContent=text;button.title=text;
@@ -36,7 +36,7 @@ const retry=document.createElement('button');retry.type='button';retry.textConte
 const close=document.createElement('button');close.type='button';close.textContent='إغلاق';close.className='subtle-btn';close.onclick=()=>dialog.close();
 controls.append(activate,retry,close);dialog.append(h,intro,statusLine,details,hint,controls);document.body.append(dialog);
 button.onclick=()=>dialog.showModal();
-function updateToggle(){activate.textContent=enabled?'إيقاف المزامنة على هذا الجهاز':'تفعيل المزامنة على هذا الجهاز';button.textContent=enabled?'⇄ المزامنة مفعلة':'⇄ مزامنة'}
+function updateToggle(){activate.textContent=enabled?'إيقاف المزامنة على هذا الجهاز':'تفعيل المزامنة على هذا الجهاز';button.textContent=enabled?'⇄ مزامنة ✓':'⇄ مزامنة'}
 updateToggle();
 async function request(action,body={}){
  const response=await fetch('/api/sync/'+action,{
@@ -157,6 +157,9 @@ function attach(state,channel){
   state.connected=true;status('متصل بجهاز آخر: نقل الكتب والملاحظات الناقصة جارٍ…');
   try{
    const docs=(await readAll('documents')).filter(d=>!d.deleted);
+   const savedFolders=(()=>{try{return JSON.parse(localStorage.getItem('pdfathat-folders:'+account)||'[]')}catch{return []}})();
+   const names=[...new Set([...(Array.isArray(savedFolders)?savedFolders:[]),...docs.flatMap(d=>Array.isArray(d.folders)?d.folders:[])])].filter(x=>typeof x==='string'&&x.length<=40).slice(0,150);
+   enqueue(state,()=>sendJSON(state,{type:'folders',names}));
    for(let i=0;i<docs.length;i+=75){
     const group=docs.slice(i,i+75).map(d=>({
      id:d.id,size:d.file?.size||0,updated:Number(d.updated)||0,
@@ -264,7 +267,10 @@ async function receive(state,data){
  await handle(state,msg);
 }
 async function handle(state,msg){
- if(msg.type==='manifest'){
+ if(msg.type==='folders'){
+  if(!Array.isArray(msg.names)||msg.names.length>150)return;
+  window.dispatchEvent(new CustomEvent('pdf-athat-sync-folders',{detail:{names:msg.names.filter(x=>typeof x==='string'&&x.trim()&&x.length<=40)}}));
+ }else if(msg.type==='manifest'){
   if(!Array.isArray(msg.docs)||msg.docs.length>100)return;
   const missing=[];
   for(const doc of msg.docs){
