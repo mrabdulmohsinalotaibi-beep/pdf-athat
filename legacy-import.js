@@ -87,6 +87,15 @@ async function transfer(oldDB,newDB){
   if(!found){await add(newDB,'strokes',record);importedNotes++}
   checks.push({store:'strokes',id,source:record});
  }
+ // If another open tab modified the visitor's collection during copying,
+ // do not rotate access to it until a fresh, complete transfer succeeds.
+ const [latestDocs,latestNotes]=await Promise.all([
+  readAll(oldDB,'documents'),readAll(oldDB,'strokes')
+ ]);
+ if(latestDocs.length!==docs.length||latestNotes.length!==notes.length||
+    latestDocs.some((v,i)=>v.id!==docs[i]?.id)||
+    latestNotes.some((v,i)=>v.id!==notes[i]?.id))
+  throw Error('تغيّرت مكتبة الزائر أثناء الربط؛ أعد المحاولة بعد إغلاق التبويبات الأخرى');
  // Verify the destination while the source library is still accessible.
  for(const item of checks){
   const record=await readOne(newDB,item.store,item.id);
