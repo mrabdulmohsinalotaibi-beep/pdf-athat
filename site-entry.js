@@ -23,6 +23,11 @@
   window.__pdfGuestDBName=guestLibrary && /^pdf-athat-guest-[a-f0-9-]{36}$/.test(guestLibrary)
    ? guestLibrary : 'pdf-athat-v1';
   window.__pdfGuestMode=guestMode;
+  // Rotate an already-open guest tab when another tab finishes linking its
+  // library to an account; never leave the old guest files visible.
+  if(guestMode)window.addEventListener('storage',event=>{
+   if(event.key==='pdf-athat-active-guest-library')location.reload();
+  });
   if(panel)panel.hidden=false;
   const actions=document.querySelector('.header-actions');
   if(actions){
