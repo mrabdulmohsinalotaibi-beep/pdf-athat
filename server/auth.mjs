@@ -75,7 +75,7 @@ async function tokenHash(request) {
 }
 async function session(db, request) {
  const hash = await tokenHash(request);
- return hash ? statement(db, `SELECT u.id,u.email FROM pdf_email_sessions s JOIN pdf_email_users u ON u.id=s.user_id
+ return hash ? statement(db, `SELECT u.id,u.email,u.role FROM pdf_email_sessions s JOIN pdf_email_users u ON u.id=s.user_id
  WHERE s.token_hash=? AND s.expires_at>?`, hash, now()).first() : null;
 }
 async function loginSession(db, user, request, expectedHash) {
@@ -87,7 +87,7 @@ async function loginSession(db, user, request, expectedHash) {
   statement(db, 'INSERT INTO pdf_email_sessions(token_hash,user_id,expires_at) SELECT ?,id,? FROM pdf_email_users WHERE id=? AND password_hash=?', await digest(token), now() + SESSION_SECONDS, user.id, expectedHash)
  ]);
  if (!result[1].meta.changes) fail('تغيرت بيانات الحساب. سجّل الدخول مجددًا.', 401);
- return json({ user: { id: user.id, email: user.email } }, 200, { 'Set-Cookie': cookie(token) });
+ return json({ user: { id: user.id, email: user.email, role: user.role || 'user' } }, 200, { 'Set-Cookie': cookie(token) });
 }
 function mailReady(env) { return !!(env.RESEND_API_KEY && env.OTP_FROM_EMAIL && env.OTP_SECRET); }
 async function sendCode(env, email, code, purpose) {
