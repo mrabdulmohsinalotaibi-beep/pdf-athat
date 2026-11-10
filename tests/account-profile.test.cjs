@@ -108,3 +108,10 @@ test('administrator profile cannot start self-deletion',async()=>{
  assert.equal(f.node('accountDeleteTrigger').disabled,true);
  assert.match(f.node('deleteSettingStatus').textContent,/انقل صلاحية الإدارة/);
 });
+
+test('profile validation errors are shown beside visible settings rather than hidden login form',()=>{
+ assert.match(source,/function guard\(form,handler,errorTarget=null\)/);
+ assert.match(source,/if\(errorTarget\)messageFor\(errorTarget,error.message\)/);
+ assert.match(source,/\},'usernameSettingStatus'\)/);
+ assert.match(source,/\},'emailSettingStatus'\)/);
+});
