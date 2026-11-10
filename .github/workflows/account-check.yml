@@ -36,7 +36,7 @@ jobs:
           node --check admin.js
           node --check prayer-bar.js
       - name: Install dependencies
-        run: cd desktop && npm ci --ignore-scripts --no-audit --no-fund
+        run: cd desktop && npm install --ignore-scripts --no-audit --no-fund
       - name: Offline PDF build
         run: cd desktop && npm run build:offline
       - name: Validate prayer UI JavaScript
