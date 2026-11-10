@@ -39,6 +39,46 @@ async function loadUsers(){
   tr.append(identity,role,sessions,control);rows.append(tr);
  }
 }
+
+async function loadAudit(){
+ const container=$('auditList');container.replaceChildren();
+ try{
+  const result=await api('/api/admin/audit');
+  if(!result.events?.length){const empty=document.createElement('p');empty.textContent='لا توجد إجراءات إدارية مسجلة بعد.';container.append(empty);return}
+  const labels={change_role:'تغيير صلاحية',revoke_sessions:'إنهاء جلسات',transfer_ownership:'نقل ملكية الإدارة'};
+  for(const event of result.events){
+   const row=document.createElement('div');row.className='admin-audit-entry';
+   const title=document.createElement('strong');title.textContent=(labels[event.action]||'إجراء إداري')+' · '+event.actor;
+   const details=document.createElement('small');
+   const time=Number.isFinite(event.created_at)?new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{dateStyle:'medium',timeStyle:'short'}).format(new Date(event.created_at*1000)):'';
+   details.textContent='الحساب المعني: '+event.target+' · '+time+(event.details?' · '+event.details:'');
+   row.append(title,details);container.append(row);
+  }
+ }catch(error){const p=document.createElement('p');p.textContent='تعذر قراءة سجل الإدارة: '+error.message;container.append(p)}
+}
+function csvSafe(value){
+ const text=String(value??'');
+ const guarded=/^[\s]*[=+@-]/.test(text)?"'"+text:text;
+ return '"'+guarded.replaceAll('"','""')+'"';
+}
+$('exportUsers').onclick=async()=>{
+ const button=$('exportUsers');button.disabled=true;
+ try{
+  const records=[];
+  for(let i=0;i<100;i++){
+   const pageData=await api('/api/admin/users?page='+i);
+   records.push(...pageData.users);
+   if(records.length>=pageData.total||pageData.users.length<30)break;
+  }
+  const rows=[['اسم المستخدم','البريد الإلكتروني','الصلاحية','تاريخ إنشاء الحساب','عدد الجلسات'],...records.map(user=>[user.username||'',user.email,user.role,user.created_at?new Date(user.created_at*1000).toISOString():'',user.sessions])];
+  const text='\ufeff'+rows.map(row=>row.map(csvSafe).join(',')).join('\r\n');
+  const file=new Blob([text],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(file);
+  const link=document.createElement('a');link.href=url;link.download='PDF-ATHAT-users-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+  notify('أُنشئ ملف الحسابات محليًا. احفظه في مكان آمن لأنه يتضمن عناوين بريد المستخدمين.');
+ }catch(error){notify('تعذر تصدير الحسابات: '+error.message)}
+ finally{button.disabled=false}
+};
 async function refresh(){
  notify('');
  const info=await api('/api/auth/session');
@@ -49,8 +89,10 @@ async function refresh(){
  $('welcomeEmail').textContent='مرحبًا '+(info.user.username||info.user.email)+' · '+info.user.email;
  const data=await api('/api/admin/overview');
  for(const [key,val] of [['statUsers',data.users],['statAdmins',data.admins],['statSessions',data.activeSessions],['statRecent',data.recentUsers],['statPending',data.pendingVerifications]])$(key).textContent=val;
- $('mailStatus').textContent='خدمة رسائل التحقق: '+(data.mailConfigured?'إعداداتها مفعّلة':'الإعدادات غير مكتملة');
+ $('mailStatus').textContent='خدمة رسائل التحقق: '+(data.mailConfigured?'إعداداتها مفعّلة (وصول البريد يحتاج اختبارًا)':'الإعدادات غير مكتملة');
+ $('healthStatus').textContent='اتصال قاعدة الحسابات: يعمل · ملفات المستخدمين محفوظة على أجهزتهم فقط';
  await loadUsers();
+ await loadAudit();
 }
 let transferChallengeId='';
 const transferStatus=message=>$('transferStatus').textContent=message;
