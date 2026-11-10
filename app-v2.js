@@ -614,6 +614,23 @@ try{db=await openDB();
   catch(error){console.warn("Could not backfill older PDF upload dates; keep library accessible",error)}
  }
  strokes=await getAll("strokes");await refresh();if((await getAll("documents")).some(d=>!d.deleted))showLibrary();document.documentElement.dataset.ready="yes"}catch(e){console.error(e);tell("التخزين المحلي غير متاح في المتصفح");document.documentElement.dataset.ready="storage-error"}
+
+// The peer-to-peer transport writes only to this account's IndexedDB.
+// Refresh cached lists and ink after a remote addition; never erase local edits.
+let peerRefreshBusy=false;
+window.addEventListener('pdf-athat-sync-update',async()=>{
+ if(peerRefreshBusy||!db)return;
+ peerRefreshBusy=true;
+ try{
+  const newNotes=await getAll('strokes');
+  const ids=new Set(strokes.map(n=>n.id));
+  for(const note of newNotes)if(!ids.has(note.id))strokes.push(note);
+  await refresh();
+  if(!active)await renderLibrary();
+  if(active&&!draft&&readerEditing)paint();
+ }catch(error){console.warn('pdf_peer_ui_refresh',error?.name)}
+ finally{peerRefreshBusy=false}
+});
 if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
 
 function showNativeReader(){
