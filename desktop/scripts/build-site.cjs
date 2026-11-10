@@ -7,7 +7,7 @@ const file=path.join(dist,'app-v2.js');
 if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
 const root=path.resolve(__dirname,'../..');
-const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js'];
+const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css'];
 const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
@@ -23,8 +23,8 @@ for(const asset of accountAssets){
  fs.copyFileSync(path.join(root,asset),path.join(dist,asset));
 }
 const gatePath=path.join(dist,'site-entry.js');
-fs.writeFileSync(gatePath,fs.readFileSync(gatePath,'utf8').replace("import('./app-v2.js')","import('./app-v2.js?v="+version+"')"));
-html=html.replace('</head>','<script defer src="./admin-entry.js?v='+version+'"></script></head>');
+fs.writeFileSync(gatePath,fs.readFileSync(gatePath,'utf8').replace("import('./app-v2.js')","import('./app-v2.js?v="+version+"')").replace("import('./prayer-bar.js')","import('./prayer-bar.js?v="+version+"')"));
+html=html.replace('</head>','<link rel="stylesheet" href="./prayer-bar.css?v='+version+'"><script defer src="./admin-entry.js?v='+version+'"></script></head>');
 fs.writeFileSync(htmlFile,html);
 
 const moduleEntry='<script type="module" src="./app-v2.js?v='+version+'"></script>';
@@ -71,7 +71,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -100,6 +100,7 @@ fs.writeFileSync(path.join(dist,'sw.js'),sw);
 fs.writeFileSync(path.join(dist,'_headers'),'/\n  Cache-Control: no-cache, must-revalidate\n/index.html\n  Cache-Control: no-cache, must-revalidate\n/sw.js\n  Cache-Control: no-cache, must-revalidate\n/style.css\n  Cache-Control: no-cache, must-revalidate\n/icon.svg\n  Cache-Control: no-cache, must-revalidate\n/app-v2.js\n  Cache-Control: no-cache, must-revalidate\n');
 if(htmlCheck.includes('id="authGate"')||htmlCheck.includes('data-app-module='))throw Error('Unexpected account gate in public PDF build');
 if(!htmlCheck.includes('site-entry.js?v='))throw Error('Account session gate missing');
+if(!htmlCheck.includes('prayer-bar.css?v='))throw Error('Prayer stylesheet missing');
 const bundled=fs.readFileSync(file,'utf8');
 if(bundled.includes('cdn.jsdelivr.net'))throw Error('Unexpected CDN reference');
 console.log('Offline-ready website PWA built. Cache version:',version);

@@ -24,6 +24,8 @@
    actions.append(logout);
   }
   await import('./app-v2.js');
+  // Prayer times are web-only and never access PDF bytes or annotations.
+  import('./prayer-bar.js').catch(()=>{});
   // Only after the reader opens its account-specific IndexedDB, offer optional
   // non-destructive migration of the old anonymous library on this device.
   import('./legacy-import.js').catch(()=>{});
