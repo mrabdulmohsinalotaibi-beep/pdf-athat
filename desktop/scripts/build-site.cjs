@@ -8,7 +8,7 @@ if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
 const root=path.resolve(__dirname,'../..');
 const localLibrarySource=path.join(root,'web','local-library.js');
-const hash=crypto.createHash('sha256');hash.update(fs.readFileSync(localLibrarySource));for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
+const hash=crypto.createHash('sha256');hash.update(fs.readFileSync(localLibrarySource));for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of ['admin.html','admin.js','admin.css','admin-entry.js'])hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
 // Version the visual assets to bypass older service-worker caches on mobile devices.
