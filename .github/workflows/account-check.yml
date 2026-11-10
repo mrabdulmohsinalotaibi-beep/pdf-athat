@@ -1,0 +1,40 @@
+name: PDF account and admin checks
+on:
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'functions/api/**'
+      - 'migrations/**'
+      - 'desktop/scripts/build-site.cjs'
+      - 'account.*'
+      - 'admin.*'
+      - 'site-entry.js'
+      - 'legacy-import.js'
+      - 'tests/auth.test.mjs'
+      - '.github/workflows/account-check.yml'
+  workflow_dispatch:
+jobs:
+  auth-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Authentication and username tests
+        run: node --test tests/auth.test.mjs
+      - name: Install dependencies
+        run: cd desktop && npm ci --ignore-scripts --no-audit --no-fund
+      - name: Offline PDF build
+        run: cd desktop && npm run build:offline
+      - name: Website build with account gate
+        run: node desktop/scripts/build-site.cjs
+      - name: Verify web entry point
+        run: |
+          test -f desktop/dist/account.html
+          test -f desktop/dist/admin.html
+          test -f desktop/dist/legacy-import.js
+          grep -q 'site-entry.js' desktop/dist/index.html
+          ! grep -q 'src="./app-v2.js?v=' desktop/dist/index.html
