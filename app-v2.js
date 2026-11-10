@@ -100,7 +100,25 @@ function setImmersive(on){if(on){document.documentElement.classList.add("reader-
 $("revealControls").onclick=()=>setImmersive(false);$("hideControls").onclick=()=>setImmersive(true);
 function toggleSidebar(on){$("sidebar").classList.remove("open");$("backdrop").hidden=true;$("libraryToggle").setAttribute("aria-expanded","false");if(on){if(active)closeDocument();else showLibrary()}}
 $("backdrop").onclick=()=>toggleSidebar(false);$("libraryToggle").onclick=()=>toggleSidebar(true);$("closeLibrary").onclick=()=>toggleSidebar(false);$("backToHome").onclick=()=>toggleSidebar(true);$("bottomFiles").onclick=()=>toggleSidebar(true);
-$("themeToggle").onclick=()=>{document.documentElement.classList.toggle("dark");localStorage.setItem("athat-theme",document.documentElement.classList.contains("dark")?"dark":"light")};if(localStorage.getItem("athat-theme")==="dark")document.documentElement.classList.add("dark");
+const appearanceModes=["light","dark","ocean"];
+function applyAppearance(mode){
+ if(!appearanceModes.includes(mode))mode="light";
+ document.documentElement.classList.toggle("dark",mode==="dark");
+ document.documentElement.classList.toggle("ocean",mode==="ocean");
+ localStorage.setItem("athat-theme",mode);
+ const labels={light:"رملي فاتح",dark:"داكن",ocean:"أزرق هادئ"};
+ const glyphs={light:"☀",dark:"☾",ocean:"◈"};
+ const toggle=$("themeToggle");
+ toggle.textContent=glyphs[mode];
+ toggle.title="المظهر الحالي: "+labels[mode]+"؛ اضغط لتغيير الوضع واللون";
+ toggle.setAttribute("aria-label",toggle.title);
+ $("manageTheme").value=mode;
+}
+$("themeToggle").onclick=()=>{
+ const current=localStorage.getItem("athat-theme")||"light";
+ applyAppearance(appearanceModes[(appearanceModes.indexOf(current)+1)%appearanceModes.length]);
+};
+applyAppearance(localStorage.getItem("athat-theme")||"light");
 async function refresh(){let docs=await getAll("documents");$("count").textContent=docs.filter(d=>!d.deleted).length;docs=docs.filter(d=>filter==="trash"?d.deleted:!d.deleted&&(filter==="fav"?d.favorite:true)).sort(compareLibraryFiles);$("library").replaceChildren();for(const d of docs){const row=document.createElement("div");row.className="doc"+(active?.id===d.id?" selected":"");const open=document.createElement("button");open.className="open";open.textContent=d.name;open.title=d.name;open.onclick=async()=>{if(d.deleted){d.deleted=false;await save("documents",d);await refresh()}else{toggleSidebar(false);await activate(d)}};const fav=document.createElement("button");fav.className="mini-star";fav.textContent=d.favorite?"★":"☆";fav.title="المفضلة";fav.onclick=async()=>{d.favorite=!d.favorite;await save("documents",d);refresh()};const del=document.createElement("button");del.className="delete";del.textContent=d.deleted?"↶":"×";del.title=d.deleted?"استعادة":"نقل للمحذوفات";del.onclick=async()=>{d.deleted=!d.deleted;await save("documents",d);if(d.deleted&&active?.id===d.id)closeDocument();refresh()};row.append(open,fav,del);$("library").append(row)}await renderLibrary()}
 
 /* IndexedDB is kept unchanged; folders are stored as per-document labels and portable backups. */
@@ -254,7 +272,7 @@ function openManagePanel(name){
   $("manageDefaultRTL").checked=localStorage.getItem(manageRTLKey)!=="false";
   $("manageAutoHide").checked=desktopReaderSettings.autoHide;
  }
- if(name==="appearance")$("manageTheme").value=document.documentElement.classList.contains("dark")?"dark":"light";
+ if(name==="appearance")$("manageTheme").value=localStorage.getItem("athat-theme")||"light";
  if(name==="storage")void updateStorageInfo();
  if(name==="files")void getAll("documents").then(renderManageFiles);
 }
@@ -283,7 +301,7 @@ $("manageDelete").onclick=()=>void applyBulk("delete");
 $("manageDefaultMode").onchange=e=>{localStorage.setItem(manageModeKey,e.target.value)};
 $("manageDefaultRTL").onchange=e=>{localStorage.setItem(manageRTLKey,String(e.target.checked))};
 $("manageAutoHide").onchange=e=>{desktopReaderSettings.autoHide=e.target.checked;try{localStorage.setItem(desktopReaderKey,JSON.stringify(desktopReaderSettings))}catch(error){console.warn(error)}applyDesktopReader()};
-$("manageTheme").onchange=e=>{document.documentElement.classList.toggle("dark",e.target.value==="dark");localStorage.setItem("athat-theme",e.target.value)};
+$("manageTheme").onchange=e=>applyAppearance(e.target.value);
 $("managePrivacyBackup").onclick=()=>$("backupExport").click();
 async function updateStorageInfo(){
  const docs=await getAll("documents");
