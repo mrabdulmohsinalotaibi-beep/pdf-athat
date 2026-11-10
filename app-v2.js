@@ -100,14 +100,16 @@ function setImmersive(on){if(on){document.documentElement.classList.add("reader-
 $("revealControls").onclick=()=>setImmersive(false);$("hideControls").onclick=()=>setImmersive(true);
 function toggleSidebar(on){$("sidebar").classList.remove("open");$("backdrop").hidden=true;$("libraryToggle").setAttribute("aria-expanded","false");if(on){if(active)closeDocument();else showLibrary()}}
 $("backdrop").onclick=()=>toggleSidebar(false);$("libraryToggle").onclick=()=>toggleSidebar(true);$("closeLibrary").onclick=()=>toggleSidebar(false);$("backToHome").onclick=()=>toggleSidebar(true);$("bottomFiles").onclick=()=>toggleSidebar(true);
-const appearanceModes=["light","dark","ocean"];
+const appearanceModes=["light","dark","sketch"];
 function applyAppearance(mode){
+ if(mode==="ocean")mode="sketch"; // Upgrade saved old blue-theme preference.
  if(!appearanceModes.includes(mode))mode="light";
  document.documentElement.classList.toggle("dark",mode==="dark");
- document.documentElement.classList.toggle("ocean",mode==="ocean");
+ document.documentElement.classList.toggle("ocean",false);
+ document.documentElement.classList.toggle("sketch",mode==="sketch");
  localStorage.setItem("athat-theme",mode);
- const labels={light:"رملي فاتح",dark:"داكن",ocean:"أزرق هادئ"};
- const glyphs={light:"☀",dark:"☾",ocean:"◈"};
+ const labels={light:"رملي فاتح",dark:"داكن",sketch:"المرسمة الرصاصية"};
+ const glyphs={light:"☀",dark:"☾",sketch:"✎"};
  const toggle=$("themeToggle");
  toggle.textContent=glyphs[mode];
  toggle.title="المظهر الحالي: "+labels[mode]+"؛ اضغط لتغيير الوضع واللون";

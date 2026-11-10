@@ -740,24 +740,95 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
  font-size:22px;line-height:1;box-shadow:0 2px 7px #00000012;
 }
 #themeToggle.theme-cycle-btn:hover{background:var(--green-light)}
-/* Third color theme in addition to the existing sandstone and charcoal modes. */
-:root.ocean{
- color-scheme:light;--page:#becbd0;--panel:#e7f0ef;
- --panel-soft:#d6e5e5;--ink:#1b303b;--mute:#516b73;
- --line:#91aab4;--green:#24546b;--green-light:#d2e5ec;
- --orange:#24546b;--shadow:0 14px 42px #173e521a;
+/* Graphite sketchbook ("المرسمة"): warm white paper and pencil-gray ink.
+   Only the UI is restyled. Never alter the PDF document's rendered page. */
+:root.sketch{
+ color-scheme:light;
+ --page:#F5F3EE;       /* matte drawing paper */
+ --panel:#FFFFFF;      /* plain white card */
+ --panel-soft:#F0EFEC; /* faint pencil wash */
+ --ink:#484848;        /* graphite rather than pure black */
+ --mute:#77746F;       /* secondary pencil */
+ --line:#BCBAB5;       /* hairline outlines */
+ --green:#626262;      /* original accent variable now graphite */
+ --green-light:#E8E6E2;
+ --orange:#757575;
+ --shadow:0 8px 23px #45433E12;
 }
-:root.ocean .library-hero-modern,
-:root.ocean .library-overview-item,
-:root.ocean .library-quick-actions button,
-:root.ocean .library-section-heading,
-:root.ocean .library-page,
-:root.ocean .library-bottom-nav{
- border-color:var(--line);color:var(--ink);
+:root.sketch #app{background:var(--page);color:var(--ink)}
+:root.sketch #app>.appbar,
+:root.sketch .library-page,
+:root.sketch .library-bottom-nav,
+:root.sketch .sidebar,
+:root.sketch .docbar,
+:root.sketch .readerbar{
+ background:var(--panel);color:var(--ink);border-color:var(--line)
 }
-:root.ocean .library-page .library-hero-modern .library-add,
-:root.ocean .library-overview-action[aria-pressed="true"],
-:root.ocean .library-quick-actions .library-add,
-:root.ocean .primary-btn{background:var(--green);color:#fff;border-color:var(--green)}
-:root.ocean .library-bottom-nav button.selected,
-:root.ocean .library-bottom-nav button.active{color:var(--green);background:var(--panel-soft)}
+:root.sketch #app button:not(.brand-home-button),
+:root.sketch #app input,
+:root.sketch #app select,
+:root.sketch #app textarea{
+ accent-color:#626262;
+}
+:root.sketch .library-page .library-hero-modern,
+:root.sketch .library-page .library-overview-item,
+:root.sketch .library-page .library-quick-actions button,
+:root.sketch .library-page .library-section-heading,
+:root.sketch .library-page .library-continue-item,
+:root.sketch .library-page .library-folders-section,
+:root.sketch .library-page .library-folder-card,
+:root.sketch .library-page .library-book-card,
+:root.sketch .library-bottom-nav,
+:root.sketch .manage-detail,
+:root.sketch .manage-card,
+:root.sketch .manage-tile{
+ background:var(--panel);color:var(--ink);
+ border-color:var(--line);
+ box-shadow:0 3px 12px #45433E0D;
+}
+/* Preserve original PDF.ATHAT brand mark and book thumbnails. */
+:root.sketch .brand-home-button{background:#FFFCF6;border:1px solid var(--line)}
+:root.sketch .library-page .library-hero-modern{
+ background:linear-gradient(115deg,#FFFFFF 0%,#F0EFEB 100%);
+ border:1px solid #BDBAB3;
+}
+:root.sketch .library-hero-modern h1,
+:root.sketch .library-hero-modern h2,
+:root.sketch .library-page h2,
+:root.sketch .library-page h3,
+:root.sketch .library-section-heading strong{color:#484848}
+:root.sketch .library-page .library-add,
+:root.sketch .library-page .library-hero-modern .library-add,
+:root.sketch .library-page .library-quick-actions .library-add,
+:root.sketch .library-page .library-quick-actions .primary-btn,
+:root.sketch .primary-btn{
+ color:#FFFFFF;background:#666666;border-color:#666666;
+ box-shadow:0 4px 12px #4444441A;
+}
+:root.sketch .library-page .library-add:hover,
+:root.sketch .primary-btn:hover{background:#535353;color:#FFFFFF}
+:root.sketch .library-overview-action.selected,
+:root.sketch .library-overview-action[aria-pressed="true"],
+:root.sketch .library-bottom-nav button.selected,
+:root.sketch .library-bottom-nav button.active,
+:root.sketch .sidebar button.selected,
+:root.sketch #themeToggle.theme-cycle-btn{
+ color:#4D4D4D;
+ background:#ECEAE5;
+ border-color:#98958F;
+ box-shadow:none;
+}
+:root.sketch .library-page input[type=search],
+:root.sketch .library-page .library-search,
+:root.sketch .library-search-bar,
+:root.sketch .library-search-input{
+ background:#FAF9F7;color:#484848;border-color:var(--line)
+}
+:root.sketch .library-overview-icon,
+:root.sketch .library-bottom-nav .selected,
+:root.sketch .library-section-heading a{color:#575757}
+:root.sketch .reader-toolbar,
+:root.sketch .reader-tools,
+:root.sketch .annotation-toolbar,
+:root.sketch .reader-controls{background:var(--panel);color:var(--ink);border-color:var(--line)}
+/* The actual PDF canvas stays faithful to its original document colors. */
