@@ -7,6 +7,7 @@ on:
       - 'migrations/**'
       - 'desktop/scripts/build-site.cjs'
       - 'account.*'
+      - 'tests/account-profile.test.cjs'
       - 'admin.*'
       - 'site-ads.*'
       - 'tests/ads.test.mjs'
@@ -33,6 +34,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Signed-in personal account and no-redirect tests
+        run: node --test tests/account-profile.test.cjs
+      - name: Account page script syntax
+        run: node --check account.js
       - name: Authentication and username tests
         run: node --test tests/auth.test.mjs
       - name: Responsive header and original logo regression tests
@@ -62,6 +67,8 @@ jobs:
       - name: Verify web entry point
         run: |
           test -f desktop/dist/account.html
+          grep -q 'id="profilePane"' desktop/dist/account.html
+          grep -q 'showProfile(data.user)' desktop/dist/account.js
           test -f desktop/dist/admin.html
           test -f desktop/dist/site-ads.js
           test -f desktop/dist/site-ads.css
