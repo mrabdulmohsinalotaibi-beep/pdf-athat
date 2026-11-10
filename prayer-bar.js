@@ -16,7 +16,7 @@
  const defaultPlace={type:'city',city:'Makkah',country:'SA',label:'مكة المكرمة'};
  const stored=parse(localStorage.getItem(key));
  let place=stored&&((stored.type==='city'&&typeof stored.city==='string'&&typeof stored.country==='string')||(stored.type==='coords'&&Number.isFinite(stored.latitude)&&Number.isFinite(stored.longitude)))?stored:defaultPlace;
- let data=null, day='', zone='Asia/Riyadh', busy=false, popupTimer=null;
+ let data=null, day='', zone='Asia/Riyadh', busy=false, popupTimer=null, lastAttempt=0;
  let visible=localStorage.getItem(hiddenKey)!=='yes';
  const el=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e};
  const toggle=el('button','prayer-toggle','🕌 الصلاة');toggle.type='button';toggle.title='عرض مواقيت الصلاة';toggle.setAttribute('aria-expanded',String(visible));
@@ -76,7 +76,7 @@
  alertsOn.onchange=()=>{localStorage.setItem('pdf-athat-prayer-alerts',alertsOn.checked?'yes':'no');if(!alertsOn.checked){toast.hidden=true;clearTimeout(popupTimer)}};
 
  async function load(){
-  if(busy)return;busy=true;soon.textContent='تحديث المواقيت…';
+  if(busy||Date.now()-lastAttempt<120000)return;busy=true;lastAttempt=Date.now();soon.textContent='تحديث المواقيت…';
   try{
    const date=dateNow(zone),cacheKey='pdf-prayers:'+JSON.stringify(place)+':'+date;
    const cached=parse(localStorage.getItem(cacheKey));
@@ -95,7 +95,7 @@
    }
    data=result.timings;zone=normalizeTimeZone(result.timezone);day=dateNow(zone);
    // Cities close to a timezone date boundary may differ: get the correct city's day.
-   if(day!==date && !cached){busy=false;return load()}
+   if(day!==date && !cached){busy=false;lastAttempt=0;return load()}
    cityButton.textContent='📍 '+place.label;
    hijri.textContent=hijriToday();
    render();
@@ -134,7 +134,7 @@
  }
  async function tick(){
   if(!data){if(document.visibilityState==='visible'&&!busy)await load();return}
-  if(day!==dateNow(zone)){data=null;await load();return}
+  if(day!==dateNow(zone)){data=null;lastAttempt=0;await load();return}
   hijri.textContent=hijriToday();render();
  }
  saveButton.onclick=async()=>{
@@ -144,14 +144,14 @@
    if(!/^[a-zA-Z][a-zA-Z\s.'-]{1,60}$/.test(city)||!/^([A-Z]{2})$/.test(country)){feedback.textContent='اكتب اسم المدينة بالإنجليزية ورمز الدولة من حرفين.';return}
    nextPlace={type:'city',city,country,label:city};
   }else nextPlace={type:'city',city:citySelect.value,country:'SA',label:cityChoices.find(x=>x[0]===citySelect.value)?.[1]||citySelect.value};
-  place=nextPlace;zone='Asia/Riyadh';localStorage.setItem(key,JSON.stringify(place));data=null;dialog.close();toggleOpen(true);await load();
+  place=nextPlace;zone='Asia/Riyadh';localStorage.setItem(key,JSON.stringify(place));data=null;lastAttempt=0;dialog.close();toggleOpen(true);await load();
  };
  locationButton.onclick=()=>{
   if(!navigator.geolocation){feedback.textContent='المتصفح لا يدعم تحديد الموقع';return}
   feedback.textContent='بانتظار إذن الموقع من المتصفح…';
   navigator.geolocation.getCurrentPosition(async position=>{
    place={type:'coords',latitude:Number(position.coords.latitude.toFixed(4)),longitude:Number(position.coords.longitude.toFixed(4)),label:'موقعي الحالي'};
-   localStorage.setItem(key,JSON.stringify(place));data=null;dialog.close();toggleOpen(true);await load();
+   localStorage.setItem(key,JSON.stringify(place));data=null;lastAttempt=0;dialog.close();toggleOpen(true);await load();
   },()=>{feedback.textContent='لم يُسمح بالموقع. اختر مدينتك يدويًا.'},{enableHighAccuracy:false,timeout:12000,maximumAge:600000});
  };
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')tick()});
