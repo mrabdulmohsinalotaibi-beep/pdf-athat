@@ -9,6 +9,7 @@ on:
       - 'account.*'
       - 'admin.*'
       - 'site-entry.js'
+      - 'prayer-bar.*'
       - 'legacy-import.js'
       - 'tests/auth.test.mjs'
       - '.github/workflows/account-check.yml'
@@ -29,12 +30,17 @@ jobs:
         run: cd desktop && npm ci --ignore-scripts --no-audit --no-fund
       - name: Offline PDF build
         run: cd desktop && npm run build:offline
+      - name: Validate prayer UI JavaScript
+        run: node --check prayer-bar.js
       - name: Website build with account gate
         run: node desktop/scripts/build-site.cjs
       - name: Verify web entry point
         run: |
           test -f desktop/dist/account.html
           test -f desktop/dist/admin.html
+          test -f desktop/dist/prayer-bar.js
+          test -f desktop/dist/prayer-bar.css
+          grep -q 'prayer-bar.css' desktop/dist/index.html
           test -f desktop/dist/legacy-import.js
           grep -q 'site-entry.js' desktop/dist/index.html
           ! grep -q 'src="./app-v2.js?v=' desktop/dist/index.html
