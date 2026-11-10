@@ -108,38 +108,64 @@ async function transfer(oldDB,newDB){
  return {documents:docs.length,notes:notes.length,importedDocs,importedNotes};
 }
 async function offer(){
- if(!(await hasDatabase(source)))return;
  const bar=$('#manageBackup .manage-controls');
- if(!bar)return;
+ const quick=$('.library-quick-actions');
+ if(!bar&&!quick)return;
  const button=document.createElement('button');
- button.type='button';button.className='subtle-btn';button.textContent='ربط ملفات الزائر بحسابي';
- button.title='نقل ظهور المكتبة من الزائر إلى حسابك بعد التأكد من اكتمال النسخ';
- button.style.cssText='font-size:12px;padding:8px';
- bar.append(button);
+ button.type='button';button.id='guestAccountLinkButton';button.className='subtle-btn';
+ button.textContent='🔐 ربط ملفات الزائر بحسابي';
+ button.title='ربط ملفات الزائر القديمة بحسابي حتى لا تظهر بعد تسجيل الخروج';
+ button.style.cssText='font-size:12px;padding:9px 12px;min-height:41px;border:1px solid #780000;border-radius:10px;white-space:normal';
+ (quick||bar).append(button);
+ if(bar&&quick){
+  const backupButton=document.createElement('button');
+  backupButton.type='button';backupButton.textContent='ربط ملفات الزائر بحسابي';
+  backupButton.title=button.title;backupButton.id='guestBackupLinkButton';
+  backupButton.className='subtle-btn';backupButton.style.cssText='font-size:12px;padding:8px';
+  backupButton.onclick=()=>button.click();
+  bar.append(backupButton);
+ }
  button.onclick=async()=>{
-  if(!confirm('ستُنقل ملفات الزائر وتعليقاته إلى مكتبة حسابك على هذا الجهاز. بعد التحقق ستختفي من وضع الزائر، وتبقى نسخة استرداد محلية غير معروضة. المزامنة بين الأجهزة تحتاج تفعيلها داخل الحساب. هل توافق؟'))return;
-  button.disabled=true;button.textContent='جارٍ الربط والتحقق من سلامة الملفات…';
+  button.disabled=true;button.textContent='جارٍ فحص مكتبة الزائر…';
   let oldDB,newDB;
   try{
-   oldDB=await open(source);newDB=await open(target);
-   if(!oldDB.objectStoreNames.contains('documents')||!oldDB.objectStoreNames.contains('strokes')||
-      !newDB.objectStoreNames.contains('documents')||!newDB.objectStoreNames.contains('strokes'))
-    throw Error('مكتبة غير جاهزة؛ أعد فتح الصفحة وحاول مجددًا');
+   if(!(await hasDatabase(source))){
+    alert('لا توجد مكتبة زائر قديمة على هذا الجهاز لربطها. إذا كانت ملفاتك تظهر في حسابك فقط، فهي معزولة بالفعل عن وضع الزائر. افتح الجهاز والمتصفح اللذين يحتويان ملفات الزائر القديمة لإجراء الربط.');
+    return;
+   }
+   oldDB=await open(source);
+   if(!oldDB.objectStoreNames.contains('documents')||!oldDB.objectStoreNames.contains('strokes'))
+    throw Error('لم يُعثر على ملفات زائر صالحة في هذه المكتبة');
+   const oldDocs=await readAll(oldDB,'documents'),oldNotes=await readAll(oldDB,'strokes');
+   if(!oldDocs.length&&!oldNotes.length){
+    alert('مكتبة الزائر الحالية فارغة؛ لا توجد ملفات أو تعليقات لربطها. ملفات حسابك المسجّل لا تظهر في وضع الزائر.');
+    return;
+   }
+   if(!confirm('عُثر على '+oldDocs.length+' ملف و'+oldNotes.length+' تعليق في مكتبة الزائر. سنربطها بحسابك الحالي على هذا الجهاز ثم نجعل مكتبة الزائر فارغة. سنحتفظ بنسخة استرداد محلية ولن نرفع ملفاتك إلى الخادم. هل توافق؟'))return;
+   newDB=await open(target);
+   if(!newDB.objectStoreNames.contains('documents')||!newDB.objectStoreNames.contains('strokes'))
+    throw Error('مكتبة الحساب غير جاهزة؛ أعد فتح الصفحة وحاول مجددًا');
+   button.textContent='جارٍ الربط والتحقق من سلامة الملفات…';
    const result=await transfer(oldDB,newDB);
    const names=[...new Set([...parseFolders(folderKey(source)),...parseFolders(accountFolders)])];
-   // Updating the pointer is the final commit, after all destination records
-   // and library folder names are verified; the original database stays intact.
    localStorage.setItem(accountFolders,JSON.stringify(names));
    const next='pdf-athat-guest-'+crypto.randomUUID();
    localStorage.setItem(guestKey,next);
    window.__pdfGuestDBName=next;
-   alert('اكتمل ربط '+result.documents+' ملف و'+result.notes+' تعليق بحسابك. عند تسجيل الخروج والدخول كزائر ستظهر مكتبة جديدة فارغة. ملفاتك محفوظة في حسابك، مع نسخة استرداد محلية على هذا الجهاز.');
+   alert('اكتمل ربط '+result.documents+' ملف و'+result.notes+' تعليق بحسابك. عند تسجيل الخروج والدخول كزائر ستظهر مكتبة فارغة، وتبقى الملفات داخل حسابك على الجهاز.');
    location.reload();
   }catch(error){
-   alert('لم يكتمل ربط المكتبة؛ بقيت ملفات الزائر الأصلية متاحة: '+(error.message||'خطأ غير معروف'));
-   button.disabled=false;button.textContent='إعادة محاولة ربط ملفات الزائر';
-  }finally{oldDB?.close();newDB?.close()}
+   alert('تعذر ربط مكتبة الزائر؛ لم تُحذف ملفاتك القديمة: '+(error.message||'خطأ'));
+  }finally{
+   oldDB?.close();newDB?.close();
+   button.disabled=false;button.textContent='🔐 ربط ملفات الزائر بحسابي';
+  }
  };
+ if(new URLSearchParams(location.search).get('link-guest')==='1'){
+  button.style.outline='3px solid #b47b44';
+  button.scrollIntoView({behavior:'smooth',block:'center'});
+  button.focus({preventScroll:true});
+ }
 }
 offer().catch(error=>console.warn('legacy_library_link',error?.name));
 })();
