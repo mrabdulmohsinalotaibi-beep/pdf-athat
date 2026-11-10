@@ -157,6 +157,46 @@ $("libraryGridView").onclick=()=>{libraryLayout="grid";try{localStorage.setItem(
 try{const stored=localStorage.getItem("pdfathat-library-layout-v1");if(stored==="grid"||stored==="list")libraryLayout=stored}catch(_){};
 $("libraryBackupExport").onclick=()=>$("backupExport").click();
 $("libraryBackupImport").onclick=()=>$("backupImport").click();
+
+function installNotesHub(){
+ const quick=document.querySelector(".library-quick-actions");if(!quick)return;
+ const button=document.createElement("button");button.type="button";button.id="libraryAllNotes";button.textContent="📝 ملاحظاتي";button.title="استعراض ملاحظات كل الكتب المحفوظة على هذا الجهاز";quick.append(button);
+ const dialog=document.createElement("dialog");dialog.className="library-notes-hub";dialog.dir="rtl";
+ const titleRow=document.createElement("div");titleRow.className="library-notes-heading";
+ const heading=document.createElement("h2");heading.textContent="ملاحظاتي في الكتب";
+ const close=document.createElement("button");close.type="button";close.textContent="إغلاق";close.className="subtle-btn";close.onclick=()=>dialog.close();
+ titleRow.append(heading,close);
+ const search=document.createElement("input");search.className="library-notes-filter";search.type="search";search.placeholder="ابحث في اسم الكتاب أو نص الملاحظة...";search.setAttribute("aria-label","البحث في جميع الملاحظات");
+ const results=document.createElement("div");results.className="library-notes-results";
+ dialog.append(titleRow,search,results);document.body.append(dialog);
+ const textFor=n=>String(n.text||({pen:"كتابة بالقلم",highlight:"تظليل",signature:"توقيع",rect:"شكل مرسوم"})[n.tool]||"تعليق");
+ button.onclick=async()=>{
+  button.disabled=true;
+  try{
+   const [docs,notes]=await Promise.all([getAll("documents"),getAll("strokes")]);
+   const docsMap=new Map(docs.filter(d=>!d.deleted).map(d=>[d.id,d]));
+   const rows=notes.filter(n=>docsMap.has(n.documentId)).map(n=>({note:n,doc:docsMap.get(n.documentId)}));
+   rows.sort((a,b)=>(b.note.updated||b.note.createdAt||0)-(a.note.updated||a.note.createdAt||0));
+   const draw=()=>{
+    const query=search.value.trim().toLocaleLowerCase("ar");results.replaceChildren();
+    const matching=rows.filter(({doc,note})=>(doc.name+" "+textFor(note)).toLocaleLowerCase("ar").includes(query));
+    if(!matching.length){const empty=document.createElement("p");empty.textContent="لا توجد ملاحظات مطابقة.";results.append(empty);return}
+    for(const {doc,note} of matching.slice(0,250)){
+     const item=document.createElement("button");item.type="button";item.className="library-note-result";
+     const title=document.createElement("strong");title.dir="auto";title.textContent=doc.name+" · صفحة "+note.page;
+     const body=document.createElement("small");body.dir="auto";body.textContent=textFor(note).slice(0,300);
+     item.append(title,body);item.onclick=()=>{dialog.close();void activate(doc,note.page)};
+     results.append(item);
+    }
+    if(matching.length>250){const notice=document.createElement("p");notice.textContent="تظهر أول 250 ملاحظة. استخدم البحث لتضييق النتائج.";results.append(notice)}
+   };
+   search.value="";search.oninput=draw;draw();dialog.showModal();
+  }catch(error){tell("تعذر عرض الملاحظات: "+(error.message||"خطأ"))}
+  finally{button.disabled=false}
+ };
+}
+installNotesHub();
+
 const manageModeKey="pdfathat-default-reading";
 const manageRTLKey="pdfathat-default-rtl";
 const managementSelected=new Set();
@@ -495,7 +535,46 @@ const panelModes=["searchPanel","notesPanel","toolsPanel"];function closePanel()
 $("closePanel").onclick=closePanel;$("searchToggle").onclick=()=>showPanel("searchPanel");$("bottomSearch").onclick=()=>showPanel("searchPanel");$("bottomNotes").onclick=()=>showPanel("notesPanel");$("bottomTools").onclick=()=>showPanel("toolsPanel");$("bottomRead").onclick=()=>{closePanel();chooseTool("pointer");$("bottomRead").classList.add("selected")};
 const tools=[["pointer","تصفح","↖"],["pen","قلم","✎"],["highlight","تظليل","◩"],["eraser","ممحاة","⌫"],["textTool","نص","T"],["commentTool","تعليق","▤"],["shapeTool","مستطيل","▢"],["signatureTool","توقيع","〰"]];for(const [id,label,icon]of tools){const b=document.createElement("button");b.innerHTML="<span>"+icon+"</span>"+label;b.onclick=()=>$(id).click();$("toolsGrid").append(b)}
 function updateNotes(){if(!active)return;$("notesList").replaceChildren();const matching=strokes.filter(x=>x.documentId===active.id);for(const s of matching){const b=document.createElement("button");b.className="result";b.textContent="صفحة "+s.page+" — "+(s.text||({pen:"كتابة بالقلم",highlight:"تظليل",signature:"توقيع",rect:"مستطيل"})[s.tool]||"تعليق");b.onclick=()=>{go(s.page-page);closePanel()};$("notesList").append(b)}if(!matching.length)$("notesList").textContent="لم تُضف تعليقات بعد."}
-const norm=t=>t.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g,"").toLowerCase();$("searchBtn").onclick=async()=>{if(!pdf||searching)return;const q=norm($("searchInput").value.trim());if(!q)return tell("اكتب كلمة للبحث");searching=true;$("searchBtn").disabled=true;$("searchResults").textContent="جاري البحث...";try{const results=[];for(let i=1;i<=pdf.numPages;i++){const text=norm((await(await pdf.getPage(i)).getTextContent()).items.map(x=>x.str||"").join(" "));if(text.includes(q))results.push(i)}$("searchResults").replaceChildren();if(!results.length)$("searchResults").textContent="لا توجد نتائج. قد يكون المستند مصورًا ويحتاج OCR.";for(const p of results){const b=document.createElement("button");b.className="result";b.textContent="الصفحة "+p;b.onclick=()=>{go(p-page);closePanel()};$("searchResults").append(b)}}catch(e){tell("تعذر البحث في هذا الملف")}finally{searching=false;$("searchBtn").disabled=false}};
+const norm=t=>String(t||"").normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g,"").toLowerCase();
+$("searchBtn").onclick=async()=>{
+ if(!pdf||searching)return;
+ const q=norm($("searchInput").value.trim());
+ if(!q)return tell("اكتب كلمة للبحث");
+ searching=true;$("searchBtn").disabled=true;
+ const box=$("searchResults");box.textContent="جاري البحث داخل صفحات الكتاب...";
+ const currentDoc=active?.id;
+ try{
+  const results=[];
+  for(let i=1;i<=pdf.numPages;i++){
+   if(active?.id!==currentDoc)break;
+   const pageObj=await pdf.getPage(i);
+   const content=await pageObj.getTextContent();
+   const plain=content.items.map(item=>item.str||"").join(" ");
+   const normalized=norm(plain),index=normalized.indexOf(q);
+   if(index>=0){
+    const before=Math.max(0,index-54),after=Math.min(plain.length,index+q.length+85);
+    results.push({page:i,snippet:(before?"…":"")+plain.slice(before,after)+(after<plain.length?"…":"")});
+   }
+   if(i%15===0)box.textContent="تم البحث في "+i+" من "+pdf.numPages+" صفحة...";
+  }
+  if(active?.id!==currentDoc)return;
+  box.replaceChildren();
+  if(!results.length)box.textContent="لا توجد نتائج في النص القابل للبحث. قد يكون الكتاب مصورًا ويحتاج إلى OCR.";
+  else{
+   const count=document.createElement("p");count.textContent="النتائج: "+results.length+" صفحة";box.append(count);
+   for(const match of results.slice(0,200)){
+    const button=document.createElement("button");button.className="result";button.type="button";
+    const title=document.createElement("strong");title.textContent="الصفحة "+match.page;
+    const snippet=document.createElement("small");snippet.textContent=match.snippet;snippet.dir="auto";
+    snippet.style.cssText="display:block;margin-top:5px;line-height:1.6;overflow-wrap:anywhere";
+    button.append(title,snippet);
+    button.onclick=()=>{go(match.page-page);closePanel()};
+    box.append(button);
+   }
+  }
+ }catch(error){console.error(error);tell("تعذر البحث في هذا الملف")}
+ finally{searching=false;$("searchBtn").disabled=false}
+};
 $("searchInput").onkeydown=e=>{if(e.key==="Enter")$("searchBtn").click()};
 $("nativeToggle").onclick=()=>setFontMode(fontMode==="native"?"original":"native");
 $("thumbToggle").onclick=()=>toggleThumbs($("thumbs").hidden);$("closeThumbs").onclick=()=>toggleThumbs(false);
