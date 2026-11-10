@@ -13,10 +13,10 @@
   const actions=document.querySelector('.header-actions');
   if(actions){
    if(data.user.role==='admin'){
-    const adminLink=document.createElement('a');adminLink.href='/admin.html';adminLink.className='subtle-btn';adminLink.textContent='لوحة الإدارة';adminLink.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';actions.prepend(adminLink);
+    const adminLink=document.createElement('a');adminLink.href='/admin.html';adminLink.className='subtle-btn';adminLink.textContent='الإدارة';adminLink.title='لوحة إدارة PDF.ATHAT';adminLink.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';actions.prepend(adminLink);
    }
    const link=document.createElement('a');link.href='/account.html';link.className='subtle-btn';
-   link.textContent='حسابي: '+(data.user.username||data.user.email);
+   link.textContent='حسابي';link.title='الحساب: '+(data.user.username||data.user.email);
    link.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';
    actions.prepend(link);
    const logout=document.createElement('button');logout.type='button';logout.className='subtle-btn';logout.textContent='خروج';
