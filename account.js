@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const state={signupChallenge:null,resetChallenge:null,currentUser:null};
+const state={signupChallenge:null,resetChallenge:null,emailChallenge:null,currentUser:null};
 const status=message=>{$('authStatus').textContent=message||''};
 const profileStatus=message=>{$('profileStatus').textContent=message||''};
 const post=async(path,body)=>{
@@ -87,15 +87,84 @@ function showProfile(user){
  state.currentUser=user;
  $('authPane').hidden=true;$('profilePane').hidden=false;$('returnToProfile').hidden=true;
  $('profileUsername').textContent=user.username||'لم يُحدد';
+ $('newProfileUsername').value=user.username||'';
  $('profileEmail').textContent=user.email||'—';
  $('accountRole').textContent=user.role==='admin'?'مدير النظام':'مستخدم';
  $('profileAdminLink').hidden=user.role!=='admin';
+ $('accountDeleteTrigger').disabled=user.role==='admin';
+ $('deleteSettingStatus').textContent=user.role==='admin'?'لحذف حساب المدير، انقل صلاحية الإدارة إلى حساب آخر أولًا.':'';
+
  let syncing=false;
  try{syncing=localStorage.getItem('pdf-athat-peer-sync-enabled:'+user.id)==='yes'}catch{}
  $('profileSync').textContent=syncing?'مفعّلة على هذا الجهاز':'غير مفعّلة على هذا الجهاز';
  profileStatus('');
  void accountLibrarySummary(user);
 }
+
+function messageFor(id,text){$(id).textContent=text||''}
+guard($('profileUsernameForm'),async values=>{
+ if(!state.currentUser)throw Error('سجّل الدخول أولًا');
+ messageFor('usernameSettingStatus','');
+ const result=await post('profile-username',values);
+ const pass=$('profileUsernameForm').querySelector('input[name=password]');
+ if(pass)pass.value='';
+ showProfile(result.user);
+ messageFor('usernameSettingStatus','تم تغيير اسم المستخدم بنجاح، ويمكنك تسجيل الدخول بالاسم الجديد.');
+});
+guard($('profileEmailStartForm'),async values=>{
+ if(!state.currentUser)throw Error('سجّل الدخول أولًا');
+ messageFor('emailSettingStatus','');
+ const result=await post('profile-email-start',values);
+ state.emailChallenge=result.challengeId;
+ $('profileEmailConfirmForm').hidden=false;
+ const pass=$('profileEmailStartForm').querySelector('input[name=password]');
+ if(pass)pass.value='';
+ messageFor('emailSettingStatus',result.message||'تم إرسال رمز التحقق إلى البريد الجديد.');
+});
+guard($('profileEmailConfirmForm'),async values=>{
+ if(!state.emailChallenge)throw Error('اطلب رمز التحقق أولًا');
+ messageFor('emailSettingStatus','');
+ const result=await post('profile-email-confirm',{challengeId:state.emailChallenge,code:values.code});
+ state.emailChallenge=null;state.currentUser=null;
+ $('profileEmailConfirmForm').hidden=true;
+ showAuth();tab('login');
+ status(result.message||'تم تغيير البريد. سجّل الدخول مرة أخرى.');
+});
+$('newProfileEmail').addEventListener('input',()=>{
+ state.emailChallenge=null;$('profileEmailConfirmForm').hidden=true;
+});
+$('accountDeleteTrigger').onclick=()=>{
+ if(!state.currentUser||state.currentUser.role==='admin')return;
+ const dialog=$('accountDeleteDialog');
+ $('accountDeleteError').textContent='';
+ $('accountDeleteForm').reset();
+ dialog.showModal();
+};
+$('accountDeleteCancel').onclick=()=>$('accountDeleteDialog').close();
+$('accountDeleteForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const form=$('accountDeleteForm');
+ const button=$('accountDeleteSubmit');
+ const values=Object.fromEntries(new FormData(form));
+ const acknowledged=form.querySelector('input[name=acknowledge]')?.checked===true;
+ if(!acknowledged||values.confirmation!=='حذف حسابي'){
+  $('accountDeleteError').textContent='يجب قراءة التحذير وكتابة عبارة «حذف حسابي» حرفيًا.';
+  return;
+ }
+ if(!confirm('تحذير أخير: هل تريد حذف حسابك نهائيًا؟ لن تتمكن من الدخول إليه مجددًا، وقد لا يمكن استعادة مكتبتك المحلية دون نسخة احتياطية.')){
+  return;
+ }
+ button.disabled=true;$('accountDeleteError').textContent='';
+ try{
+  const result=await post('profile-delete',{password:values.password,confirmation:values.confirmation,acknowledge:true});
+  $('accountDeleteDialog').close();
+  form.reset();
+  state.currentUser=null;state.emailChallenge=null;
+  showAuth();tab('login');
+  status(result.message||'تم حذف الحساب. ملفات PDF المحلية لم تُحذف.');
+ }catch(error){$('accountDeleteError').textContent=error.message}
+ finally{button.disabled=false}
+});
 $('accountPasswordChange').onclick=()=>{
  if(!state.currentUser)return;
  $('profilePane').hidden=true;$('authPane').hidden=false;$('returnToProfile').hidden=false;
