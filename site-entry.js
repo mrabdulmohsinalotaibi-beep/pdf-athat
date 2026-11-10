@@ -13,10 +13,10 @@
   const actions=document.querySelector('.header-actions');
   if(actions){
    if(data.user.role==='admin'){
-    const adminLink=document.createElement('a');adminLink.href='/admin.html';adminLink.className='subtle-btn';adminLink.textContent='لوحة الإدارة';adminLink.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';actions.prepend(adminLink);
+    const adminLink=document.createElement('a');adminLink.href='/admin.html';adminLink.className='subtle-btn';adminLink.textContent='الإدارة';adminLink.title='لوحة إدارة PDF.ATHAT';adminLink.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';actions.prepend(adminLink);
    }
    const link=document.createElement('a');link.href='/account.html';link.className='subtle-btn';
-   link.textContent='حسابي: '+(data.user.username||data.user.email);
+   link.textContent='حسابي';link.title='الحساب: '+(data.user.username||data.user.email);
    link.style.cssText='font-size:12px;text-decoration:none;white-space:nowrap;padding:8px';
    actions.prepend(link);
    const logout=document.createElement('button');logout.type='button';logout.className='subtle-btn';logout.textContent='خروج';
@@ -29,6 +29,8 @@
   // Only after the reader opens its account-specific IndexedDB, offer optional
   // non-destructive migration of the old anonymous library on this device.
   import('./legacy-import.js').catch(()=>{});
+  // Optional peer-to-peer transfer: runs only for signed-in users and only if enabled on this device.
+  import('./peer-sync.js').catch(error=>console.warn('peer_sync_disabled',error?.name));
  } catch(error){
   if(panel){panel.hidden=false;panel.replaceChildren();}
   const alertBox=document.createElement('main');alertBox.dir='rtl';alertBox.style.cssText='max-width:520px;margin:14vh auto;padding:24px;background:#efe3d4;border-radius:18px;font:16px system-ui;text-align:center';
