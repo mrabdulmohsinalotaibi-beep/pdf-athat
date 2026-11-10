@@ -730,6 +730,8 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 
 
 /* One-tap appearance control, visible at top-left even on compact phones. */
+/* Flex row is RTL: last ordered item is visually leftmost. */
+.header-actions #themeToggle.theme-cycle-btn{order:99;margin-inline-start:auto}
 #themeToggle.theme-cycle-btn{
  display:grid!important;place-items:center;flex:0 0 41px;
  width:41px;height:41px;min-width:41px;min-height:41px;
