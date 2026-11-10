@@ -1,11 +1,59 @@
 <!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#780000"><title>حسابي | PDF.ATHAT</title><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./admin.css"><style>.auth-layout{max-width:1020px;margin:5vh auto;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}.auth-info{padding:24px}.auth-info h1{font-size:clamp(28px,5vw,48px)}.auth-box{padding:27px}.tabs{display:flex;gap:7px;margin:14px 0 25px}.tabs button{flex:1;padding:10px;background:transparent;color:var(--wine);border:1px solid var(--line)}.tabs button[aria-selected=true]{color:white;background:var(--wine)}.auth-form label{margin:10px 0}.auth-form button[type=submit]{width:100%;margin-top:15px}.hint{font-size:13px;color:#584639;line-height:1.9}.auth-status{padding:14px;font-weight:700;color:var(--wine);white-space:pre-wrap}.protected{display:flex;gap:9px;align-items:center}.auth-back{display:inline-block;padding:9px 0}@media(max-width:740px){.auth-layout{grid-template-columns:1fr;margin:12px auto}.auth-info{padding:12px 8px}.auth-info h1{font-size:30px}.auth-box{padding:18px}}</style></head><body>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#780000"><title>حسابي | PDF.ATHAT</title><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="stylesheet" href="./admin.css"><style>.auth-layout{max-width:1020px;margin:5vh auto;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}.auth-info{padding:24px}.auth-info h1{font-size:clamp(28px,5vw,48px)}.auth-box{padding:27px}.tabs{display:flex;gap:7px;margin:14px 0 25px}.tabs button{flex:1;padding:10px;background:transparent;color:var(--wine);border:1px solid var(--line)}.tabs button[aria-selected=true]{color:white;background:var(--wine)}.auth-form label{margin:10px 0}.auth-form button[type=submit]{width:100%;margin-top:15px}.hint{font-size:13px;color:#584639;line-height:1.9}.auth-status{padding:14px;font-weight:700;color:var(--wine);white-space:pre-wrap}.protected{display:flex;gap:9px;align-items:center}.auth-back{display:inline-block;padding:9px 0}@media(max-width:740px){.auth-layout{grid-template-columns:1fr;margin:12px auto}.auth-info{padding:12px 8px}.auth-info h1{font-size:30px}.auth-box{padding:18px}}
+.account-profile{padding:24px;min-width:0}
+.account-profile .account-heading{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.account-profile h2{font-size:25px;margin:5px 0}
+.account-role{font-size:12px;padding:4px 12px;border:1px solid var(--line);border-radius:30px;color:var(--wine);background:#f7eadb}
+.account-data{display:grid;gap:10px;margin:17px 0}
+.account-field{background:#f7ecdf;border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.account-field span{display:block;font-size:12px;color:#6e5949}
+.account-field strong{display:block;font-size:15px;overflow-wrap:anywhere;direction:auto}
+.account-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:18px 0}
+.account-stats>div{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);border-radius:12px;background:#f7ecdf;padding:11px 7px}
+.account-stats strong{font-size:22px;color:var(--wine);font-variant-numeric:tabular-nums}
+.account-stats small{font-size:11px;text-align:center}
+.account-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.account-actions a,.account-actions button{display:flex;align-items:center;justify-content:center;padding:11px;text-align:center;text-decoration:none;border-radius:11px;font-size:13px;line-height:1.5}
+.account-actions .primary-action{background:var(--wine);color:#fff;border:1px solid var(--wine)}
+.account-actions .secondary-action{color:var(--wine);background:#fff6eb;border:1px solid var(--line)}
+.account-actions .logout-action{grid-column:1/-1}
+.account-help{color:#695644;font-size:12px;margin-top:15px;line-height:1.8}
+.account-status{color:var(--wine);font-size:13px;min-height:1.5em}
+@media(max-width:740px){.account-profile{padding:18px}.account-profile h2{font-size:22px}.account-data{gap:8px}.account-stats strong{font-size:19px}.account-stats>div{padding:9px 4px}}
+@media(max-width:380px){.account-actions{grid-template-columns:1fr}.account-actions .logout-action{grid-column:auto}}
+</style></head><body>
 <header class="bar"><div class="brand"><img src="./icon.svg" alt="" width="38" height="38"><div><strong>PDF.ATHAT</strong><small>المكتبة المحلية الذكية</small></div></div><a href="./">الرئيسية</a></header>
 <main class="container auth-layout"><section class="auth-info"><span class="eyebrow">حساب واحد · مكتبة خاصة بكل جهاز</span><h1>ملفاتك معك، وخصوصيتك محفوظة</h1><p>سجّل بحسابك للوصول إلى مكتبتك على هذا الجهاز. تسجيل الدخول بجهاز جديد لا ينقل ملفات PDF إليه تلقائيًا؛ يمكنك نقل نسخة احتياطية بنفسك.</p><p class="protected">🔒 ملفات PDF والشروح لا تُرفع إلى خوادم الموقع.</p><p class="hint">المكتبات القديمة لا تُحذف. بعد تسجيل الدخول يمكنك ربط ملفات المكتبة العامة القديمة بهذا الحساب على الجهاز نفسه بإذن صريح منك.</p></section>
-<section class="panel auth-box"><div class="tabs" role="tablist" aria-label="خدمات الحساب"><button type="button" data-tab="login" aria-selected="true">تسجيل الدخول</button><button type="button" data-tab="signup" aria-selected="false">حساب جديد</button><button type="button" data-tab="recover" aria-selected="false">استعادة كلمة المرور</button></div>
+<section id="authPane" class="panel auth-box"><div class="tabs" role="tablist" aria-label="خدمات الحساب"><button type="button" data-tab="login" aria-selected="true">تسجيل الدخول</button><button type="button" data-tab="signup" aria-selected="false">حساب جديد</button><button type="button" data-tab="recover" aria-selected="false">استعادة كلمة المرور</button></div>
 <form id="loginForm" class="auth-form"><label>اسم المستخدم أو البريد الإلكتروني<input name="identifier" autocomplete="username" required></label><label>كلمة المرور<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">الدخول إلى مكتبتي</button></form>
 <form id="signupForm" class="auth-form" hidden><label>اسم المستخدم (بالإنجليزية)<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9_]{2,31}" autocomplete="username" required placeholder="example_user"></label><label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required></label><label>كلمة المرور<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><p class="hint">سيصلك رمز من 6 أرقام لتأكيد ملكية البريد. لا تستخدم كلمة مرور حساب آخر.</p><button type="submit">إنشاء الحساب وإرسال الرمز</button></form>
 <form id="verifyForm" class="auth-form" hidden><label>رمز التأكيد من البريد<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label><button type="submit">تأكيد البريد والدخول</button></form>
 <form id="recoverForm" class="auth-form" hidden><label>البريد الإلكتروني المسجل<input name="email" type="email" required></label><button type="submit">إرسال رمز الاستعادة</button></form>
 <form id="resetForm" class="auth-form" hidden><label>رمز الاستعادة<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label><label>كلمة المرور الجديدة<input name="password" type="password" minlength="8" required></label><button type="submit">تغيير كلمة المرور</button></form>
-<p id="authStatus" class="auth-status" role="status" aria-live="polite"></p></section></main><script type="module" src="./account.js"></script></body></html>
+<p id="authStatus" class="auth-status" role="status" aria-live="polite"></p></section>
+<section id="profilePane" class="panel account-profile" hidden aria-labelledby="accountProfileTitle">
+ <span class="eyebrow">الحساب الشخصي</span>
+ <div class="account-heading"><h2 id="accountProfileTitle">بيانات حسابي</h2><span id="accountRole" class="account-role">مستخدم</span></div>
+ <p>هذا الحساب مرتبط بمكتبتك المحلية على الجهاز. بيانات المستخدم والصلاحيات محفوظة في خدمة الحسابات، ولا تُرفع كتبك أو شروحك إلى قاعدة المستخدمين.</p>
+ <div class="account-data">
+  <div class="account-field"><span>اسم المستخدم</span><strong id="profileUsername" dir="auto">—</strong></div>
+  <div class="account-field"><span>البريد الإلكتروني</span><strong id="profileEmail" dir="ltr">—</strong></div>
+  <div class="account-field"><span>مزامنة هذا الجهاز</span><strong id="profileSync">—</strong></div>
+ </div>
+ <h3>مكتبتي على هذا الجهاز</h3>
+ <div class="account-stats">
+  <div><strong id="profileFiles">—</strong><small>ملفات PDF</small></div>
+  <div><strong id="profileNotes">—</strong><small>التعليقات</small></div>
+  <div><strong id="profileFolders">—</strong><small>المجلدات</small></div>
+ </div>
+ <div class="account-actions">
+  <a class="primary-action" href="./">فتح مكتبتي</a>
+  <a class="secondary-action" href="./">المزامنة والملفات</a>
+  <a class="secondary-action" href="./#libraryTabManage">إدارة المكتبة والنسخ</a>
+  <button type="button" id="accountPasswordChange" class="secondary-action">استعادة أو تغيير كلمة المرور</button>
+  <a id="profileAdminLink" class="secondary-action" href="./admin.html" hidden>لوحة مدير النظام</a>
+  <button type="button" id="profileLogout" class="secondary-action logout-action">تسجيل الخروج</button>
+ </div>
+ <p class="account-help">المزامنة المباشرة تعمل عندما تكون مفعلة والموقع مفتوحًا على الجهازين. احتفظ بنسخة احتياطية مشفرة؛ حذف بيانات المتصفح قد يؤدي إلى فقد الملفات المحلية.</p>
+ <p id="profileStatus" class="account-status" role="status" aria-live="polite"></p>
+</section></main><script type="module" src="./account.js"></script></body></html>
