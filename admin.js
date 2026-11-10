@@ -9,6 +9,22 @@ async function api(path,options={}){
 }
 const post=(path,data)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
 let page=0,query='',owner=null;
+
+const adminViews=['overview','users','ads','health','audit','security','transferPanel'];
+function selectAdminView(){
+ const requested=location.hash.slice(1);
+ const active=adminViews.includes(requested)?requested:'overview';
+ for(const id of adminViews)$(id).hidden=id!==active;
+ for(const link of document.querySelectorAll('.admin-sections a')){
+  const current=link.getAttribute('href')==='#'+active;
+  if(current)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+ }
+ const holder=document.querySelector('.sections');
+ if(holder)holder.hidden=active==='overview';
+ window.scrollTo({top:0,behavior:'instant'});
+}
+window.addEventListener('hashchange',selectAdminView);
+
 async function loadUsers(){
  const result=await api('/api/admin/users?page='+page+'&q='+encodeURIComponent(query));
  $('usersTotal').textContent=result.total+' حساب';
@@ -148,6 +164,7 @@ async function refresh(){
  if(!info.user)return;
  if(info.user.role!=='admin'){view('deniedPane',true);return;}
  owner=info.user;view('dashboard',true);
+ selectAdminView();
  $('welcomeEmail').textContent='مرحبًا '+(info.user.username||info.user.email)+' · '+info.user.email;
  const data=await api('/api/admin/overview');
  for(const [key,val] of [['statUsers',data.users],['statAdmins',data.admins],['statSessions',data.activeSessions],['statRecent',data.recentUsers],['statPending',data.pendingVerifications]])$(key).textContent=val;
