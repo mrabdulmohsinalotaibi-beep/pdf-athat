@@ -832,3 +832,22 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 :root.sketch .annotation-toolbar,
 :root.sketch .reader-controls{background:var(--panel);color:var(--ink);border-color:var(--line)}
 /* The actual PDF canvas stays faithful to its original document colors. */
+
+
+/* Crisp, complete PDF cover previews: do not crop first-page text. */
+.library-cover-image,
+.library-page .library-cards .library-cover-image,
+.library-page .library-resume .library-cover-image{
+ object-fit:contain;
+ object-position:center center;
+ background:#FFFFFF;
+ image-rendering:auto;
+}
+.library-page .library-cards.responsive-view .library-cover,
+.library-cards.grid-view .library-cover{
+ background:#F8F7F4;
+}
+:root.dark .library-page .library-cards.responsive-view .library-cover,
+:root.sketch .library-page .library-cards.responsive-view .library-cover{
+ background:#FFFFFF;
+}
