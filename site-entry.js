@@ -29,6 +29,8 @@
   // Only after the reader opens its account-specific IndexedDB, offer optional
   // non-destructive migration of the old anonymous library on this device.
   import('./legacy-import.js').catch(()=>{});
+  // Optional peer-to-peer transfer: runs only for signed-in users and only if enabled on this device.
+  import('./peer-sync.js').catch(error=>console.warn('peer_sync_disabled',error?.name));
  } catch(error){
   if(panel){panel.hidden=false;panel.replaceChildren();}
   const alertBox=document.createElement('main');alertBox.dir='rtl';alertBox.style.cssText='max-width:520px;margin:14vh auto;padding:24px;background:#efe3d4;border-radius:18px;font:16px system-ui;text-align:center';
