@@ -142,3 +142,14 @@ textarea{resize:vertical;min-height:85px}
  .pagination{gap:8px}
  .pagination button{font-size:12px}
 }
+
+/* Section-based admin navigation, not an endless list of settings. */
+.admin-sections a[aria-current="page"]{background:var(--wine);color:#fff;border-color:var(--wine)}
+.admin-side{grid-template-columns:minmax(0,1fr)}
+.ad-manager,.admin-users,.admin-side>.panel{max-width:100%}
+#dashboard .sections:has(#users:not([hidden])) .admin-side,
+#dashboard .sections:has(#ads:not([hidden])) .admin-side{display:none}
+#dashboard .sections:has(#health:not([hidden])) #users,
+#dashboard .sections:has(#audit:not([hidden])) #users{display:none}
+#dashboard #ads[hidden],#dashboard #users[hidden],#dashboard #overview[hidden]{display:none!important}
+@media(min-width:901px){.admin-users,.ad-manager{max-width:100%}.admin-side .panel{max-width:100%}}
