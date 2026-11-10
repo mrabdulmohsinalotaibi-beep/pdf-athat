@@ -7,7 +7,7 @@ const file=path.join(dist,'app-v2.js');
 if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
 const root=path.resolve(__dirname,'../..');
-const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css'];
+const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','peer-sync.js'];
 const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
@@ -23,7 +23,7 @@ for(const asset of accountAssets){
  fs.copyFileSync(path.join(root,asset),path.join(dist,asset));
 }
 const gatePath=path.join(dist,'site-entry.js');
-fs.writeFileSync(gatePath,fs.readFileSync(gatePath,'utf8').replace("import('./app-v2.js')","import('./app-v2.js?v="+version+"')").replace("import('./prayer-bar.js')","import('./prayer-bar.js?v="+version+"')"));
+fs.writeFileSync(gatePath,fs.readFileSync(gatePath,'utf8').replace("import('./app-v2.js')","import('./app-v2.js?v="+version+"')").replace("import('./prayer-bar.js')","import('./prayer-bar.js?v="+version+"')").replace("import(\'./peer-sync.js\')","import(\'./peer-sync.js?v="+version+"\')"));
 html=html.replace('</head>','<link rel="stylesheet" href="./prayer-bar.css?v='+version+'"><script defer src="./admin-entry.js?v='+version+'"></script></head>');
 fs.writeFileSync(htmlFile,html);
 
