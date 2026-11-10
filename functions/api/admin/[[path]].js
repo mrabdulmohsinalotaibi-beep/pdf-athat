@@ -1,4 +1,4 @@
-import { session } from '../../../server/auth.mjs';
+import { session, verifyAccountPassword } from '../../../server/auth.mjs';
 
 const response = (data, status=200) => Response.json(data, {status, headers: {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const sql = (db, query, ...args) => db.prepare(query).bind(...args);
@@ -24,6 +24,59 @@ export async function onRequest({request,env}) {
    const rows=await sql(env.PDF_AUTH_DB,"SELECT id,email,username,role,created_at,(SELECT COUNT(*) FROM pdf_email_sessions s WHERE s.user_id=pdf_email_users.id AND s.expires_at>?) AS sessions FROM pdf_email_users WHERE email LIKE ? ESCAPE '\\' OR username LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT 30 OFFSET ?",Math.floor(Date.now()/1000),pattern,pattern,page*30).all();
    const counts=await sql(env.PDF_AUTH_DB,"SELECT COUNT(*) AS total FROM pdf_email_users WHERE email LIKE ? ESCAPE '\\' OR username LIKE ? ESCAPE '\\'",pattern,pattern).first();
    return response({users:rows.results||[],total:Number(counts?.total||0),page});
+  }
+  if(request.method==='POST' && (action==='transfer-start'||action==='transfer-confirm')) {
+   if(request.headers.get('Origin')!==url.origin || request.headers.get('Sec-Fetch-Site')==='cross-site')return response({error:'الطلب غير مسموح'},403);
+   if(!request.headers.get('Content-Type')?.startsWith('application/json'))return response({error:'نوع الطلب غير مدعوم'},415);
+   const body=await request.json();
+   const db=env.PDF_AUTH_DB, time=Math.floor(Date.now()/1000);
+   const owner=await sql(db,'SELECT id,email FROM pdf_email_users WHERE id=? AND email IN (SELECT email FROM pdf_admin_allowed_emails)',user.id).first();
+   if(!owner)return response({error:'نقل الإدارة متاح لمالك الموقع المعتمد فقط'},403);
+   if(!env.OTP_SECRET||!env.RESEND_API_KEY||!env.OTP_FROM_EMAIL)return response({error:'خدمة التحقق بالبريد غير مهيأة'},503);
+   const encoder=new TextEncoder();
+   const hex=buf=>Array.from(new Uint8Array(buf),v=>v.toString(16).padStart(2,'0')).join('');
+   const makeKey=()=>crypto.subtle.importKey('raw',encoder.encode(env.OTP_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
+   if(action==='transfer-start'){
+    const email=typeof body.email==='string'?body.email.trim().toLowerCase():'';
+    if(email.length>254||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email===owner.email)return response({error:'أدخل بريدًا آخر صحيحًا'},400);
+    // Rate-limit starts to protect mailbox delivery and password guessing.
+    const quota=await sql(db,`INSERT INTO pdf_email_limits(key,count,expires_at) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN expires_at<=? THEN 1 ELSE count+1 END, expires_at=CASE WHEN expires_at<=? THEN excluded.expires_at ELSE expires_at END RETURNING count`, 'owner-transfer:'+user.id,time+900,time,time).first();
+    if(!quota||quota.count>5)return response({error:'محاولات كثيرة. حاول بعد 15 دقيقة'},429);
+    if(!await verifyAccountPassword(db,user.id,body.password))return response({error:'كلمة مرور حساب المدير غير صحيحة'},401);
+    const target=await sql(db,'SELECT id,email FROM pdf_email_users WHERE email=?',email).first();
+    if(!target)return response({error:'البريد الجديد يحتاج حسابًا مسجلًا ومؤكدًا أولًا'},400);
+    const challengeId=hex(crypto.getRandomValues(new Uint8Array(32)));
+    const num=crypto.getRandomValues(new Uint32Array(1))[0]%1000000,code=String(num).padStart(6,'0');
+    const signature=hex(await crypto.subtle.sign('HMAC',await makeKey(),encoder.encode(challengeId+':'+code)));
+    await db.batch([
+     sql(db,"DELETE FROM pdf_email_challenges WHERE purpose='admin-transfer' AND salt=?",user.id),
+     sql(db,"INSERT INTO pdf_email_challenges(id,email,purpose,code_hash,salt,password_hash,expires_at,attempts) VALUES(?,?,'admin-transfer',?,?,?,?,0)",challengeId,email,signature,user.id,target.id,time+600)
+    ]);
+    try{
+     const sent=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:env.OTP_FROM_EMAIL,to:[email],subject:'تأكيد نقل إدارة PDF.ATHAT',text:'طلب نقل صلاحية إدارة PDF.ATHAT إلى بريدك. رمز التأكيد: '+code+'\\nصالح 10 دقائق. إذا لم تطلب النقل فتجاهل الرسالة.'})});
+     if(!sent.ok)throw Error('delivery');
+    }catch{await sql(db,'DELETE FROM pdf_email_challenges WHERE id=?',challengeId).run();return response({error:'تعذر إرسال رمز التحقق إلى البريد الجديد'},503)}
+    return response({challengeId,message:'تم إرسال رمز التحقق إلى البريد الجديد'});
+   }
+   if(typeof body.challengeId!=='string'||! /^[a-f0-9]{64}$/.test(body.challengeId)||! /^\\d{6}$/.test(body.code||''))return response({error:'رمز التأكيد غير صحيح'},400);
+   const pending=await sql(db,"SELECT * FROM pdf_email_challenges WHERE id=? AND purpose='admin-transfer' AND salt=? AND expires_at>? AND attempts<5",body.challengeId,user.id,time).first();
+   if(!pending)return response({error:'انتهت صلاحية طلب النقل، ابدأ من جديد'},400);
+   const attempt=await sql(db,'UPDATE pdf_email_challenges SET attempts=attempts+1 WHERE id=? AND attempts<5 AND expires_at>?',pending.id,time).run();
+   if(!attempt.meta?.changes)return response({error:'انتهت المحاولات المسموحة'},400);
+   const matched=await crypto.subtle.verify('HMAC',await makeKey(),Uint8Array.from(pending.code_hash.match(/../g),h=>parseInt(h,16)),encoder.encode(pending.id+':'+body.code));
+   if(!matched)return response({error:'رمز التأكيد غير صحيح'},400);
+   const consumed=await sql(db,'DELETE FROM pdf_email_challenges WHERE id=?',pending.id).run();
+   if(!consumed.meta?.changes)return response({error:'استُخدم الرمز من قبل'},400);
+   const target=await sql(db,'SELECT id,email FROM pdf_email_users WHERE id=? AND email=?',pending.password_hash,pending.email).first();
+   if(!target)return response({error:'حساب البريد الجديد لم يعد متاحًا'},400);
+   await db.batch([
+    sql(db,"UPDATE pdf_email_users SET role='admin' WHERE id=?",target.id),
+    sql(db,'INSERT OR IGNORE INTO pdf_admin_allowed_emails(email) VALUES(?)',target.email),
+    sql(db,'DELETE FROM pdf_admin_allowed_emails WHERE email=?',owner.email),
+    sql(db,"UPDATE pdf_email_users SET role='user' WHERE id=?",owner.id),
+    sql(db,'DELETE FROM pdf_email_sessions WHERE user_id IN (?,?)',owner.id,target.id)
+   ]);
+   return response({ok:true,message:'تم نقل إدارة الموقع إلى البريد الجديد. سجّل الدخول به.'});
   }
   if(request.method==='POST' && (action==='role'||action==='revoke')) {
    if(request.headers.get('Origin')!==url.origin || request.headers.get('Sec-Fetch-Site')==='cross-site') return response({error:'الطلب غير مسموح'},403);
