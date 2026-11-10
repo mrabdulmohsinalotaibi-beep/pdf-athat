@@ -25,10 +25,12 @@ export async function onRequest({request,env}) {
   }
   if(action==='traffic' && request.method==='GET'){
    // Always authorize before querying: only signed-in administrators see stats.
-   const now=new Date();
+   const now=new Date(Date.now()+3*3600000); // Saudi local day
    const today=now.toISOString().slice(0,10);
    const since=days=>new Date(now.getTime()-(days-1)*86400000).toISOString().slice(0,10);
    const db=env.PDF_AUTH_DB;
+   // Retain the daily aggregate window needed for annual comparisons.
+   await sql(db,'DELETE FROM pdf_traffic_visits WHERE day<?',since(400)).run();
    const count=async from=>{
     const result=await sql(db,'SELECT COALESCE(SUM(visits),0) AS views,COUNT(DISTINCT visitor_hash) AS visitors FROM pdf_traffic_visits WHERE day>=?',from).first();
     return {views:Number(result?.views||0),visitors:Number(result?.visitors||0)};
