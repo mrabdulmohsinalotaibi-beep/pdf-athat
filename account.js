@@ -14,12 +14,12 @@ function tab(name){
  status('');
 }
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
-function guard(form,handler){
+function guard(form,handler,errorTarget=null){
  form.addEventListener('submit',async event=>{
   event.preventDefault();
   const button=form.querySelector('button[type=submit]');
   button.disabled=true;status('');
-  try{await handler(Object.fromEntries(new FormData(form)))}catch(error){status(error.message)}
+  try{await handler(Object.fromEntries(new FormData(form)))}catch(error){if(errorTarget)messageFor(errorTarget,error.message);else status(error.message)}
   finally{button.disabled=false}
  });
 }
@@ -110,7 +110,7 @@ guard($('profileUsernameForm'),async values=>{
  if(pass)pass.value='';
  showProfile(result.user);
  messageFor('usernameSettingStatus','تم تغيير اسم المستخدم بنجاح، ويمكنك تسجيل الدخول بالاسم الجديد.');
-});
+},'usernameSettingStatus');
 guard($('profileEmailStartForm'),async values=>{
  if(!state.currentUser)throw Error('سجّل الدخول أولًا');
  messageFor('emailSettingStatus','');
@@ -120,7 +120,7 @@ guard($('profileEmailStartForm'),async values=>{
  const pass=$('profileEmailStartForm').querySelector('input[name=password]');
  if(pass)pass.value='';
  messageFor('emailSettingStatus',result.message||'تم إرسال رمز التحقق إلى البريد الجديد.');
-});
+},'emailSettingStatus');
 guard($('profileEmailConfirmForm'),async values=>{
  if(!state.emailChallenge)throw Error('اطلب رمز التحقق أولًا');
  messageFor('emailSettingStatus','');
@@ -129,7 +129,7 @@ guard($('profileEmailConfirmForm'),async values=>{
  $('profileEmailConfirmForm').hidden=true;
  showAuth();tab('login');
  status(result.message||'تم تغيير البريد. سجّل الدخول مرة أخرى.');
-});
+},'emailSettingStatus');
 $('newProfileEmail').addEventListener('input',()=>{
  state.emailChallenge=null;$('profileEmailConfirmForm').hidden=true;
 });
