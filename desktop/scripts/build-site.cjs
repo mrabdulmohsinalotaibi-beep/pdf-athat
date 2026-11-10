@@ -23,7 +23,11 @@ for(const asset of accountAssets){
  fs.copyFileSync(path.join(root,asset),path.join(dist,asset));
 }
 const gatePath=path.join(dist,'site-entry.js');
-fs.writeFileSync(gatePath,fs.readFileSync(gatePath,'utf8').replace("import('./app-v2.js')","import('./app-v2.js?v="+version+"')").replace("import('./prayer-bar.js')","import('./prayer-bar.js?v="+version+"')").replace("import(\'./peer-sync.js\')","import(\'./peer-sync.js?v="+version+"\')"));
+let gate=fs.readFileSync(gatePath,'utf8');
+for(const asset of ['app-v2.js','prayer-bar.js','peer-sync.js']){
+ gate=gate.replace("import('./"+asset+"')","import('./"+asset+"?v="+version+"')");
+}
+fs.writeFileSync(gatePath,gate);
 html=html.replace('</head>','<link rel="stylesheet" href="./prayer-bar.css?v='+version+'"><script defer src="./admin-entry.js?v='+version+'"></script></head>');
 fs.writeFileSync(htmlFile,html);
 
@@ -71,7 +75,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./peer-sync.js?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
