@@ -21,6 +21,31 @@
 .account-status{color:var(--wine);font-size:13px;min-height:1.5em}
 @media(max-width:740px){.account-profile{padding:18px}.account-profile h2{font-size:22px}.account-data{gap:8px}.account-stats strong{font-size:19px}.account-stats>div{padding:9px 4px}}
 @media(max-width:380px){.account-actions{grid-template-columns:1fr}.account-actions .logout-action{grid-column:auto}}
+
+.account-settings{margin-top:24px;padding-top:13px;border-top:1px solid var(--line)}
+.account-settings>h3{font-size:19px;margin:5px 0 14px}
+.account-setting{padding:12px 14px;background:#f7ecdf;border:1px solid var(--line);border-radius:12px;margin:9px 0}
+.account-setting summary{color:var(--wine);font-weight:700;cursor:pointer}
+.account-setting p{font-size:13px;color:#6a5040;margin:8px 0}
+.account-setting input{width:100%;max-width:100%;background:#fff9f2}
+.account-setting form button{margin-top:8px}
+.account-setting .account-setting-status{font-size:13px;color:var(--wine);min-height:16px;margin:9px 0 0}
+.account-setting-danger{border-color:#b86f6f;background:#f9eae6}
+.account-setting-danger summary,.account-setting-danger strong{color:#870d0d}
+.account-danger-button{background:#870d0d;color:#fff;padding:10px 15px}
+.account-danger-button:disabled{opacity:.55;cursor:not-allowed}
+.account-delete-dialog{border:1px solid #b86f6f;border-radius:17px;background:#fff2e8;color:#33251c;width:min(93vw,490px);max-height:86dvh;overflow:auto;padding:23px;box-shadow:0 15px 45px #0004}
+.account-delete-dialog::backdrop{background:#0009}
+.account-delete-dialog h2{font-size:22px;color:#870d0d;margin:0 0 7px}
+.account-delete-dialog p{font-size:14px;line-height:1.8}
+.account-delete-dialog input[type=text],.account-delete-dialog input[type=password]{width:100%;padding:11px;border-radius:9px;border:1px solid #a88c7d;background:#fff;color:#221b17}
+.account-delete-dialog label{display:block;font-size:13px;font-weight:700;margin:12px 0}
+.account-delete-dialog .account-checkbox{display:flex;align-items:flex-start;gap:8px}
+.account-delete-dialog .account-checkbox input{width:17px;height:17px;flex:none;margin-top:5px}
+.account-delete-dialog .account-dialog-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.account-delete-dialog .account-dialog-actions button{flex:1 1 145px}
+.account-delete-dialog .account-dialog-cancel{background:#efe3d4;color:#392d28;border:1px solid #bca696}
+.account-delete-dialog .account-dialog-error{min-height:1.5em;color:#870d0d;font-size:13px}
 </style></head><body>
 <header class="bar"><div class="brand"><img src="./icon.svg" alt="" width="38" height="38"><div><strong>PDF.ATHAT</strong><small>المكتبة المحلية الذكية</small></div></div><a href="./">الرئيسية</a></header>
 <main class="container auth-layout"><section class="auth-info"><span class="eyebrow">حساب واحد · مكتبة خاصة بكل جهاز</span><h1>ملفاتك معك، وخصوصيتك محفوظة</h1><p>سجّل بحسابك للوصول إلى مكتبتك على هذا الجهاز. يمكنك تفعيل المزامنة المباشرة عند فتح الموقع على جهازين بالحساب نفسه، أو نقل نسخة احتياطية مشفرة يدويًا.</p><p class="protected">🔒 ملفات PDF والشروح لا تُرفع إلى خوادم الموقع.</p><p class="hint">المكتبات القديمة لا تُحذف. بعد تسجيل الدخول يمكنك ربط ملفات المكتبة العامة القديمة بهذا الحساب على الجهاز نفسه بإذن صريح منك.</p></section>
@@ -55,5 +80,52 @@
   <button type="button" id="profileLogout" class="secondary-action logout-action">تسجيل الخروج</button>
  </div>
  <p class="account-help">المزامنة المباشرة تعمل عندما تكون مفعلة والموقع مفتوحًا على الجهازين. احتفظ بنسخة احتياطية مشفرة؛ حذف بيانات المتصفح قد يؤدي إلى فقد الملفات المحلية.</p>
- <p id="profileStatus" class="account-status" role="status" aria-live="polite"></p>
-</section></main><script type="module" src="./account.js"></script></body></html>
+ 
+<div class="account-settings">
+ <h3>إعدادات الحساب والأمان</h3>
+ <details class="account-setting" id="usernameSetting">
+  <summary>تعديل اسم المستخدم</summary>
+  <p>اسم المستخدم فريد، ويمكنك تسجيل الدخول به أو ببريدك. تغيير الاسم لا يغيّر مكتبتك.</p>
+  <form id="profileUsernameForm">
+   <label>اسم المستخدم الجديد (بالإنجليزية)<input name="username" id="newProfileUsername" autocomplete="username" pattern="[A-Za-z][A-Za-z0-9_]{2,31}" minlength="3" maxlength="32" required></label>
+   <label>كلمة المرور الحالية<input name="password" type="password" autocomplete="current-password" required></label>
+   <button type="submit">حفظ اسم المستخدم</button>
+  </form>
+  <p id="usernameSettingStatus" class="account-setting-status" role="status" aria-live="polite"></p>
+ </details>
+ <details class="account-setting" id="emailSetting">
+  <summary>تعديل البريد الإلكتروني</summary>
+  <p>لحمايتك، سنرسل رمز تحقق للبريد الجديد. لن يتغير البريد قبل تأكيد الرمز، وستحتاج إلى تسجيل الدخول مجددًا بعد نجاح التعديل.</p>
+  <form id="profileEmailStartForm">
+   <label>البريد الإلكتروني الجديد<input name="email" id="newProfileEmail" type="email" autocomplete="email" required></label>
+   <label>كلمة المرور الحالية<input name="password" type="password" autocomplete="current-password" required></label>
+   <button type="submit">إرسال رمز التحقق</button>
+  </form>
+  <form id="profileEmailConfirmForm" hidden>
+   <label>رمز التحقق المرسل للبريد الجديد<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label>
+   <button type="submit">تأكيد البريد الجديد</button>
+  </form>
+  <p id="emailSettingStatus" class="account-setting-status" role="status" aria-live="polite"></p>
+ </details>
+ <details class="account-setting account-setting-danger" id="deleteSetting">
+  <summary>حذف الحساب نهائيًا</summary>
+  <p><strong>تحذير:</strong> حذف الحساب يزيل بيانات الدخول والمزامنة وجلسات الأجهزة، ولا يحذف ملفات PDF من التخزين المحلي تلقائيًا. لكن هذه الملفات مرتبطة بمعرّف الحساب المحذوف، وقد لا تتمكن من الوصول إليها من حساب جديد. <strong>نزّل نسخة احتياطية مشفرة قبل الحذف.</strong></p>
+  <a class="secondary-action" href="./">فتح مكتبتي لحفظ نسخة احتياطية</a>
+  <button id="accountDeleteTrigger" type="button" class="account-danger-button">متابعة طلب حذف الحساب</button>
+  <p id="deleteSettingStatus" class="account-setting-status" role="status" aria-live="polite"></p>
+ </details>
+</div>
+<p id="profileStatus" class="account-status" role="status" aria-live="polite"></p>
+</section></main>
+<dialog id="accountDeleteDialog" class="account-delete-dialog" aria-labelledby="accountDeleteTitle">
+ <h2 id="accountDeleteTitle">تأكيد حذف حساب PDF.ATHAT</h2>
+ <p>هذا الإجراء نهائي: ستُحذف بيانات الحساب من خادم تسجيل الدخول، وستنتهي جلسات الأجهزة والمزامنة. ملفات PDF المحلية لن تُمسح، لكن الوصول إليها من حساب جديد غير مضمون. يُنصح بحفظ نسخة احتياطية مشفرة أولًا.</p>
+ <form id="accountDeleteForm">
+  <label class="account-checkbox"><input name="acknowledge" type="checkbox" required> قرأت التحذير وأفهم أنني قد أفقد الوصول إلى مكتبتي المحلية إذا لم أحتفظ بنسخة احتياطية.</label>
+  <label>اكتب «حذف حسابي» للتأكيد<input name="confirmation" type="text" required autocomplete="off" placeholder="حذف حسابي"></label>
+  <label>كلمة المرور الحالية<input name="password" type="password" autocomplete="current-password" required></label>
+  <div class="account-dialog-actions"><button id="accountDeleteSubmit" class="account-danger-button" type="submit">تأكيد حذف الحساب نهائيًا</button><button id="accountDeleteCancel" class="account-dialog-cancel" type="button">إلغاء</button></div>
+  <p id="accountDeleteError" class="account-dialog-error" role="alert"></p>
+ </form>
+</dialog>
+<script type="module" src="./account.js"></script></body></html>
