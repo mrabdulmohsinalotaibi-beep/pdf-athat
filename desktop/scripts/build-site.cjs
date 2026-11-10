@@ -21,6 +21,12 @@ for(const [fileName,attribute] of [['style.css','href'],['icon.svg','href'],['ma
 // Public, login-free PDF.ATHAT. Preserve every existing IndexedDB database and
 // select a previously used local library *before* importing the PDF application.
 fs.copyFileSync(localLibrarySource,path.join(dist,'local-library.js'));
+for(const asset of ['admin.html','admin.js','admin.css','admin-entry.js']){
+ fs.copyFileSync(path.join(root,asset),path.join(dist,asset));
+}
+html=html.replace('</head>','<script defer src="./admin-entry.js?v='+version+'"></script></head>');
+fs.writeFileSync(htmlFile,html);
+
 const moduleEntry='<script type="module" src="./app-v2.js?v='+version+'"></script>';
 if(!html.includes(moduleEntry))throw Error('PDF reader entrypoint missing');
 html=html.replace(moduleEntry,'<script src="./local-library.js?v='+version+'"></script>'+moduleEntry);
