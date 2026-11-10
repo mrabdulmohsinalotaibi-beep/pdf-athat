@@ -28,6 +28,13 @@ async function matches(value, expected) {
  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode('pdf-athat-password-check'));
  return crypto.subtle.verify('HMAC', await macKey(value), signature, encoder.encode('pdf-athat-password-check'));
 }
+export async function verifyAccountPassword(db, userId, password) {
+ if(typeof userId!=='string' || typeof password!=='string' || password.length>128)return false;
+ const row=await db.prepare('SELECT salt,password_hash FROM pdf_email_users WHERE id=?').bind(userId).first();
+ if(!row)return false;
+ const computed=await passwordHash(password,row.salt);
+ return matches(computed,row.password_hash);
+}
 function emailAddress(value) {
  const email = typeof value === 'string' ? value.trim().toLowerCase() : '';
  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail('أدخل بريدًا إلكترونيًا صحيحًا.');
