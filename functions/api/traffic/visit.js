@@ -12,7 +12,7 @@ export function classifyAgent(agent=''){
 export function safeCountry(country){
  return typeof country==='string'&&/^[A-Z]{2}$/.test(country)?country:'ZZ';
 }
-export function dayUTC(stamp=Date.now()){return new Date(stamp).toISOString().slice(0,10)}
+export function dayRiyadh(stamp=Date.now()){return new Date(stamp+3*3600000).toISOString().slice(0,10)}
 export async function visitorDigest(secret,day,ip,agent){
  const key=await crypto.subtle.importKey('raw',encoder.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);
  return hex(await crypto.subtle.sign('HMAC',key,encoder.encode(day+'|'+ip+'|'+agent.slice(0,220))));
@@ -32,7 +32,7 @@ export async function onRequest({request,env}){
   const agent=request.headers.get('User-Agent')||'';
   const {device,browser}=classifyAgent(agent);
   if(device==='bot')return json({recorded:false});
-  const day=dayUTC();
+  const day=dayRiyadh();
   const ip=request.headers.get('CF-Connecting-IP')||'';
   if(!ip)return json({recorded:false});
   const visitor_hash=await visitorDigest(env.OTP_SECRET,day,ip,agent);
