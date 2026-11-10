@@ -73,7 +73,7 @@ async function tokenHash(request) {
  const token = request.headers.get('Cookie')?.split(';').map(x => x.trim()).find(x => x.startsWith(COOKIE + '='))?.slice(COOKIE.length + 1);
  return token && /^[a-f0-9]{64}$/.test(token) ? digest(token) : null;
 }
-async function session(db, request) {
+export async function session(db, request) {
  const hash = await tokenHash(request);
  return hash ? statement(db, `SELECT u.id,u.email,u.role FROM pdf_email_sessions s JOIN pdf_email_users u ON u.id=s.user_id
  WHERE s.token_hash=? AND s.expires_at>?`, hash, now()).first() : null;
@@ -166,9 +166,10 @@ async function route(context) {
  if (action === 'verify') {
   const pending = await consume(env, db, body, 'signup');
   const user = { id: crypto.randomUUID(), email: pending.email };
-  const result = await statement(db, 'INSERT OR IGNORE INTO pdf_email_users(id,email,salt,password_hash,created_at) VALUES(?,?,?,?,?)', user.id, user.email, pending.salt, pending.password_hash, now()).run();
+  const result = await statement(db, `INSERT OR IGNORE INTO pdf_email_users(id,email,salt,password_hash,created_at,role) VALUES(?,?,?,?,?,CASE WHEN EXISTS(SELECT 1 FROM pdf_admin_allowed_emails WHERE email=?) THEN 'admin' ELSE 'user' END)`, user.id, user.email, pending.salt, pending.password_hash, now(), pending.email).run();
   if (!result.meta.changes) fail('تعذر إكمال التسجيل. جرّب تسجيل الدخول.');
-  return loginSession(db, user, request, pending.password_hash);
+  const created = await statement(db, 'SELECT id,email,role FROM pdf_email_users WHERE id=?', user.id).first();
+  return loginSession(db, created, request, pending.password_hash);
  }
  if (action === 'login') {
   const email = emailAddress(body.email);
