@@ -27,7 +27,7 @@
     const close=document.createElement('button');close.type='button';close.textContent='إخفاء';close.setAttribute('aria-label','إخفاء الإعلان');close.onclick=()=>{sessionStorage.setItem(dismissKey,'yes');card.remove()};actions.append(close);
     card.append(details,actions);wrap.append(card);
     const duration=Number(ad.duration_seconds);
-    if(Number.isFinite(duration)&&duration>0)timers.push(setTimeout(()=>card.remove(),Math.min(3600,duration)*1000));
+    if(Number.isFinite(duration)&&duration>0)timers.push(setTimeout(()=>{sessionStorage.setItem(dismissKey,'yes');card.remove()},Math.min(3600,duration)*1000));
    }
   }catch(e){console.warn('site_ads_network',e?.name)}
  }
