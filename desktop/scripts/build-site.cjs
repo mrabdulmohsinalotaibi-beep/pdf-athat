@@ -23,7 +23,7 @@ for(const asset of accountAssets){
  fs.copyFileSync(path.join(root,asset),path.join(dist,asset));
 }
 const gatePath=path.join(dist,'site-entry.js');
-fs.writeFileSync(gatePath,fs.readFileSync(gatePath,'utf8').replace("import('./app-v2.js')","import('./app-v2.js?v="+version+"')"));
+fs.writeFileSync(gatePath,fs.readFileSync(gatePath,'utf8').replace("import('./app-v2.js')","import('./app-v2.js?v="+version+"')").replace("import('./prayer-bar.js')","import('./prayer-bar.js?v="+version+"')"));
 html=html.replace('</head>','<link rel="stylesheet" href="./prayer-bar.css?v='+version+'"><script defer src="./admin-entry.js?v='+version+'"></script></head>');
 fs.writeFileSync(htmlFile,html);
 
