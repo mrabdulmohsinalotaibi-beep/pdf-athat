@@ -617,6 +617,15 @@ try{db=await openDB();
 
 // The peer-to-peer transport writes only to this account's IndexedDB.
 // Refresh cached lists and ink after a remote addition; never erase local edits.
+window.addEventListener('pdf-athat-sync-folders',event=>{
+ const names=event.detail?.names;
+ if(!Array.isArray(names))return;
+ const safe=names.filter(x=>typeof x==='string'&&x.trim()&&x.length<=40);
+ const current=new Set(libraryCustomFolders);
+ let changed=false;
+ for(const name of safe)if(!current.has(name)){current.add(name);changed=true}
+ if(changed){libraryCustomFolders=[...current];saveFolders();void renderLibrary()}
+});
 let peerRefreshBusy=false;
 window.addEventListener('pdf-athat-sync-update',async()=>{
  if(peerRefreshBusy||!db)return;
