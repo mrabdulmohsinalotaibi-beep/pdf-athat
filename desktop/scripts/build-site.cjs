@@ -8,7 +8,7 @@ if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
 const root=path.resolve(__dirname,'../..');
 const localLibrarySource=path.join(root,'web','local-library.js');
-const hash=crypto.createHash('sha256');hash.update(fs.readFileSync(localLibrarySource));for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));const version=hash.digest('hex').slice(0,12);
+const hash=crypto.createHash('sha256');hash.update(fs.readFileSync(localLibrarySource));for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of ['admin.html','admin.js','admin.css','admin-entry.js'])hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
 // Version the visual assets to bypass older service-worker caches on mobile devices.
@@ -21,6 +21,12 @@ for(const [fileName,attribute] of [['style.css','href'],['icon.svg','href'],['ma
 // Public, login-free PDF.ATHAT. Preserve every existing IndexedDB database and
 // select a previously used local library *before* importing the PDF application.
 fs.copyFileSync(localLibrarySource,path.join(dist,'local-library.js'));
+for(const asset of ['admin.html','admin.js','admin.css','admin-entry.js']){
+ fs.copyFileSync(path.join(root,asset),path.join(dist,asset));
+}
+html=html.replace('</head>','<script defer src="./admin-entry.js?v='+version+'"></script></head>');
+fs.writeFileSync(htmlFile,html);
+
 const moduleEntry='<script type="module" src="./app-v2.js?v='+version+'"></script>';
 if(!html.includes(moduleEntry))throw Error('PDF reader entrypoint missing');
 html=html.replace(moduleEntry,'<script src="./local-library.js?v='+version+'"></script>'+moduleEntry);

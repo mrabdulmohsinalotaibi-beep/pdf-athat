@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#780000"><title>لوحة مدير النظام | PDF.ATHAT</title>
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./admin.css">
+</head><body>
+<header class="bar"><div class="brand"><img src="./icon.svg" alt="" width="38" height="38"><div><strong>PDF.ATHAT</strong><small>إدارة النظام</small></div></div><a href="./">العودة إلى مكتبتي ←</a></header>
+<main class="container">
+<section id="loginPane" class="panel narrow" hidden><span class="eyebrow">وصول محمي</span><h1>دخول مدير النظام</h1><p>الإدارة مستقلة عن مكتبة الجهاز، ولا تعرض ملفات PDF الشخصية.</p>
+<form id="loginForm"><label>البريد الإلكتروني<input id="email" type="email" autocomplete="username" required></label><label>كلمة المرور<input id="password" type="password" autocomplete="current-password" required minlength="6"></label><button type="submit">دخول</button></form>
+<details><summary>إنشاء حساب مدير بالبريد المعتمد</summary><p>يجب إثبات ملكية البريد برمز تحقق قبل منح أي صلاحية.</p><form id="signupForm"><label>البريد الإلكتروني<input id="newEmail" type="email" autocomplete="email" required></label><label>كلمة المرور<input id="newPassword" type="password" autocomplete="new-password" minlength="6" required></label><button type="submit">إرسال رمز التحقق</button></form><form id="verifyForm" hidden><label>رمز التحقق من البريد<input id="verifyCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label><button type="submit">تأكيد البريد وإنشاء الحساب</button></form></details>
+</section>
+<section id="deniedPane" class="panel narrow" hidden><h1>صلاحية غير متاحة</h1><p>الحساب مسجل، لكنه لا يمتلك صلاحية مدير النظام.</p><button id="deniedLogout">تسجيل الخروج</button></section>
+<section id="dashboard" hidden><div class="heading"><div><span class="eyebrow">لوحة تحكم المدير</span><h1>إدارة PDF.ATHAT</h1><p id="welcomeEmail"></p></div><button id="logoutBtn" class="secondary">تسجيل الخروج</button></div>
+<div class="stats"><article class="panel"><small>حسابات المستخدمين</small><strong id="statUsers">—</strong></article><article class="panel"><small>مديرو النظام</small><strong id="statAdmins">—</strong></article><article class="panel"><small>الجلسات النشطة</small><strong id="statSessions">—</strong></article></div>
+<div class="sections"><section class="panel"><h2>المستخدمون والصلاحيات</h2><p>تغيير الصلاحية يلغي جلسات الحساب لحماية الدخول. حساب المالك محمي من سحب الصلاحية.</p><div class="tableWrap"><table><thead><tr><th>البريد الإلكتروني</th><th>الصلاحية</th><th>الإجراء</th></tr></thead><tbody id="usersRows"></tbody></table></div></section>
+<section class="panel"><h2>حالة النظام</h2><p id="mailStatus"></p><p>ملفات PDF والتعليقات محفوظة محليًا في أجهزة المستخدمين، ولا يمكن لمدير النظام الاطلاع عليها من هذه اللوحة.</p><p><a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">إعدادات Cloudflare</a> · <a href="https://github.com/mrabdulmohsinalotaibi-beep/pdf-athat" target="_blank" rel="noopener noreferrer">مستودع الموقع</a></p></section></div></section>
+<p id="status" class="status" role="status" aria-live="polite"></p></main><script type="module" src="./admin.js"></script>
+</body></html>
