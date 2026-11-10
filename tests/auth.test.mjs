@@ -8,6 +8,9 @@ import { handleAuth } from '../server/auth.mjs';
 function fixture() {
  const sqlite = new DatabaseSync(':memory:');
  sqlite.exec(readFileSync(new URL('../migrations/0001_email_auth.sql', import.meta.url), 'utf8'));
+ sqlite.exec(readFileSync(new URL('../migrations/0002_admin_role.sql', import.meta.url), 'utf8'));
+ sqlite.exec(readFileSync(new URL('../migrations/0003_admin_invites.sql', import.meta.url), 'utf8'));
+ sqlite.exec(readFileSync(new URL('../migrations/0004_usernames.sql', import.meta.url), 'utf8'));
  const db = { prepare(sql) {
   return { bind(...args) {
    const stmt = sqlite.prepare(sql);
@@ -29,7 +32,7 @@ function fixture() {
  };
  return {sqlite,env,mail,call};
 }
-const email='reader@example.com', password='a long private password';
+const email='reader@example.com', username='reader_test', password='a long private password';
 async function withMail(run) {
  const original=globalThis.fetch, f=fixture();
  globalThis.fetch=async (url,request) => {
@@ -41,7 +44,7 @@ async function withMail(run) {
 }
 const code=f=>f.mail.at(-1).text.match(/\d{6}/)[0];
 async function register(f) {
- const signup=await f.call('signup',{email,password}); assert.equal(signup.status,200);
+ const signup=await f.call('signup',{email,username,password}); assert.equal(signup.status,200);
  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM pdf_email_users').get().n,0);
  const result=await f.call('verify',{challengeId:signup.body.challengeId,code:code(f)});
  assert.equal(result.status,200); return result;
@@ -63,13 +66,13 @@ test('verified signup, protected cookie, login, session lookup, logout and accou
  assert.equal((await f.call('session',undefined,'__Host-pdf_session='+ 'a'.repeat(64))).body.user,null);
 }));
 test('codes expire, cannot be replayed, and lock after five failed attempts',()=>withMail(async f=>{
- const signup=await f.call('signup',{email,password}), correct=code(f);
+ const signup=await f.call('signup',{email,username,password}), correct=code(f);
  for(let i=0;i<5;i++) assert.equal((await f.call('verify',{challengeId:signup.body.challengeId,code:correct==='000000'?'111111':'000000'})).status,400);
  assert.equal((await f.call('verify',{challengeId:signup.body.challengeId,code:correct})).status,400);
- const second=await f.call('signup',{email,password});
+ const second=await f.call('signup',{email,username,password});
  f.sqlite.prepare('UPDATE pdf_email_challenges SET expires_at=0').run();
  assert.equal((await f.call('verify',{challengeId:second.body.challengeId,code:code(f)})).status,400);
- const third=await f.call('signup',{email,password}), payload={challengeId:third.body.challengeId,code:code(f)};
+ const third=await f.call('signup',{email,username,password}), payload={challengeId:third.body.challengeId,code:code(f)};
  assert.equal((await f.call('verify',payload)).status,200);
  assert.equal((await f.call('verify',payload)).status,400);
 }));
@@ -78,17 +81,17 @@ test('password reset verifies code, changes password and revokes all sessions',(
  const next='a different long password';
  assert.equal((await f.call('reset',{challengeId:forgot.body.challengeId,code:code(f),password:next})).status,200);
  assert.equal((await f.call('session',undefined,original.cookie)).body.user,null);
- assert.equal((await f.call('login',{email,password})).status,401);
+ assert.equal((await f.call('login',{email,username,password})).status,401);
  assert.equal((await f.call('login',{email,password:next})).status,200);
 }));
 test('server enforces input validation, CSRF, mail readiness and rate limits',()=>withMail(async f=>{
- assert.equal((await f.call('signup',{email,password:'short'})).status,400);
- assert.equal((await f.call('signup',{email:'bad',password})).status,400);
- assert.equal((await f.call('login',{email,password},'',{headers:{Origin:'https://evil.example'}})).status,403);
- assert.equal((await f.call('signup',{email,password:'x'.repeat(9000)})).status,413);
+ assert.equal((await f.call('signup',{email,username,password:'short'})).status,400);
+ assert.equal((await f.call('signup',{email:'bad',username,password})).status,400);
+ assert.equal((await f.call('login',{email,username,password},'',{headers:{Origin:'https://evil.example'}})).status,403);
+ assert.equal((await f.call('signup',{email,username,password:'x'.repeat(9000)})).status,413);
  delete f.env.RESEND_API_KEY;
  assert.equal((await f.call('config')).body.signupReady,false);
- assert.equal((await f.call('signup',{email,password})).status,503);
+ assert.equal((await f.call('signup',{email,username,password})).status,503);
  f.env.RESEND_API_KEY='mock';
  for(let i=0;i<3;i++) assert.equal((await f.call('forgot',{email})).status,200);
  assert.equal(f.mail.length,0); // Unknown email is not exposed and receives no mail.
@@ -96,7 +99,7 @@ test('server enforces input validation, CSRF, mail readiness and rate limits',()
 }));
 test('provider delivery failure leaves no usable challenge',()=>withMail(async f=>{
  globalThis.fetch=async()=>new Response('unavailable',{status:503});
- assert.equal((await f.call('signup',{email,password})).status,503);
+ assert.equal((await f.call('signup',{email,username,password})).status,503);
  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM pdf_email_challenges').get().n,0);
  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM pdf_email_users').get().n,0);
 }));
@@ -105,10 +108,26 @@ test('daily provider quota failures are explained without leaking database detai
  const f=fixture();
  f.env.PDF_AUTH_DB.prepare=()=>{throw Error("D1_ERROR: Your account has exceeded D1's free tier daily row read limit. Upgrade to a paid plan or wait until tomorrow (midnight UTC) to continue.");};
  try{
-  const result=await f.call('signup',{email,password});
+  const result=await f.call('signup',{email,username,password});
   assert.equal(result.status,503);
   assert.equal(result.body.code,'ACCOUNT_SERVICE_LIMIT');
   assert.match(result.body.error,/حد الاستخدام اليومي/);
   assert.equal(result.body.detail,undefined);
  }finally{f.sqlite.close();}
 });
+
+test('username sign-in uses the same verified account and does not expose another library',()=>withMail(async f=>{
+ const verified=await register(f);
+ assert.equal(verified.body.user.username,username);
+ const login=await f.call('login',{identifier:username.toUpperCase(),password});
+ assert.equal(login.status,200);
+ assert.equal(login.body.user.id,verified.body.user.id);
+ assert.equal((await f.call('login',{identifier:'unknown_user',password})).status,401);
+}));
+test('duplicate usernames do not create usable registration challenges',()=>withMail(async f=>{
+ await register(f);
+ const second=await f.call('signup',{email:'second@example.com',username,password});
+ assert.equal(second.status,200);
+ assert.equal(f.mail.length,1);
+ assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM pdf_email_challenges WHERE email='second@example.com'").get().count,0);
+}));
