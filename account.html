@@ -46,6 +46,10 @@
 .account-delete-dialog .account-dialog-actions button{flex:1 1 145px}
 .account-delete-dialog .account-dialog-cancel{background:#efe3d4;color:#392d28;border:1px solid #bca696}
 .account-delete-dialog .account-dialog-error{min-height:1.5em;color:#870d0d;font-size:13px}
+.guest-access{margin-top:16px;border-top:1px solid var(--line);padding-top:17px}
+.guest-access button{width:100%;min-height:48px;background:#fff6eb;color:var(--wine);border:1px solid var(--wine);border-radius:12px;font-weight:700}
+.guest-access p{font-size:12px;line-height:1.8;color:#594638;margin:9px 0 0}
+.guest-access button:hover{background:#ead9c4}
 </style></head><body>
 <header class="bar"><div class="brand"><img src="./icon.svg" alt="" width="38" height="38"><div><strong>PDF.ATHAT</strong><small>المكتبة المحلية الذكية</small></div></div><a href="./">الرئيسية</a></header>
 <main class="container auth-layout"><section class="auth-info"><span class="eyebrow">حساب واحد · مكتبة خاصة بكل جهاز</span><h1>ملفاتك معك، وخصوصيتك محفوظة</h1><p>سجّل بحسابك للوصول إلى مكتبتك على هذا الجهاز. يمكنك تفعيل المزامنة المباشرة عند فتح الموقع على جهازين بالحساب نفسه، أو نقل نسخة احتياطية مشفرة يدويًا.</p><p class="protected">🔒 ملفات PDF والشروح لا تُرفع إلى خوادم الموقع.</p><p class="hint">المكتبات القديمة لا تُحذف. بعد تسجيل الدخول يمكنك ربط ملفات المكتبة العامة القديمة بهذا الحساب على الجهاز نفسه بإذن صريح منك.</p></section>
@@ -55,7 +59,11 @@
 <form id="verifyForm" class="auth-form" hidden><label>رمز التأكيد من البريد<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label><button type="submit">تأكيد البريد والدخول</button></form>
 <form id="recoverForm" class="auth-form" hidden><label>البريد الإلكتروني المسجل<input name="email" type="email" required></label><button type="submit">إرسال رمز الاستعادة</button></form>
 <form id="resetForm" class="auth-form" hidden><label>رمز الاستعادة<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label><label>كلمة المرور الجديدة<input name="password" type="password" minlength="8" required></label><button type="submit">تغيير كلمة المرور</button></form>
-<p id="authStatus" class="auth-status" role="status" aria-live="polite"></p></section>
+<div class="guest-access">
+ <button id="guestLogin" type="button">الدخول كزائر دون تسجيل</button>
+ <p>اقرأ ملفات PDF وأضف تعليقاتك واحفظها على هذا الجهاز فقط، دون بريد إلكتروني أو كلمة مرور. لا تتوفر المزامنة بين الأجهزة في وضع الزائر. يمكنك إنشاء حساب لاحقًا واختيار ربط مكتبتك به.</p>
+ </div>
+ <p id="authStatus" class="auth-status" role="status" aria-live="polite"></p></section>
 <section id="profilePane" class="panel account-profile" hidden aria-labelledby="accountProfileTitle">
  <span class="eyebrow">الحساب الشخصي</span>
  <div class="account-heading"><h2 id="accountProfileTitle">بيانات حسابي</h2><span id="accountRole" class="account-role">مستخدم</span></div>
@@ -77,6 +85,7 @@
   <a class="secondary-action" href="./">إدارة مكتبتي والنسخ</a>
   <button type="button" id="accountPasswordChange" class="secondary-action">استعادة أو تغيير كلمة المرور</button>
   <a id="profileAdminLink" class="secondary-action" href="./admin.html" hidden>لوحة مدير النظام</a>
+  <button type="button" id="profileGuest" class="secondary-action">فتح مكتبة الزائر المحلية</button>
   <button type="button" id="profileLogout" class="secondary-action logout-action">تسجيل الخروج</button>
  </div>
  <p class="account-help">المزامنة المباشرة تعمل عندما تكون مفعلة والموقع مفتوحًا على الجهازين. احتفظ بنسخة احتياطية مشفرة؛ حذف بيانات المتصفح قد يؤدي إلى فقد الملفات المحلية.</p>
