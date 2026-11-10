@@ -105,7 +105,7 @@ function mailReady(env) { return !!(env.RESEND_API_KEY && env.OTP_FROM_EMAIL && 
 async function sendCode(env, email, code, purpose) {
  const response = await fetch('https://api.resend.com/emails', {
   method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ from: env.OTP_FROM_EMAIL, to: [email], subject: purpose === 'signup' ? 'تأكيد بريدك في PDF.ATHAT' : 'استعادة كلمة المرور — PDF.ATHAT',
+  body: JSON.stringify({ from: env.OTP_FROM_EMAIL, to: [email], subject: purpose === 'signup' ? 'تأكيد بريدك في PDF.ATHAT' : purpose === 'change_email' ? 'تأكيد البريد الجديد في PDF.ATHAT' : 'استعادة كلمة المرور — PDF.ATHAT',
    text: `رمزك هو: ${code}\nصالح لمدة 10 دقائق. لا تشارك الرمز مع أي شخص.\nإذا لم تطلب هذا الرمز، تجاهل الرسالة.` }),
   signal: AbortSignal.timeout(10000)
  });
@@ -149,7 +149,7 @@ async function route(context) {
  if (request.method === 'GET' && action === 'session') return json({ user: await session(db, request) });
  if (request.method !== 'POST') fail('الطلب غير متاح.', 405);
  if (request.headers.get('Origin') !== url.origin || request.headers.get('Sec-Fetch-Site') === 'cross-site') fail('الطلب غير مسموح.', 403);
- if (!['signup','verify','login','forgot','reset','logout'].includes(action)) fail('الطلب غير موجود.', 404);
+ if (!['signup','verify','login','forgot','reset','logout','profile-username','profile-email-start','profile-email-confirm','profile-delete'].includes(action)) fail('الطلب غير موجود.', 404);
  const body = await readBody(request);
  context.data.authStage = 'ip-limit';
  await limit(db, 'ip:' + await digest(request.headers.get('CF-Connecting-IP') || 'local'), 60, 900);
@@ -158,6 +158,87 @@ async function route(context) {
   return json({ ok: true }, 200, { 'Set-Cookie': cookie('', 0) });
  }
  if (['signup','forgot','verify','reset'].includes(action) && !mailReady(env)) fail('إرسال رسائل الحسابات غير مفعّل بعد. حاول لاحقًا.', 503);
+
+ if (['profile-username','profile-email-start','profile-email-confirm','profile-delete'].includes(action)) {
+  context.data.authStage = action;
+  const user = await session(db, request);
+  if (!user) fail('انتهت جلسة الحساب. سجّل الدخول مجددًا.', 401);
+  // Rate limits apply per authenticated account and action, not just IP.
+  if (action === 'profile-username') {
+   const username = usernameValue(body.username);
+   if (username === user.username) return json({user});
+   await limit(db, 'profile-name:'+user.id, 6, 1800);
+   if (!await verifyAccountPassword(db, user.id, body.password)) fail('كلمة المرور الحالية غير صحيحة.', 401);
+   const taken=await statement(db,'SELECT id FROM pdf_email_users WHERE username=? AND id<>?', username,user.id).first();
+   if(taken)fail('اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر.',409);
+   try{
+    const changed=await statement(db,'UPDATE pdf_email_users SET username=? WHERE id=?', username,user.id).run();
+    if(!changed.meta.changes)fail('لم يمكن تحديث اسم المستخدم.',409);
+   }catch(error){
+    if(error instanceof PublicError)throw error;
+    if(/UNIQUE constraint failed|SQLITE_CONSTRAINT|D1_ERROR.*UNIQUE/i.test(error.message||''))fail('اسم المستخدم مستخدم بالفعل.',409);
+    throw error;
+   }
+   return json({ok:true,user:{...user,username}});
+  }
+  if (action === 'profile-email-start') {
+   if (!mailReady(env)) fail('خدمة التحقق بالبريد غير مفعّلة حاليًا.', 503);
+   const email=emailAddress(body.email);
+   if(email===user.email)fail('هذا هو البريد المرتبط بحسابك حاليًا.');
+   await limit(db,'profile-email:'+user.id,3,900);
+   if(!await verifyAccountPassword(db,user.id,body.password))fail('كلمة المرور الحالية غير صحيحة.',401);
+   const taken=await statement(db,'SELECT id FROM pdf_email_users WHERE email=?',email).first();
+   if(taken)fail('البريد الإلكتروني مستخدم بالفعل في حساب آخر.',409);
+   // Store the verified session owner in the existing challenge username field.
+   const challengeId=await challenge(env,db,email,'change_email',{username:user.id});
+   return json({challengeId,message:'أُرسل رمز تأكيد إلى البريد الإلكتروني الجديد. تنتهي صلاحيته بعد عشر دقائق.'});
+  }
+  if (action === 'profile-email-confirm') {
+   if (!mailReady(env)) fail('خدمة التحقق بالبريد غير مفعّلة حاليًا.',503);
+   const id=typeof body.challengeId==='string'?body.challengeId:'';
+   const pending=await statement(db,
+    "SELECT username,email FROM pdf_email_challenges WHERE id=? AND purpose='change_email' AND expires_at>? AND attempts<5",id,now()).first();
+   if(!pending||pending.username!==user.id)fail('هذا الطلب لا يخص حسابك أو انتهت صلاحيته.',403);
+   const taken=await statement(db,'SELECT id FROM pdf_email_users WHERE email=?',pending.email).first();
+   if(taken)fail('البريد الإلكتروني مستخدم بالفعل في حساب آخر.',409);
+   const verified=await consume(env,db,body,'change_email');
+   if(verified.username!==user.id)fail('لا يمكن تأكيد تغيير البريد لهذا الحساب.',403);
+   // Keep a protected administrator's allowance in step with their verified email.
+   const protectedEmail=await statement(db,'SELECT email FROM pdf_admin_allowed_emails WHERE email=?',user.email).first();
+   try{
+    await db.batch([
+     statement(db,'UPDATE pdf_email_users SET email=? WHERE id=? AND email=?',verified.email,user.id,user.email),
+     ...(protectedEmail?[
+      statement(db,'INSERT OR IGNORE INTO pdf_admin_allowed_emails(email) VALUES(?)',verified.email),
+      statement(db,'DELETE FROM pdf_admin_allowed_emails WHERE email=?',user.email)
+     ]:[]),
+     statement(db,'DELETE FROM pdf_email_sessions WHERE user_id=?',user.id),
+     statement(db,'DELETE FROM pdf_email_challenges WHERE username=? OR email=?',user.id,user.email)
+    ]);
+   }catch(error){
+    if(/UNIQUE constraint failed|SQLITE_CONSTRAINT|D1_ERROR.*UNIQUE/i.test(error.message||''))fail('تعذر تغيير البريد لأنه أصبح مستخدمًا في حساب آخر.',409);
+    throw error;
+   }
+   return json({ok:true,message:'تم تأكيد البريد الجديد. سجّل الدخول به مرة أخرى.'},200,{'Set-Cookie':cookie('',0)});
+  }
+  if (action === 'profile-delete') {
+   await limit(db,'profile-delete:'+user.id,5,3600);
+   if(user.role==='admin')fail('يجب نقل صلاحية المدير إلى حساب آخر أولًا قبل حذف هذا الحساب.',403);
+   if(body.confirmation!=='حذف حسابي'||body.acknowledge!==true)fail('أكد أنك قرأت التحذير واكتب «حذف حسابي» لإتمام الحذف.');
+   if(!await verifyAccountPassword(db,user.id,body.password))fail('كلمة المرور الحالية غير صحيحة.',401);
+   // No IndexedDB or PDF files are touched: the user must back up private local
+   // data before deletion, as a future account will have a different immutable ID.
+   await db.batch([
+    statement(db,'DELETE FROM pdf_sync_signals WHERE user_id=?',user.id),
+    statement(db,'DELETE FROM pdf_sync_peers WHERE user_id=?',user.id),
+    statement(db,'DELETE FROM pdf_email_sessions WHERE user_id=?',user.id),
+    statement(db,'DELETE FROM pdf_email_challenges WHERE email=? OR username=?',user.email,user.id),
+    statement(db,'DELETE FROM pdf_admin_audit WHERE actor_id=? OR target_id=?',user.id,user.id),
+    statement(db,'DELETE FROM pdf_email_users WHERE id=? AND role=?',user.id,'user')
+   ]);
+   return json({ok:true,message:'حُذف الحساب من خدمة تسجيل الدخول. ملفات PDF الموجودة على الجهاز لم تُحذف.'},200,{'Set-Cookie':cookie('',0)});
+  }
+ }
  if (action === 'signup' || action === 'forgot') {
   context.data.authStage = 'signup-validation';
   const email = emailAddress(body.email);
