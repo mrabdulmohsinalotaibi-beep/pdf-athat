@@ -23,7 +23,7 @@
 @media(max-width:380px){.account-actions{grid-template-columns:1fr}.account-actions .logout-action{grid-column:auto}}
 </style></head><body>
 <header class="bar"><div class="brand"><img src="./icon.svg" alt="" width="38" height="38"><div><strong>PDF.ATHAT</strong><small>المكتبة المحلية الذكية</small></div></div><a href="./">الرئيسية</a></header>
-<main class="container auth-layout"><section class="auth-info"><span class="eyebrow">حساب واحد · مكتبة خاصة بكل جهاز</span><h1>ملفاتك معك، وخصوصيتك محفوظة</h1><p>سجّل بحسابك للوصول إلى مكتبتك على هذا الجهاز. تسجيل الدخول بجهاز جديد لا ينقل ملفات PDF إليه تلقائيًا؛ يمكنك نقل نسخة احتياطية بنفسك.</p><p class="protected">🔒 ملفات PDF والشروح لا تُرفع إلى خوادم الموقع.</p><p class="hint">المكتبات القديمة لا تُحذف. بعد تسجيل الدخول يمكنك ربط ملفات المكتبة العامة القديمة بهذا الحساب على الجهاز نفسه بإذن صريح منك.</p></section>
+<main class="container auth-layout"><section class="auth-info"><span class="eyebrow">حساب واحد · مكتبة خاصة بكل جهاز</span><h1>ملفاتك معك، وخصوصيتك محفوظة</h1><p>سجّل بحسابك للوصول إلى مكتبتك على هذا الجهاز. يمكنك تفعيل المزامنة المباشرة عند فتح الموقع على جهازين بالحساب نفسه، أو نقل نسخة احتياطية مشفرة يدويًا.</p><p class="protected">🔒 ملفات PDF والشروح لا تُرفع إلى خوادم الموقع.</p><p class="hint">المكتبات القديمة لا تُحذف. بعد تسجيل الدخول يمكنك ربط ملفات المكتبة العامة القديمة بهذا الحساب على الجهاز نفسه بإذن صريح منك.</p></section>
 <section id="authPane" class="panel auth-box"><div class="tabs" role="tablist" aria-label="خدمات الحساب"><button type="button" data-tab="login" aria-selected="true">تسجيل الدخول</button><button type="button" data-tab="signup" aria-selected="false">حساب جديد</button><button type="button" data-tab="recover" aria-selected="false">استعادة كلمة المرور</button></div>
 <form id="loginForm" class="auth-form"><label>اسم المستخدم أو البريد الإلكتروني<input name="identifier" autocomplete="username" required></label><label>كلمة المرور<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">الدخول إلى مكتبتي</button></form>
 <form id="signupForm" class="auth-form" hidden><label>اسم المستخدم (بالإنجليزية)<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9_]{2,31}" autocomplete="username" required placeholder="example_user"></label><label>البريد الإلكتروني<input name="email" type="email" autocomplete="email" required></label><label>كلمة المرور<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><p class="hint">سيصلك رمز من 6 أرقام لتأكيد ملكية البريد. لا تستخدم كلمة مرور حساب آخر.</p><button type="submit">إنشاء الحساب وإرسال الرمز</button></form>
@@ -49,7 +49,7 @@
  <div class="account-actions">
   <a class="primary-action" href="./">فتح مكتبتي</a>
   <a class="secondary-action" href="./">المزامنة والملفات</a>
-  <a class="secondary-action" href="./#libraryTabManage">إدارة المكتبة والنسخ</a>
+  <a class="secondary-action" href="./">إدارة مكتبتي والنسخ</a>
   <button type="button" id="accountPasswordChange" class="secondary-action">استعادة أو تغيير كلمة المرور</button>
   <a id="profileAdminLink" class="secondary-action" href="./admin.html" hidden>لوحة مدير النظام</a>
   <button type="button" id="profileLogout" class="secondary-action logout-action">تسجيل الخروج</button>
