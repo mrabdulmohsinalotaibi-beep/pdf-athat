@@ -23,6 +23,31 @@ export async function onRequest({request,env}) {
    const pending=await sql(env.PDF_AUTH_DB,"SELECT COUNT(*) AS total FROM pdf_email_challenges WHERE purpose='signup' AND expires_at>?",time).first();
    return response({users:Number(users?.total||0),admins:Number(users?.admins||0),activeSessions:Number(sessions?.total||0),recentUsers:Number(recent?.total||0),pendingVerifications:Number(pending?.total||0),mailConfigured:!!(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET),localFiles:'لا تُرفع ملفات PDF إلى الخادم'});
   }
+  if(action==='traffic' && request.method==='GET'){
+   // Always authorize before querying: only signed-in administrators see stats.
+   const now=new Date();
+   const today=now.toISOString().slice(0,10);
+   const since=days=>new Date(now.getTime()-(days-1)*86400000).toISOString().slice(0,10);
+   const db=env.PDF_AUTH_DB;
+   const count=async from=>{
+    const result=await sql(db,'SELECT COALESCE(SUM(visits),0) AS views,COUNT(DISTINCT visitor_hash) AS visitors FROM pdf_traffic_visits WHERE day>=?',from).first();
+    return {views:Number(result?.views||0),visitors:Number(result?.visitors||0)};
+   };
+   const [daily,weekly,monthly,yearly,history,countries,devices,browsers,pages]=await Promise.all([
+    count(today),count(since(7)),count(since(30)),count(since(365)),
+    sql(db,'SELECT day,SUM(visits) AS views,COUNT(DISTINCT visitor_hash) AS visitors FROM pdf_traffic_visits WHERE day>=? GROUP BY day ORDER BY day ASC',since(30)).all(),
+    sql(db,'SELECT country,SUM(visits) AS views,COUNT(DISTINCT visitor_hash) AS visitors FROM pdf_traffic_visits WHERE day>=? GROUP BY country ORDER BY views DESC LIMIT 12',since(30)).all(),
+    sql(db,'SELECT device,SUM(visits) AS views FROM pdf_traffic_visits WHERE day>=? GROUP BY device ORDER BY views DESC',since(30)).all(),
+    sql(db,'SELECT browser,SUM(visits) AS views FROM pdf_traffic_visits WHERE day>=? GROUP BY browser ORDER BY views DESC',since(30)).all(),
+    sql(db,'SELECT page,SUM(visits) AS views FROM pdf_traffic_visits WHERE day>=? GROUP BY page ORDER BY views DESC',since(30)).all()
+   ]);
+   return response({
+    daily,weekly,monthly,yearly,days:history.results||[],
+    countries:countries.results||[],devices:devices.results||[],
+    browsers:browsers.results||[],pages:pages.results||[],
+    since:since(30),asOf:today,retention:'aggregated-only'
+   });
+  }
   if(action==='ads' && request.method==='GET'){
    const rows=await sql(env.PDF_AUTH_DB,'SELECT id,title,body,link_url,starts_at,ends_at,duration_seconds,enabled,created_at FROM pdf_site_ads ORDER BY updated_at DESC LIMIT 100').all();
    return response({ads:rows.results||[]});
