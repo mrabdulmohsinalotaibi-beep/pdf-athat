@@ -52,7 +52,6 @@ async function refresh(){
  $('mailStatus').textContent='خدمة رسائل التحقق: '+(data.mailConfigured?'إعداداتها مفعّلة':'الإعدادات غير مكتملة');
  await loadUsers();
 }
-$('loginForm').onsubmit=async event=>{event.preventDefault();const submit=event.currentTarget.querySelector('button');submit.disabled=true;try{await post('/api/auth/login',{identifier:$('email').value,password:$('password').value});$('password').value='';await refresh()}catch(e){notify(e.message)}finally{submit.disabled=false}};
 $('userSearchForm').onsubmit=event=>{event.preventDefault();query=$('userSearch').value.trim();page=0;loadUsers().catch(e=>notify(e.message))};
 $('pagePrev').onclick=()=>{if(page>0){page--;loadUsers().catch(e=>notify(e.message))}};
 $('pageNext').onclick=()=>{page++;loadUsers().catch(e=>notify(e.message))};

@@ -36,3 +36,5 @@ body{min-height:100vh}
 [hidden]{display:none!important}
 @media(max-width:1100px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.sections{grid-template-columns:1fr}}
 @media(max-width:600px){.container{margin:16px auto;padding:0 11px}.bar{padding:12px}.bar-links{gap:8px;font-size:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stat-card{min-height:115px;padding:13px}.stat-card strong{font-size:27px}.heading{margin-bottom:11px}.heading-actions{width:100%}.heading-actions button{flex:1}.admin-sections{margin-bottom:10px}.search-controls{flex-wrap:wrap}.search-controls button{width:100%}.panel-heading{flex-wrap:wrap}}
+
+.admin-login-link{display:inline-block;background:var(--wine);color:white;border-radius:11px;padding:12px 20px;text-decoration:none;font-weight:700}.admin-login-link:hover{color:white;opacity:.9}
