@@ -6,13 +6,16 @@ test('one visible mobile/desktop appearance button cycles three saved themes',()
  const index=file('index.html'),reader=file('app-v2.js'),css=file('style.css');
  assert.match(index,/id="themeToggle" class="icon-btn theme-cycle-btn"/);
  assert.match(index,/<option value="sketch">المرسمة — رصاصي وورقي<\/option>/);
- assert.match(reader,/const appearanceModes=\["light","dark","ocean"\]/);
+ assert.match(reader,/const appearanceModes=\["light","dark","sketch"\]/);
  assert.match(reader,/\$\("themeToggle"\)\.onclick=/);
  assert.match(reader,/localStorage\.setItem\("athat-theme",mode\)/);
  assert.match(reader,/\$\("manageTheme"\)\.onchange=e=>applyAppearance\(e\.target\.value\)/);
  assert.match(css,/#themeToggle\.theme-cycle-btn\{/);
  assert.match(css,/display:grid!important/);
- assert.match(css,/:root\.ocean\{/);
+ assert.match(css,/:root\.sketch\{/);
+ assert.match(css,/--page:#F5F3EE/);
+ assert.match(reader,/if\(mode==="ocean"\)mode="sketch"/);
+ assert.doesNotMatch(index,/أزرق هادئ/);
 });
 test('admin visit dashboard contains only aggregated statistics and guards server access',()=>{
  const html=file('admin.html'),admin=file('admin.js'),api=file('functions/api/admin/[[path]].js');
