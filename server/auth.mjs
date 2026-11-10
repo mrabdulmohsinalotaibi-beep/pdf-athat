@@ -33,6 +33,11 @@ function emailAddress(value) {
  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail('أدخل بريدًا إلكترونيًا صحيحًا.');
  return email;
 }
+function usernameValue(value) {
+ const name = typeof value==='string' ? value.trim().toLowerCase() : '';
+ if (!/^[a-z][a-z0-9_]{2,31}$/.test(name)) fail('اسم المستخدم يجب أن يبدأ بحرف إنجليزي وأن يتكون من 3 إلى 32 حرفًا أو رقمًا أو شرطة سفلية.');
+ return name;
+}
 function strongPassword(value) {
  if (typeof value !== 'string' || value.length < 6 || value.length > 128) fail('استخدم كلمة مرور من 6 إلى 128 حرفًا.');
  return value;
@@ -75,7 +80,7 @@ async function tokenHash(request) {
 }
 export async function session(db, request) {
  const hash = await tokenHash(request);
- return hash ? statement(db, `SELECT u.id,u.email,u.role FROM pdf_email_sessions s JOIN pdf_email_users u ON u.id=s.user_id
+ return hash ? statement(db, `SELECT u.id,u.email,u.username,u.role FROM pdf_email_sessions s JOIN pdf_email_users u ON u.id=s.user_id
  WHERE s.token_hash=? AND s.expires_at>?`, hash, now()).first() : null;
 }
 async function loginSession(db, user, request, expectedHash) {
@@ -87,7 +92,7 @@ async function loginSession(db, user, request, expectedHash) {
   statement(db, 'INSERT INTO pdf_email_sessions(token_hash,user_id,expires_at) SELECT ?,id,? FROM pdf_email_users WHERE id=? AND password_hash=?', await digest(token), now() + SESSION_SECONDS, user.id, expectedHash)
  ]);
  if (!result[1].meta.changes) fail('تغيرت بيانات الحساب. سجّل الدخول مجددًا.', 401);
- return json({ user: { id: user.id, email: user.email, role: user.role || 'user' } }, 200, { 'Set-Cookie': cookie(token) });
+ return json({ user: { id: user.id, email: user.email, username: user.username || null, role: user.role || 'user' } }, 200, { 'Set-Cookie': cookie(token) });
 }
 function mailReady(env) { return !!(env.RESEND_API_KEY && env.OTP_FROM_EMAIL && env.OTP_SECRET); }
 async function sendCode(env, email, code, purpose) {
@@ -108,8 +113,8 @@ async function challenge(env, db, email, purpose, credentials = {}) {
  const codeHash = hex(await crypto.subtle.sign('HMAC', await macKey(env.OTP_SECRET), encoder.encode(`${id}:${code}`)));
  await db.batch([
   statement(db, 'DELETE FROM pdf_email_challenges WHERE email=? AND purpose=?', email, purpose),
-  statement(db, `INSERT INTO pdf_email_challenges(id,email,purpose,code_hash,salt,password_hash,expires_at) VALUES(?,?,?,?,?,?,?)`,
-   id, email, purpose, codeHash, credentials.salt || null, credentials.hash || null, now() + 600)
+  statement(db, `INSERT INTO pdf_email_challenges(id,email,purpose,code_hash,salt,password_hash,expires_at,username) VALUES(?,?,?,?,?,?,?,?)`,
+   id, email, purpose, codeHash, credentials.salt || null, credentials.hash || null, now() + 600, credentials.username || null)
  ]);
  try { await sendCode(env, email, code, purpose); }
  catch { await statement(db, 'DELETE FROM pdf_email_challenges WHERE id=?', id).run(); fail('تعذر إرسال رسالة التحقق. حاول لاحقًا.', 503); }
@@ -150,32 +155,35 @@ async function route(context) {
   context.data.authStage = 'signup-validation';
   const email = emailAddress(body.email);
   const password = action === 'signup' ? strongPassword(body.password) : null;
+  const username = action === 'signup' ? usernameValue(body.username) : null;
   context.data.authStage = 'email-limit';
   await limit(db, 'mail:' + await digest(email), 3, 900);
   context.data.authStage = 'signup-user-lookup';
   const user = await statement(db, 'SELECT id FROM pdf_email_users WHERE email=?', email).first();
+  const usernameUsed = action === 'signup' ? await statement(db, 'SELECT 1 FROM pdf_email_users WHERE username=?', username).first() : null;
   // Return the same response for existing and unknown addresses.
   let challengeId = random();
-  if (action === 'signup' && !user) {
+  if (action === 'signup' && !user && !usernameUsed) {
    context.data.authStage = 'signup-password';
    const salt = random();
-   challengeId = await challenge(env, db, email, 'signup', { salt, hash: await passwordHash(password, salt) });
+   challengeId = await challenge(env, db, email, 'signup', { salt, hash: await passwordHash(password, salt), username });
   } else if (action === 'forgot' && user) challengeId = await challenge(env, db, email, 'reset');
   return json({ challengeId, message: action === 'signup' ? 'إذا كان البريد متاحًا للتسجيل فسيصلك رمز تأكيد. إن كان لديك حساب، سجّل الدخول.' : 'إذا كان البريد مسجلًا فسيصلك رمز استعادة كلمة المرور.' });
  }
  if (action === 'verify') {
   const pending = await consume(env, db, body, 'signup');
-  const user = { id: crypto.randomUUID(), email: pending.email };
-  const result = await statement(db, `INSERT OR IGNORE INTO pdf_email_users(id,email,salt,password_hash,created_at,role) VALUES(?,?,?,?,?,CASE WHEN EXISTS(SELECT 1 FROM pdf_admin_allowed_emails WHERE email=?) THEN 'admin' ELSE 'user' END)`, user.id, user.email, pending.salt, pending.password_hash, now(), pending.email).run();
+  const user = { id: crypto.randomUUID(), email: pending.email, username: pending.username };
+  const result = await statement(db, `INSERT OR IGNORE INTO pdf_email_users(id,email,salt,password_hash,created_at,role,username) VALUES(?,?,?,?,?,CASE WHEN EXISTS(SELECT 1 FROM pdf_admin_allowed_emails WHERE email=?) THEN 'admin' ELSE 'user' END,?)`, user.id, user.email, pending.salt, pending.password_hash, now(), pending.email, pending.username).run();
   if (!result.meta.changes) fail('تعذر إكمال التسجيل. جرّب تسجيل الدخول.');
-  const created = await statement(db, 'SELECT id,email,role FROM pdf_email_users WHERE id=?', user.id).first();
+  const created = await statement(db, 'SELECT id,email,username,role FROM pdf_email_users WHERE id=?', user.id).first();
   return loginSession(db, created, request, pending.password_hash);
  }
  if (action === 'login') {
-  const email = emailAddress(body.email);
+  const identifier = typeof body.identifier==='string' ? body.identifier.trim().toLowerCase() : (typeof body.email==='string' ? body.email.trim().toLowerCase() : '');
+  if (identifier.length>254 || !identifier || (!identifier.includes('@') && !/^[a-z][a-z0-9_]{2,31}$/.test(identifier))) fail('اسم المستخدم أو كلمة المرور غير صحيحة.',401);
   if (typeof body.password !== 'string' || body.password.length > 128) fail('البريد أو كلمة المرور غير صحيحة.', 401);
-  await limit(db, 'login:' + await digest(email), 10, 900);
-  const user = await statement(db, 'SELECT * FROM pdf_email_users WHERE email=?', email).first();
+  await limit(db, 'login:' + await digest(identifier), 10, 900);
+  const user = await statement(db, 'SELECT * FROM pdf_email_users WHERE email=? OR username=?', identifier, identifier).first();
   const hash = await passwordHash(body.password, user?.salt || '00'.repeat(32));
   if (!await matches(hash, user?.password_hash || '00'.repeat(32)) || !user) fail('البريد أو كلمة المرور غير صحيحة.', 401);
   return loginSession(db, user, request, user.password_hash);
