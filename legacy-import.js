@@ -33,7 +33,7 @@
   const b=document.createElement('button');b.type='button';b.className='subtle-btn';b.textContent='ربط مكتبتي القديمة';b.title='نسخ ملفات المكتبة العامة القديمة إلى حسابك على هذا الجهاز فقط';b.style.cssText='font-size:12px;padding:8px';bar.prepend(b);
   b.onclick=async()=>{if(!confirm('سيتم نسخ ملفات وشروح المكتبة العامة القديمة إلى حسابك الحالي على هذا الجهاز فقط. لن تُحذف المكتبة القديمة ولن يُرفع أي ملف إلى الخادم. هل توافق؟'))return;
    b.disabled=true;b.textContent='جارٍ النسخ محليًا…';
-   let oldDB,newDB;try{oldDB=await open(source);newDB=await open(target);const a=await copyStore(oldDB,newDB,'documents');const n=await copyStore(oldDB,newDB,'strokes');alert('تم نسخ '+a+' ملف و'+n+' تعليق محليًا. سيتم تحديث المكتبة.');location.reload()}
+   let oldDB,newDB;try{oldDB=await open(source);newDB=await open(target);if(!newDB.objectStoreNames.contains('documents')||!newDB.objectStoreNames.contains('strokes'))throw Error('لم تكتمل تهيئة المكتبة الجديدة بعد. حاول مرة أخرى.');const a=await copyStore(oldDB,newDB,'documents');const n=await copyStore(oldDB,newDB,'strokes');alert('تم نسخ '+a+' ملف و'+n+' تعليق محليًا. سيتم تحديث المكتبة.');location.reload()}
    catch(e){alert('تعذر النسخ. لم تُحذف المكتبة القديمة: '+e.message);b.disabled=false;b.textContent='إعادة المحاولة'}
    finally{oldDB?.close();newDB?.close()}
   }
