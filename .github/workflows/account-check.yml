@@ -10,6 +10,9 @@ on:
       - 'admin.*'
       - 'site-entry.js'
       - 'prayer-bar.*'
+      - 'app-v2.js'
+      - 'style.css'
+      - 'tests/reader-hardening.test.cjs'
       - 'legacy-import.js'
       - 'tests/auth.test.mjs'
       - '.github/workflows/account-check.yml'
@@ -26,8 +29,14 @@ jobs:
           node-version: '22'
       - name: Authentication and username tests
         run: node --test tests/auth.test.mjs
+      - name: Encrypted backup, search and local privacy tests
+        run: node --test tests/reader-hardening.test.cjs
+      - name: Check admin and prayer scripts
+        run: |
+          node --check admin.js
+          node --check prayer-bar.js
       - name: Install dependencies
-        run: cd desktop && npm ci --ignore-scripts --no-audit --no-fund
+        run: cd desktop && npm install --ignore-scripts --no-audit --no-fund
       - name: Offline PDF build
         run: cd desktop && npm run build:offline
       - name: Validate prayer UI JavaScript
@@ -39,6 +48,8 @@ jobs:
           test -f desktop/dist/account.html
           test -f desktop/dist/admin.html
           test -f desktop/dist/prayer-bar.js
+          grep -q 'backupCryptoVersion' desktop/dist/app-v2.js
+          grep -q 'installNotesHub' desktop/dist/app-v2.js
           test -f desktop/dist/prayer-bar.css
           grep -q 'prayer-bar.css' desktop/dist/index.html
           test -f desktop/dist/legacy-import.js

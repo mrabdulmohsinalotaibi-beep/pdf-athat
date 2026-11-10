@@ -48,8 +48,54 @@ async function backfillLegacyUploadDates(){
 const digestHex=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(b=>b.toString(16).padStart(2,"0")).join("");
 const bytesToBase64=async blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)});
 const base64ToBytes=value=>{const raw=atob(value);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return bytes};
-$("backupExport").onclick=async()=>{try{const docs=await getAll("documents"),notes=await getAll("strokes");const entries=[];for(const d of docs){entries.push({...d,file:{name:d.file.name,type:"application/pdf",base64:await bytesToBase64(d.file),sha256:await digestHex(await d.file.arrayBuffer())}})}const backup={format:"PDF.ATHAT.backup",version:3,folders:libraryCustomFolders,createdAt:new Date().toISOString(),documents:entries,strokes:notes};const blob=new Blob([JSON.stringify(backup)],{type:"application/json"});const saved=await saveBlob(blob,"PDF-ATHAT-"+new Date().toISOString().slice(0,10)+".athatbackup");tell(saved?"تم حفظ نسخة احتياطية للمكتبة والكتابات":"أُلغِي حفظ النسخة الاحتياطية")}catch(e){console.error(e);tell("تعذر إنشاء النسخة الاحتياطية: "+(e.message||"خطأ غير معروف"))}};
-$("backupImport").onchange=async e=>{const file=e.target.files?.[0];e.target.value="";if(!file)return;try{if(file.size>600*1024*1024)throw Error("حجم النسخة كبير جدًا");const backup=JSON.parse(await file.text());if(backup.format!=="PDF.ATHAT.backup"||![1,2,3].includes(backup.version)||!Array.isArray(backup.documents)||!Array.isArray(backup.strokes))throw Error("ملف النسخة الاحتياطية غير صالح");if(backup.documents.length>5000||backup.strokes.length>300000)throw Error("النسخة تتجاوز الحدود المقبولة");const docs=[];for(const d of backup.documents){if(typeof d.id!=="string"||typeof d.name!=="string"||typeof d.file?.base64!=="string")throw Error("مستند غير صالح");const bytes=base64ToBytes(d.file.base64);if(bytes.length>75*1024*1024||!new TextDecoder("latin1").decode(bytes.slice(0,1024)).includes("%PDF-"))throw Error("مستند PDF غير صالح في النسخة");if(backup.version>=2&&typeof d.file.sha256!=="string")throw Error("النسخة الجديدة تفتقد بصمة حماية الملف: "+d.name);if(d.file.sha256!==undefined&&typeof d.file.sha256!=="string")throw Error("بصمة ملف غير صالحة: "+d.name);if(d.file.sha256&&(!/^[a-f0-9]{64}$/i.test(d.file.sha256)||(await digestHex(bytes)).toLowerCase()!==d.file.sha256.toLowerCase()))throw Error("فشل التحقق من سلامة الملف: "+d.name);docs.push({...d,uploadedAt:uploadTimestamp(d)||Date.now(),file:new File([bytes],d.file.name||d.name,{type:"application/pdf"})})}const ids=new Set(docs.map(d=>d.id));if(ids.size!==docs.length)throw Error("معرفات مستندات مكررة");const noteIds=new Set();for(const note of backup.strokes){if(!ids.has(note.documentId)||typeof note.id!=="string"||!Number.isInteger(note.page)||note.page<1||!Array.isArray(note.points)||noteIds.has(note.id)||note.points.length>200000||!note.points.every(p=>Array.isArray(p)&&p.length===2&&p.every(v=>Number.isFinite(v)&&v>=0&&v<=1)))throw Error("تعليق غير صالح أو مكرر في النسخة");noteIds.add(note.id)}const existingDocs=await getAll("documents"),existingNotes=await getAll("strokes");const takenDocs=new Set(existingDocs.map(d=>d.id)),takenNotes=new Set(existingNotes.map(n=>n.id));const originalIds=new Set(docs.map(d=>d.id));for(const note of backup.strokes){if(!originalIds.has(note.documentId))throw Error("تعليق بلا مستند مرتبط")};const remap=new Map();for(const d of docs){const old=d.id;while(takenDocs.has(d.id))d.id=crypto.randomUUID();remap.set(old,d.id);takenDocs.add(d.id)}const incomingNotes=backup.strokes.map(note=>{const copy={...note,documentId:remap.get(note.documentId)};while(takenNotes.has(copy.id))copy.id=crypto.randomUUID();takenNotes.add(copy.id);return copy});if(new Set(incomingNotes.map(n=>n.id)).size!==incomingNotes.length)throw Error("تعليقات مكررة في النسخة");if(!confirm("سيتم إضافة "+docs.length+" مستند و"+incomingNotes.length+" تعليق دون استبدال المستندات الحالية. هل تريد المتابعة؟"))return;await new Promise((resolve,reject)=>{const transaction=db.transaction(["documents","strokes"],"readwrite");transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error||Error("فشلت عملية الاستعادة"));for(const d of docs)transaction.objectStore("documents").add(d);for(const note of incomingNotes)transaction.objectStore("strokes").add(note)});strokes=await getAll("strokes");if(backup.version>=3&&Array.isArray(backup.folders)){libraryCustomFolders=Array.from(new Set([...libraryCustomFolders,...backup.folders.filter(n=>typeof n==="string"&&n.trim().length<=40).map(n=>n.trim())]));saveFolders()}await refresh();showLibrary();tell("اكتملت استعادة النسخة الاحتياطية. افتح مستندًا من المكتبة")}catch(error){console.error(error);tell("تعذرت الاستعادة: "+(error.message||"الملف غير صالح"))}};
+
+const backupCryptoVersion=1;
+// Passwords never leave this browser. New backups use authenticated AES-GCM encryption.
+// Existing plain .athatbackup files remain importable, with the original validations.
+function backupPasswordDialog(mode){
+ return new Promise(resolve=>{
+  const dialog=document.createElement("dialog");dialog.className="backup-password-dialog";dialog.dir="rtl";
+  const heading=document.createElement("h2");heading.textContent=mode==="create"?"حماية النسخة الاحتياطية":"فتح نسخة احتياطية مشفرة";
+  const message=document.createElement("p");message.textContent=mode==="create"?"سيُشفّر ملف النسخة بكلمة مرور مستقلة. إذا نسيتها فلن نستطيع استعادة النسخة. احتفظ بها في مكان آمن.":"أدخل كلمة المرور التي استخدمتها عند إنشاء هذه النسخة المشفرة.";
+  const password=document.createElement("input");password.type="password";password.autocomplete="new-password";password.placeholder="كلمة مرور النسخة الاحتياطية";password.setAttribute("aria-label","كلمة مرور النسخة الاحتياطية");password.minLength=10;password.required=true;
+  const confirmInput=document.createElement("input");confirmInput.type="password";confirmInput.autocomplete="new-password";confirmInput.placeholder="تأكيد كلمة المرور";confirmInput.setAttribute("aria-label","تأكيد كلمة مرور النسخة");
+  const status=document.createElement("p");status.setAttribute("role","status");status.className="backup-password-status";
+  const buttons=document.createElement("div");buttons.className="backup-password-actions";
+  const proceed=document.createElement("button");proceed.textContent=mode==="create"?"تشفير النسخة وحفظها":"فك التشفير";proceed.type="submit";proceed.className="primary-btn";
+  const cancel=document.createElement("button");cancel.textContent="إلغاء";cancel.type="button";cancel.className="subtle-btn";
+  const form=document.createElement("form");form.method="dialog";form.append(password);if(mode==="create")form.append(confirmInput);form.append(status);buttons.append(proceed,cancel);form.append(buttons);
+  dialog.append(heading,message,form);document.body.append(dialog);
+  const finish=value=>{if(dialog.open)dialog.close();dialog.remove();resolve(value)};
+  cancel.onclick=()=>finish(null);
+  dialog.addEventListener("cancel",event=>{event.preventDefault();finish(null)});
+  form.onsubmit=event=>{event.preventDefault();if(password.value.length<10){status.textContent="استخدم كلمة مرور طويلة من 10 أحرف على الأقل.";return}if(mode==="create"&&password.value!==confirmInput.value){status.textContent="كلمتا المرور غير متطابقتين.";return}finish(password.value)};
+  dialog.showModal();password.focus();
+ });
+}
+const backupToB64=bytes=>{let text="";for(let i=0;i<bytes.length;i+=8192)text+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(text)};
+async function backupKey(password,salt,usages){
+ const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveKey"]);
+ return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,usages);
+}
+async function encryptBackupText(text,password){
+ const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+ const key=await backupKey(password,salt,["encrypt"]);
+ const cipher=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(text)));
+ return JSON.stringify({format:"PDF.ATHAT.encrypted-backup",version:backupCryptoVersion,algorithm:"AES-256-GCM",kdf:"PBKDF2-SHA256",iterations:250000,salt:backupToB64(salt),iv:backupToB64(iv),ciphertext:backupToB64(cipher)});
+}
+async function decodeBackupText(text){
+ const payload=JSON.parse(text);
+ if(payload?.format!=="PDF.ATHAT.encrypted-backup")return payload;
+ if(payload.version!==1||payload.algorithm!=="AES-256-GCM"||payload.kdf!=="PBKDF2-SHA256"||payload.iterations!==250000||typeof payload.ciphertext!=="string"||payload.ciphertext.length>850000000)throw Error("صيغة النسخة المشفرة غير مدعومة");
+ const salt=base64ToBytes(payload.salt),iv=base64ToBytes(payload.iv),cipher=base64ToBytes(payload.ciphertext);
+ if(salt.length!==16||iv.length!==12||cipher.length<16)throw Error("النسخة المشفرة غير صالحة");
+ const password=await backupPasswordDialog("open");if(password===null)throw Error("أُلغِي فتح النسخة المشفرة");
+ try{const key=await backupKey(password,salt,["decrypt"]);const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,cipher);return JSON.parse(new TextDecoder().decode(plain))}
+ catch{throw Error("كلمة المرور غير صحيحة أو ملف النسخة تالف")}
+}
+
+$("backupExport").onclick=async()=>{try{const docs=await getAll("documents"),notes=await getAll("strokes");const entries=[];for(const d of docs){entries.push({...d,file:{name:d.file.name,type:"application/pdf",base64:await bytesToBase64(d.file),sha256:await digestHex(await d.file.arrayBuffer())}})}const backup={format:"PDF.ATHAT.backup",version:3,folders:libraryCustomFolders,createdAt:new Date().toISOString(),documents:entries,strokes:notes};const password=await backupPasswordDialog("create");if(password===null)return;const secure=await encryptBackupText(JSON.stringify(backup),password);const blob=new Blob([secure],{type:"application/octet-stream"});const saved=await saveBlob(blob,"PDF-ATHAT-SECURE-"+new Date().toISOString().slice(0,10)+".athatbackup");tell(saved?"تم حفظ نسخة مشفرة للمكتبة والكتابات. احتفظ بكلمة مرور النسخة في مكان آمن.":"أُلغِي حفظ النسخة الاحتياطية")}catch(e){console.error(e);tell("تعذر إنشاء النسخة الاحتياطية: "+(e.message||"خطأ غير معروف"))}};
+$("backupImport").onchange=async e=>{const file=e.target.files?.[0];e.target.value="";if(!file)return;try{if(file.size>600*1024*1024)throw Error("حجم النسخة كبير جدًا");const backup=await decodeBackupText(await file.text());if(backup.format!=="PDF.ATHAT.backup"||![1,2,3].includes(backup.version)||!Array.isArray(backup.documents)||!Array.isArray(backup.strokes))throw Error("ملف النسخة الاحتياطية غير صالح");if(backup.documents.length>5000||backup.strokes.length>300000)throw Error("النسخة تتجاوز الحدود المقبولة");const docs=[];for(const d of backup.documents){if(typeof d.id!=="string"||typeof d.name!=="string"||typeof d.file?.base64!=="string")throw Error("مستند غير صالح");const bytes=base64ToBytes(d.file.base64);if(bytes.length>75*1024*1024||!new TextDecoder("latin1").decode(bytes.slice(0,1024)).includes("%PDF-"))throw Error("مستند PDF غير صالح في النسخة");if(backup.version>=2&&typeof d.file.sha256!=="string")throw Error("النسخة الجديدة تفتقد بصمة حماية الملف: "+d.name);if(d.file.sha256!==undefined&&typeof d.file.sha256!=="string")throw Error("بصمة ملف غير صالحة: "+d.name);if(d.file.sha256&&(!/^[a-f0-9]{64}$/i.test(d.file.sha256)||(await digestHex(bytes)).toLowerCase()!==d.file.sha256.toLowerCase()))throw Error("فشل التحقق من سلامة الملف: "+d.name);docs.push({...d,uploadedAt:uploadTimestamp(d)||Date.now(),file:new File([bytes],d.file.name||d.name,{type:"application/pdf"})})}const ids=new Set(docs.map(d=>d.id));if(ids.size!==docs.length)throw Error("معرفات مستندات مكررة");const noteIds=new Set();for(const note of backup.strokes){if(!ids.has(note.documentId)||typeof note.id!=="string"||!Number.isInteger(note.page)||note.page<1||!Array.isArray(note.points)||noteIds.has(note.id)||note.points.length>200000||!note.points.every(p=>Array.isArray(p)&&p.length===2&&p.every(v=>Number.isFinite(v)&&v>=0&&v<=1)))throw Error("تعليق غير صالح أو مكرر في النسخة");noteIds.add(note.id)}const existingDocs=await getAll("documents"),existingNotes=await getAll("strokes");const takenDocs=new Set(existingDocs.map(d=>d.id)),takenNotes=new Set(existingNotes.map(n=>n.id));const originalIds=new Set(docs.map(d=>d.id));for(const note of backup.strokes){if(!originalIds.has(note.documentId))throw Error("تعليق بلا مستند مرتبط")};const remap=new Map();for(const d of docs){const old=d.id;while(takenDocs.has(d.id))d.id=crypto.randomUUID();remap.set(old,d.id);takenDocs.add(d.id)}const incomingNotes=backup.strokes.map(note=>{const copy={...note,documentId:remap.get(note.documentId)};while(takenNotes.has(copy.id))copy.id=crypto.randomUUID();takenNotes.add(copy.id);return copy});if(new Set(incomingNotes.map(n=>n.id)).size!==incomingNotes.length)throw Error("تعليقات مكررة في النسخة");if(!confirm("سيتم إضافة "+docs.length+" مستند و"+incomingNotes.length+" تعليق دون استبدال المستندات الحالية. هل تريد المتابعة؟"))return;await new Promise((resolve,reject)=>{const transaction=db.transaction(["documents","strokes"],"readwrite");transaction.oncomplete=resolve;transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error||Error("فشلت عملية الاستعادة"));for(const d of docs)transaction.objectStore("documents").add(d);for(const note of incomingNotes)transaction.objectStore("strokes").add(note)});strokes=await getAll("strokes");if(backup.version>=3&&Array.isArray(backup.folders)){libraryCustomFolders=Array.from(new Set([...libraryCustomFolders,...backup.folders.filter(n=>typeof n==="string"&&n.trim().length<=40).map(n=>n.trim())]));saveFolders()}await refresh();showLibrary();tell("اكتملت استعادة النسخة الاحتياطية. افتح مستندًا من المكتبة")}catch(error){console.error(error);tell("تعذرت الاستعادة: "+(error.message||"الملف غير صالح"))}};
 function setImmersive(on){if(on){document.documentElement.classList.add("reader-open");$("viewer").classList.remove("immersive");closePanel();toggleSidebar(false)}else{$("viewer").classList.remove("immersive")}}
 $("revealControls").onclick=()=>setImmersive(false);$("hideControls").onclick=()=>setImmersive(true);
 function toggleSidebar(on){$("sidebar").classList.remove("open");$("backdrop").hidden=true;$("libraryToggle").setAttribute("aria-expanded","false");if(on){if(active)closeDocument();else showLibrary()}}
@@ -111,6 +157,72 @@ $("libraryGridView").onclick=()=>{libraryLayout="grid";try{localStorage.setItem(
 try{const stored=localStorage.getItem("pdfathat-library-layout-v1");if(stored==="grid"||stored==="list")libraryLayout=stored}catch(_){};
 $("libraryBackupExport").onclick=()=>$("backupExport").click();
 $("libraryBackupImport").onclick=()=>$("backupImport").click();
+
+function installNotesHub(){
+ const quick=document.querySelector(".library-quick-actions");if(!quick)return;
+ const button=document.createElement("button");button.type="button";button.id="libraryAllNotes";button.textContent="📝 ملاحظاتي";button.title="استعراض ملاحظات كل الكتب المحفوظة على هذا الجهاز";quick.append(button);
+ const dialog=document.createElement("dialog");dialog.className="library-notes-hub";dialog.dir="rtl";
+ const titleRow=document.createElement("div");titleRow.className="library-notes-heading";
+ const heading=document.createElement("h2");heading.textContent="ملاحظاتي في الكتب";
+ const close=document.createElement("button");close.type="button";close.textContent="إغلاق";close.className="subtle-btn";close.onclick=()=>dialog.close();
+ titleRow.append(heading,close);
+ const search=document.createElement("input");search.className="library-notes-filter";search.type="search";search.placeholder="ابحث في اسم الكتاب أو نص الملاحظة...";search.setAttribute("aria-label","البحث في جميع الملاحظات");
+ const results=document.createElement("div");results.className="library-notes-results";
+ dialog.append(titleRow,search,results);document.body.append(dialog);
+ const textFor=n=>String(n.text||({pen:"كتابة بالقلم",highlight:"تظليل",signature:"توقيع",rect:"شكل مرسوم"})[n.tool]||"تعليق");
+ button.onclick=async()=>{
+  button.disabled=true;
+  try{
+   const [docs,notes]=await Promise.all([getAll("documents"),getAll("strokes")]);
+   const docsMap=new Map(docs.filter(d=>!d.deleted).map(d=>[d.id,d]));
+   const rows=notes.filter(n=>docsMap.has(n.documentId)).map(n=>({note:n,doc:docsMap.get(n.documentId)}));
+   rows.sort((a,b)=>(b.note.updated||b.note.createdAt||0)-(a.note.updated||a.note.createdAt||0));
+   const draw=()=>{
+    const query=search.value.trim().toLocaleLowerCase("ar");results.replaceChildren();
+    const matching=rows.filter(({doc,note})=>(doc.name+" "+textFor(note)).toLocaleLowerCase("ar").includes(query));
+    if(!matching.length){const empty=document.createElement("p");empty.textContent="لا توجد ملاحظات مطابقة.";results.append(empty);return}
+    for(const {doc,note} of matching.slice(0,250)){
+     const item=document.createElement("button");item.type="button";item.className="library-note-result";
+     const title=document.createElement("strong");title.dir="auto";title.textContent=doc.name+" · صفحة "+note.page;
+     const body=document.createElement("small");body.dir="auto";body.textContent=textFor(note).slice(0,300);
+     item.append(title,body);item.onclick=()=>{dialog.close();void activate(doc,note.page)};
+     results.append(item);
+    }
+    if(matching.length>250){const notice=document.createElement("p");notice.textContent="تظهر أول 250 ملاحظة. استخدم البحث لتضييق النتائج.";results.append(notice)}
+   };
+   search.value="";search.oninput=draw;draw();dialog.showModal();
+  }catch(error){tell("تعذر عرض الملاحظات: "+(error.message||"خطأ"))}
+  finally{button.disabled=false}
+ };
+}
+installNotesHub();
+
+function installLocalStorageProtection(){
+ const backupActions=$("backupExport")?.parentElement;
+ if(!backupActions)return;
+ const protect=document.createElement("button");protect.type="button";protect.className="subtle-btn";
+ protect.textContent="حماية تخزين الجهاز";protect.title="اطلب من المتصفح الحفاظ على المكتبة المحلية وراجع المساحة المتاحة";
+ backupActions.append(protect);
+ protect.onclick=async()=>{
+  if(!navigator.storage){tell("لا يدعم المتصفح فحص مساحة التخزين. يُنصح بتنزيل نسخة احتياطية مشفرة بانتظام.");return}
+  protect.disabled=true;
+  try{
+   const estimate=await navigator.storage.estimate();
+   const size=Number(estimate.usage||0),quota=Number(estimate.quota||0);
+   const usage=quota?Math.round(size/quota*100):null;
+   let persistent=false;
+   if(navigator.storage.persisted) persistent=await navigator.storage.persisted();
+   if(!persistent&&navigator.storage.persist) persistent=await navigator.storage.persist();
+   tell((persistent?"يساعد المتصفح الآن في الحفاظ على المكتبة المحلية.":"تعذر تثبيت التخزين الدائم في هذا المتصفح.")+
+    (usage!==null?" المساحة المستخدمة: "+usage+"% من الحصة المتاحة.":"")+
+    " لا يُغني هذا الخيار عن النسخة الاحتياطية؛ حذف بيانات الموقع قد يحذف الملفات.");
+  }catch(error){tell("تعذر فحص تخزين الجهاز: "+(error.message||"خطأ"))}
+  finally{protect.disabled=false}
+ };
+}
+installLocalStorageProtection();
+
+
 const manageModeKey="pdfathat-default-reading";
 const manageRTLKey="pdfathat-default-rtl";
 const managementSelected=new Set();
@@ -449,7 +561,46 @@ const panelModes=["searchPanel","notesPanel","toolsPanel"];function closePanel()
 $("closePanel").onclick=closePanel;$("searchToggle").onclick=()=>showPanel("searchPanel");$("bottomSearch").onclick=()=>showPanel("searchPanel");$("bottomNotes").onclick=()=>showPanel("notesPanel");$("bottomTools").onclick=()=>showPanel("toolsPanel");$("bottomRead").onclick=()=>{closePanel();chooseTool("pointer");$("bottomRead").classList.add("selected")};
 const tools=[["pointer","تصفح","↖"],["pen","قلم","✎"],["highlight","تظليل","◩"],["eraser","ممحاة","⌫"],["textTool","نص","T"],["commentTool","تعليق","▤"],["shapeTool","مستطيل","▢"],["signatureTool","توقيع","〰"]];for(const [id,label,icon]of tools){const b=document.createElement("button");b.innerHTML="<span>"+icon+"</span>"+label;b.onclick=()=>$(id).click();$("toolsGrid").append(b)}
 function updateNotes(){if(!active)return;$("notesList").replaceChildren();const matching=strokes.filter(x=>x.documentId===active.id);for(const s of matching){const b=document.createElement("button");b.className="result";b.textContent="صفحة "+s.page+" — "+(s.text||({pen:"كتابة بالقلم",highlight:"تظليل",signature:"توقيع",rect:"مستطيل"})[s.tool]||"تعليق");b.onclick=()=>{go(s.page-page);closePanel()};$("notesList").append(b)}if(!matching.length)$("notesList").textContent="لم تُضف تعليقات بعد."}
-const norm=t=>t.normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g,"").toLowerCase();$("searchBtn").onclick=async()=>{if(!pdf||searching)return;const q=norm($("searchInput").value.trim());if(!q)return tell("اكتب كلمة للبحث");searching=true;$("searchBtn").disabled=true;$("searchResults").textContent="جاري البحث...";try{const results=[];for(let i=1;i<=pdf.numPages;i++){const text=norm((await(await pdf.getPage(i)).getTextContent()).items.map(x=>x.str||"").join(" "));if(text.includes(q))results.push(i)}$("searchResults").replaceChildren();if(!results.length)$("searchResults").textContent="لا توجد نتائج. قد يكون المستند مصورًا ويحتاج OCR.";for(const p of results){const b=document.createElement("button");b.className="result";b.textContent="الصفحة "+p;b.onclick=()=>{go(p-page);closePanel()};$("searchResults").append(b)}}catch(e){tell("تعذر البحث في هذا الملف")}finally{searching=false;$("searchBtn").disabled=false}};
+const norm=t=>String(t||"").normalize("NFKC").replace(/[\u064B-\u065F\u0670\u0640]/g,"").toLowerCase();
+$("searchBtn").onclick=async()=>{
+ if(!pdf||searching)return;
+ const q=norm($("searchInput").value.trim());
+ if(!q)return tell("اكتب كلمة للبحث");
+ searching=true;$("searchBtn").disabled=true;
+ const box=$("searchResults");box.textContent="جاري البحث داخل صفحات الكتاب...";
+ const currentDoc=active?.id;
+ try{
+  const results=[];
+  for(let i=1;i<=pdf.numPages;i++){
+   if(active?.id!==currentDoc)break;
+   const pageObj=await pdf.getPage(i);
+   const content=await pageObj.getTextContent();
+   const plain=content.items.map(item=>item.str||"").join(" ");
+   const normalized=norm(plain),index=normalized.indexOf(q);
+   if(index>=0){
+    const before=Math.max(0,index-54),after=Math.min(plain.length,index+q.length+85);
+    results.push({page:i,snippet:(before?"…":"")+plain.slice(before,after)+(after<plain.length?"…":"")});
+   }
+   if(i%15===0)box.textContent="تم البحث في "+i+" من "+pdf.numPages+" صفحة...";
+  }
+  if(active?.id!==currentDoc)return;
+  box.replaceChildren();
+  if(!results.length)box.textContent="لا توجد نتائج في النص القابل للبحث. قد يكون الكتاب مصورًا ويحتاج إلى OCR.";
+  else{
+   const count=document.createElement("p");count.textContent="النتائج: "+results.length+" صفحة";box.append(count);
+   for(const match of results.slice(0,200)){
+    const button=document.createElement("button");button.className="result";button.type="button";
+    const title=document.createElement("strong");title.textContent="الصفحة "+match.page;
+    const snippet=document.createElement("small");snippet.textContent=match.snippet;snippet.dir="auto";
+    snippet.style.cssText="display:block;margin-top:5px;line-height:1.6;overflow-wrap:anywhere";
+    button.append(title,snippet);
+    button.onclick=()=>{go(match.page-page);closePanel()};
+    box.append(button);
+   }
+  }
+ }catch(error){console.error(error);tell("تعذر البحث في هذا الملف")}
+ finally{searching=false;$("searchBtn").disabled=false}
+};
 $("searchInput").onkeydown=e=>{if(e.key==="Enter")$("searchBtn").click()};
 $("nativeToggle").onclick=()=>setFontMode(fontMode==="native"?"original":"native");
 $("thumbToggle").onclick=()=>toggleThumbs($("thumbs").hidden);$("closeThumbs").onclick=()=>toggleThumbs(false);

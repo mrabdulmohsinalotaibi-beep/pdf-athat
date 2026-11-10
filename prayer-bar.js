@@ -16,7 +16,7 @@
  const defaultPlace={type:'city',city:'Makkah',country:'SA',label:'مكة المكرمة'};
  const stored=parse(localStorage.getItem(key));
  let place=stored&&((stored.type==='city'&&typeof stored.city==='string'&&typeof stored.country==='string')||(stored.type==='coords'&&Number.isFinite(stored.latitude)&&Number.isFinite(stored.longitude)))?stored:defaultPlace;
- let data=null, day='', zone='Asia/Riyadh', busy=false, popupTimer=null, lastAlert='';
+ let data=null, day='', zone='Asia/Riyadh', busy=false, popupTimer=null, lastAttempt=0;
  let visible=localStorage.getItem(hiddenKey)!=='yes';
  const el=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e};
  const toggle=el('button','prayer-toggle','🕌 الصلاة');toggle.type='button';toggle.title='عرض مواقيت الصلاة';toggle.setAttribute('aria-expanded',String(visible));
@@ -24,7 +24,8 @@
  const bar=el('section','prayer-bar');bar.setAttribute('aria-label','مواقيت الصلاة اليوم');bar.hidden=!visible;
  const info=el('div','prayer-place');const cityButton=el('button','prayer-city','📍 '+place.label);cityButton.type='button';cityButton.title='تغيير مدينة مواقيت الصلاة';
  const soon=el('small','prayer-soon','جاري تحميل مواقيت اليوم…');
- info.append(cityButton,soon);
+ const hijri=el('small','prayer-hijri','');
+ info.append(cityButton,soon,hijri);
  const times=el('div','prayer-times');
  const settings=el('button','prayer-settings','⚙');settings.type='button';settings.title='تغيير المدينة';
  const dismiss=el('button','prayer-dismiss','×');dismiss.type='button';dismiss.title='إخفاء مواقيت الصلاة';
@@ -42,12 +43,15 @@
  const cityInput=el('input','');cityInput.placeholder='اسم المدينة بالإنجليزية، مثل London';cityInput.setAttribute('aria-label','اسم المدينة');
  const countryInput=el('input','');countryInput.placeholder='رمز الدولة، مثل GB';countryInput.value='SA';countryInput.setAttribute('aria-label','رمز الدولة');
  custom.append(cityInput,countryInput);
+ const alertControl=el('label','prayer-alert-control');
+ const alertsOn=el('input');alertsOn.type='checkbox';alertsOn.checked=localStorage.getItem('pdf-athat-prayer-alerts')!=='no';
+ alertControl.append(alertsOn,document.createTextNode(' إظهار تنبيه مرئي صامت عند حلول الصلاة (30 ثانية)'));
  const locationButton=el('button','prayer-secondary','استخدام موقعي بإذني');locationButton.type='button';
  const saveButton=el('button','prayer-primary','حفظ المدينة');saveButton.type='button';
  const cancelButton=el('button','prayer-secondary','إلغاء');cancelButton.type='button';
  const dialogActions=el('div','prayer-dialog-actions');dialogActions.append(saveButton,locationButton,cancelButton);
  const feedback=el('p','prayer-feedback','');
- dialog.append(title,note,citySelect,custom,dialogActions,feedback);document.body.append(dialog);
+ dialog.append(title,note,citySelect,custom,alertControl,dialogActions,feedback);document.body.append(dialog);
  const toggleOpen=open=>{visible=open;bar.hidden=!open;toggle.setAttribute('aria-expanded',String(open));localStorage.setItem(hiddenKey,open?'no':'yes')};
  toggle.onclick=()=>toggleOpen(!visible);
  dismiss.onclick=()=>toggleOpen(false);
@@ -65,8 +69,14 @@
  const minutes=raw=>{const match=String(raw||'').match(/^(\d{1,2}):(\d{2})/);return match?Number(match[1])*60+Number(match[2]):null};
  const human=raw=>{const m=minutes(raw);if(m===null)return '—';const h=Math.floor(m/60),period=h<12?'ص':'م';return String(h%12||12)+':'+String(m%60).padStart(2,'0')+' '+period};
  const normalizeTimeZone=z=>{try{new Intl.DateTimeFormat('en',{timeZone:z});return z}catch{return 'Asia/Riyadh'}};
+ const hijriToday=()=>{
+  try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{timeZone:zone,day:'numeric',month:'long',year:'numeric'}).format(new Date())}
+  catch{return ''}
+ };
+ alertsOn.onchange=()=>{localStorage.setItem('pdf-athat-prayer-alerts',alertsOn.checked?'yes':'no');if(!alertsOn.checked){toast.hidden=true;clearTimeout(popupTimer)}};
+
  async function load(){
-  if(busy)return;busy=true;soon.textContent='تحديث المواقيت…';
+  if(busy||Date.now()-lastAttempt<120000)return;busy=true;lastAttempt=Date.now();soon.textContent='تحديث المواقيت…';
   try{
    const date=dateNow(zone),cacheKey='pdf-prayers:'+JSON.stringify(place)+':'+date;
    const cached=parse(localStorage.getItem(cacheKey));
@@ -85,17 +95,18 @@
    }
    data=result.timings;zone=normalizeTimeZone(result.timezone);day=dateNow(zone);
    // Cities close to a timezone date boundary may differ: get the correct city's day.
-   if(day!==date && !cached){busy=false;return load()}
+   if(day!==date && !cached){busy=false;lastAttempt=0;return load()}
    cityButton.textContent='📍 '+place.label;
+   hijri.textContent=hijriToday();
    render();
   }catch(error){data=null;soon.textContent=error.message||'المواقيت غير متاحة الآن';times.replaceChildren()}
   finally{busy=false}
  }
  function showAlert(label,stamp){
-  if(document.visibilityState!=='visible'||!visible)return;
+  if(document.visibilityState!=='visible'||!visible||!alertsOn.checked)return;
   const id='pdf-prayer-shown:'+JSON.stringify(place)+':'+day+':'+stamp;
   if(sessionStorage.getItem(id))return;
-  sessionStorage.setItem(id,'yes');lastAlert=id;
+  sessionStorage.setItem(id,'yes');
   alertText.textContent='حان الآن موعد صلاة '+label+' في '+place.label;
   toast.hidden=false;
   clearTimeout(popupTimer);popupTimer=setTimeout(()=>{toast.hidden=true},30000);
@@ -122,9 +133,9 @@
   }
  }
  async function tick(){
-  if(!data)return;
-  if(day!==dateNow(zone)){data=null;await load();return}
-  render();
+  if(!data){if(document.visibilityState==='visible'&&!busy)await load();return}
+  if(day!==dateNow(zone)){data=null;lastAttempt=0;await load();return}
+  hijri.textContent=hijriToday();render();
  }
  saveButton.onclick=async()=>{
   let nextPlace;
@@ -133,14 +144,14 @@
    if(!/^[a-zA-Z][a-zA-Z\s.'-]{1,60}$/.test(city)||!/^([A-Z]{2})$/.test(country)){feedback.textContent='اكتب اسم المدينة بالإنجليزية ورمز الدولة من حرفين.';return}
    nextPlace={type:'city',city,country,label:city};
   }else nextPlace={type:'city',city:citySelect.value,country:'SA',label:cityChoices.find(x=>x[0]===citySelect.value)?.[1]||citySelect.value};
-  place=nextPlace;zone='Asia/Riyadh';localStorage.setItem(key,JSON.stringify(place));data=null;dialog.close();toggleOpen(true);await load();
+  place=nextPlace;zone='Asia/Riyadh';localStorage.setItem(key,JSON.stringify(place));data=null;lastAttempt=0;dialog.close();toggleOpen(true);await load();
  };
  locationButton.onclick=()=>{
   if(!navigator.geolocation){feedback.textContent='المتصفح لا يدعم تحديد الموقع';return}
   feedback.textContent='بانتظار إذن الموقع من المتصفح…';
   navigator.geolocation.getCurrentPosition(async position=>{
    place={type:'coords',latitude:Number(position.coords.latitude.toFixed(4)),longitude:Number(position.coords.longitude.toFixed(4)),label:'موقعي الحالي'};
-   localStorage.setItem(key,JSON.stringify(place));data=null;dialog.close();toggleOpen(true);await load();
+   localStorage.setItem(key,JSON.stringify(place));data=null;lastAttempt=0;dialog.close();toggleOpen(true);await load();
   },()=>{feedback.textContent='لم يُسمح بالموقع. اختر مدينتك يدويًا.'},{enableHighAccuracy:false,timeout:12000,maximumAge:600000});
  };
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')tick()});

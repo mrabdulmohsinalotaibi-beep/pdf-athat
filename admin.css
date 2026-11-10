@@ -38,3 +38,10 @@ body{min-height:100vh}
 @media(max-width:600px){.container{margin:16px auto;padding:0 11px}.bar{padding:12px}.bar-links{gap:8px;font-size:12px}.stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stat-card{min-height:115px;padding:13px}.stat-card strong{font-size:27px}.heading{margin-bottom:11px}.heading-actions{width:100%}.heading-actions button{flex:1}.admin-sections{margin-bottom:10px}.search-controls{flex-wrap:wrap}.search-controls button{width:100%}.panel-heading{flex-wrap:wrap}}
 
 .admin-login-link{display:inline-block;background:var(--wine);color:white;border-radius:11px;padding:12px 20px;text-decoration:none;font-weight:700}.admin-login-link:hover{color:white;opacity:.9}
+
+.admin-audit-list{display:grid;gap:7px;max-height:370px;overflow:auto;margin:10px 0}
+.admin-audit-entry{display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:color-mix(in srgb,var(--card) 85%,white);border:1px solid var(--line);border-radius:9px}
+.admin-audit-entry strong{font-size:13px;font-weight:700}
+.admin-audit-entry small{font-size:11px;color:#654c3d;line-height:1.6;overflow-wrap:anywhere}
+#healthStatus{font-size:13px;color:var(--wine);font-weight:700}
+@media(max-width:600px){#exportUsers{width:100%}}

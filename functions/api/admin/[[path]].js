@@ -2,6 +2,12 @@ import { session, verifyAccountPassword } from '../../../server/auth.mjs';
 
 const response = (data, status=200) => Response.json(data, {status, headers: {'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const sql = (db, query, ...args) => db.prepare(query).bind(...args);
+async function recordAudit(db,actorId,targetId,action,details=''){
+ try{
+  await sql(db,'INSERT INTO pdf_admin_audit(id,actor_id,target_id,action,details,created_at) VALUES(?,?,?,?,?,?)',crypto.randomUUID(),actorId,targetId,action,details,Math.floor(Date.now()/1000)).run();
+ }catch(error){console.warn('admin_audit_log_unavailable',error?.name)}
+}
+
 export async function onRequest({request,env}) {
  try {
   if (!env.PDF_AUTH_DB) return response({error:'خدمة الحسابات غير مهيأة'},503);
@@ -16,6 +22,16 @@ export async function onRequest({request,env}) {
    const recent=await sql(env.PDF_AUTH_DB,'SELECT COUNT(*) AS total FROM pdf_email_users WHERE created_at>?',time-7*86400).first();
    const pending=await sql(env.PDF_AUTH_DB,"SELECT COUNT(*) AS total FROM pdf_email_challenges WHERE purpose='signup' AND expires_at>?",time).first();
    return response({users:Number(users?.total||0),admins:Number(users?.admins||0),activeSessions:Number(sessions?.total||0),recentUsers:Number(recent?.total||0),pendingVerifications:Number(pending?.total||0),mailConfigured:!!(env.RESEND_API_KEY&&env.OTP_FROM_EMAIL&&env.OTP_SECRET),localFiles:'لا تُرفع ملفات PDF إلى الخادم'});
+  }
+  if(request.method==='GET' && action==='audit') {
+   const result=await sql(env.PDF_AUTH_DB,`SELECT a.action,a.details,a.created_at,
+    COALESCE(actor.username,actor.email,'حساب غير موجود') AS actor,
+    COALESCE(target.username,target.email,'غير متاح') AS target
+    FROM pdf_admin_audit a
+    LEFT JOIN pdf_email_users actor ON actor.id=a.actor_id
+    LEFT JOIN pdf_email_users target ON target.id=a.target_id
+    ORDER BY a.created_at DESC LIMIT 40`).all();
+   return response({events:result.results||[]});
   }
   if(request.method==='GET' && action==='users') {
    const search=(url.searchParams.get('q')||'').trim().toLowerCase().slice(0,80);
@@ -76,6 +92,7 @@ export async function onRequest({request,env}) {
     sql(db,"UPDATE pdf_email_users SET role='user' WHERE id=?",owner.id),
     sql(db,'DELETE FROM pdf_email_sessions WHERE user_id IN (?,?)',owner.id,target.id)
    ]);
+   await recordAudit(db,user.id,target.id,'transfer_ownership','ownership transferred to verified email');
    return response({ok:true,message:'تم نقل إدارة الموقع إلى البريد الجديد. سجّل الدخول به.'});
   }
   if(request.method==='POST' && (action==='role'||action==='revoke')) {
@@ -88,11 +105,13 @@ export async function onRequest({request,env}) {
     const exists=await sql(env.PDF_AUTH_DB,'SELECT id FROM pdf_email_users WHERE id=?',body.id).first();
     if(!exists)return response({error:'الحساب غير موجود'},404);
     const removed=await sql(env.PDF_AUTH_DB,'DELETE FROM pdf_email_sessions WHERE user_id=?',body.id).run();
+    await recordAudit(env.PDF_AUTH_DB,user.id,body.id,'revoke_sessions',String(Number(removed.meta?.changes||0))+' sessions');
     return response({ok:true,revoked:Number(removed.meta?.changes||0)});
    }
    const res=await sql(env.PDF_AUTH_DB,"UPDATE pdf_email_users SET role=? WHERE id=? AND email NOT IN (SELECT email FROM pdf_admin_allowed_emails)",body.role,body.id).run();
    if(!res.meta?.changes) return response({error:'الحساب غير موجود أو محمي'},404);
    await sql(env.PDF_AUTH_DB,'DELETE FROM pdf_email_sessions WHERE user_id=?',body.id).run();
+   await recordAudit(env.PDF_AUTH_DB,user.id,body.id,'change_role','new role: '+body.role);
    return response({ok:true});
   }
   return response({error:'المسار غير موجود'},404);

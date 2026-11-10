@@ -26,3 +26,8 @@
 .prayer-alert-text{font-size:13px;flex:1}
 .prayer-alert-close{min-height:29px;min-width:29px;padding:0}
 @media(max-width:680px){.prayer-bar{gap:5px;padding:3px 7px}.prayer-place{min-width:97px;max-width:125px}.prayer-time{min-width:52px}.prayer-times{justify-content:start}.prayer-bar .prayer-settings,.prayer-bar .prayer-dismiss{min-width:24px}.prayer-time b{font-size:10px}.prayer-toggle{font-size:11px!important;padding:5px!important}}
+
+.prayer-hijri{font-size:10px;color:var(--mute);line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prayer-alert-control{display:flex;align-items:center;gap:8px;padding:10px 0;font-size:13px;line-height:1.6}
+.prayer-alert-control input{accent-color:var(--green);width:17px;height:17px;flex:none}
+@media(max-width:680px){.prayer-hijri{font-size:9px}.prayer-place{gap:0}}
