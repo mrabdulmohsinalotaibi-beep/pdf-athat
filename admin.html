@@ -5,9 +5,32 @@
 <section id="loginPane" class="panel narrow" hidden><span class="eyebrow">دخول موحد وآمن</span><h1>حساب PDF.ATHAT</h1><p>تسجيل دخول واحد لجميع المستخدمين. تُفتح صلاحيات المدير تلقائيًا عند الدخول بحساب مخوّل.</p><a class="admin-login-link" href="./account.html">الدخول إلى حسابي</a></section>
 <section id="deniedPane" class="panel narrow" hidden><h1>صلاحية غير متاحة</h1><p>هذا الحساب مسجّل كمستخدم عادي وليس مديرًا. تستطيع استخدام مكتبتك بشكل طبيعي.</p><a href="./">فتح مكتبتي</a> <button id="deniedLogout" class="secondary">تسجيل الخروج</button></section>
 <section id="dashboard" hidden><div class="heading"><div><span class="eyebrow">المساحة الإدارية · الوصول الموثق</span><h1>لوحة تحكم PDF.ATHAT</h1><p id="welcomeEmail"></p></div><div class="heading-actions"><button id="refreshBtn" class="secondary" type="button">تحديث البيانات</button><button id="logoutBtn" class="secondary" type="button">تسجيل الخروج</button></div></div>
-<nav class="admin-sections" aria-label="أقسام لوحة الإدارة"><a href="#overview">نظرة عامة</a><a href="#users">المستخدمون والصلاحيات</a><a href="#ads">الإعلانات والجدولة</a><a href="#health">حالة الموقع</a><a href="#audit">سجل الإدارة</a><a href="#security">الأمان والخصوصية</a><a href="#transferPanel">نقل الإدارة</a></nav>
+<nav class="admin-sections" aria-label="أقسام لوحة الإدارة"><a href="#overview">نظرة عامة</a><a href="#traffic">إحصائيات الزيارات</a><a href="#users">المستخدمون والصلاحيات</a><a href="#ads">الإعلانات والجدولة</a><a href="#health">حالة الموقع</a><a href="#audit">سجل الإدارة</a><a href="#security">الأمان والخصوصية</a><a href="#transferPanel">نقل الإدارة</a></nav>
 <section id="overview" aria-label="إحصاءات الحسابات"><div class="stats"><article class="panel stat-card"><small>إجمالي الحسابات</small><strong id="statUsers">—</strong><span>حسابات مسجلة</span></article><article class="panel stat-card"><small>مديرو النظام</small><strong id="statAdmins">—</strong><span>بحقوق إدارية</span></article><article class="panel stat-card"><small>جلسات تسجيل الدخول</small><strong id="statSessions">—</strong><span>غير منتهية الصلاحية</span></article><article class="panel stat-card"><small>حسابات جديدة خلال 7 أيام</small><strong id="statRecent">—</strong><span>من قاعدة الحسابات</span></article><article class="panel stat-card"><small>طلبات تحقق معلّقة</small><strong id="statPending">—</strong><span>رموز التسجيل السارية</span></article></div></section>
-<div class="sections"><section id="users" class="panel admin-users"><div class="panel-heading"><div><h2>إدارة المستخدمين</h2><p>ابحث بالاسم أو البريد، وغيّر الصلاحيات، أو أنهِ جلسات تسجيل الدخول عند الحاجة.</p></div><span id="usersTotal" class="count-chip"></span></div>
+<div class="sections">
+<section id="traffic" class="panel traffic-panel" aria-label="إحصائيات زيارات الموقع" hidden>
+ <div class="panel-heading"><div><h2>إحصائيات زيارات PDF.ATHAT</h2>
+ <p>زيارات الصفحات العامة والحساب والإدارة. تُعرض أعداد فعلية منذ تفعيل الإحصاءات فقط، دون أسماء الزوار أو ملفات PDF أو عناوين IP.</p></div>
+ <button type="button" class="secondary" id="trafficRefresh">تحديث الإحصائيات</button></div>
+ <div class="traffic-stats">
+  <article class="traffic-stat"><small>اليوم</small><strong id="trafficToday">—</strong><span>زيارة</span></article>
+  <article class="traffic-stat"><small>آخر 7 أيام</small><strong id="trafficWeek">—</strong><span>زيارة</span></article>
+  <article class="traffic-stat"><small>آخر 30 يومًا</small><strong id="trafficMonth">—</strong><span>زيارة</span></article>
+  <article class="traffic-stat"><small>آخر 365 يومًا</small><strong id="trafficYear">—</strong><span>زيارة</span></article>
+  <article class="traffic-stat"><small>زوار مميزون اليوم</small><strong id="trafficVisitors">—</strong><span>تقدير دون تخزين IP</span></article>
+ </div>
+ <h3>حركة الزيارات خلال آخر 30 يومًا</h3>
+ <div id="trafficChart" class="traffic-chart" role="img" aria-label="رسم زيارات آخر ثلاثين يومًا"></div>
+ <div class="traffic-grids">
+  <div><h3>الدول الأكثر زيارة</h3><div id="trafficCountries" class="traffic-breakdown"></div></div>
+  <div><h3>أنواع الأجهزة</h3><div id="trafficDevices" class="traffic-breakdown"></div></div>
+  <div><h3>المتصفحات</h3><div id="trafficBrowsers" class="traffic-breakdown"></div></div>
+  <div><h3>الصفحات</h3><div id="trafficPages" class="traffic-breakdown"></div></div>
+ </div>
+ <p id="trafficStatus" role="status" class="hint"></p>
+ <p class="hint">الأرقام لا تشمل فترة ما قبل تفعيل الإحصاءات؛ الزيارات تعني فتح الصفحات، وقد تختلف عن أرقام Cloudflare بسبب أدوات حجب التتبع أو انقطاع الاتصال. يُستثنى جزء من زيارات الروبوتات.</p>
+</section>
+<section id="users" class="panel admin-users"><div class="panel-heading"><div><h2>إدارة المستخدمين</h2><p>ابحث بالاسم أو البريد، وغيّر الصلاحيات، أو أنهِ جلسات تسجيل الدخول عند الحاجة.</p></div><span id="usersTotal" class="count-chip"></span></div>
 <form id="userSearchForm" class="search-controls"><label class="sr-only" for="userSearch">البحث عن مستخدم</label><input id="userSearch" type="search" placeholder="بحث باسم المستخدم أو البريد الإلكتروني…"><button type="submit">بحث</button><button id="exportUsers" type="button" class="secondary">تصدير قائمة الحسابات CSV</button></form>
 <div class="tableWrap"><table><thead><tr><th>الحساب</th><th>الصلاحية</th><th>الجلسات</th><th>إدارة</th></tr></thead><tbody id="usersRows"></tbody></table></div><div class="pagination"><button id="pagePrev" type="button" class="secondary">السابق</button><span id="pageLabel"></span><button id="pageNext" type="button" class="secondary">التالي</button></div></section>
 <section id="ads" class="panel ad-manager">
@@ -26,7 +49,7 @@
 <div class="admin-side"><section id="health" class="panel"><h2>حالة الموقع</h2><p id="mailStatus"></p><p>إدارة حسابات المستخدمين تتم من Cloudflare D1. لا تُخزن الملفات في قاعدة البيانات.</p><p id="healthStatus" role="status" aria-live="polite">جاري التحقق من خدمات الإدارة…</p><div class="resource-links"><a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer">إعدادات Cloudflare</a><a href="https://github.com/mrabdulmohsinalotaibi-beep/pdf-athat" target="_blank" rel="noopener noreferrer">المستودع البرمجي</a></div></section>
 <section id="audit" class="panel"><h2>سجل إجراءات الإدارة</h2><p>يسجل تغيير الصلاحيات وإنهاء الجلسات ونقل ملكية الإدارة، دون أي أسماء ملفات أو محتوى PDF.</p><div id="auditList" class="admin-audit-list" aria-live="polite"><p>جارٍ تحميل السجل…</p></div></section>
 <section id="transferPanel" class="panel"><h2>نقل ملكية إدارة الموقع</h2><p>انقل صلاحية المدير إلى حساب بريده مؤكد. يتطلب إدخال كلمة مرور المدير الحالية، ثم رمزًا يصل إلى البريد الجديد. بعد تأكيد النقل يعود الحساب القديم مستخدمًا عاديًا، دون حذف مكتبته.</p>
-<form id="transferStartForm"><label>البريد الجديد للمدير<input name="email" type="email" autocomplete="email" value="abdulmohsinalkhalidi@gmail.com" required></label><label>كلمة مرور حساب المدير الحالي<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">إرسال رمز نقل الإدارة</button></form>
+<form id="transferStartForm"><label>البريد الجديد للمدير<input name="email" type="email" autocomplete="email" required></label><label>كلمة مرور حساب المدير الحالي<input name="password" type="password" autocomplete="current-password" required></label><button type="submit">إرسال رمز نقل الإدارة</button></form>
 <form id="transferConfirmForm" hidden><label>رمز التحقق الوارد للبريد الجديد<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></label><button type="submit">تأكيد النقل وإنهاء جلسة المدير القديم</button></form><p id="transferStatus" role="status" aria-live="polite"></p></section>
 <section id="security" class="panel"><h2>الخصوصية والأمان</h2><p>ملفات PDF والشروح والفواصل محفوظة محليًا على كل جهاز داخل IndexedDB، ومنفصلة حسب معرّف الحساب.</p><p>تغيير الصلاحية يُنهي جلسات المستخدم. لوحة الإدارة لا تعرض أسماء الكتب أو ملفاتها ولا تتيح فتحها.</p><p class="hint">مهم: المزامنة المباشرة بين الأجهزة لا تعني وجود نسخة سحابية أو تشفيرًا لمحتوى الجهاز، وقد يؤدي حذف بيانات المتصفح إلى فقد المكتبة إن لم تُحفظ نسخة احتياطية.</p></section></div></div></section>
 <p id="status" class="status" role="status" aria-live="polite"></p></main><script type="module" src="./admin.js"></script></body></html>

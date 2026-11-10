@@ -727,3 +727,35 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
  #app>.appbar .brand-text small{display:none}
  #app>.appbar .header-actions{gap:4px}
 }
+
+
+/* One-tap appearance control, visible at top-left even on compact phones. */
+#themeToggle.theme-cycle-btn{
+ display:grid!important;place-items:center;flex:0 0 41px;
+ width:41px;height:41px;min-width:41px;min-height:41px;
+ border:1px solid var(--line);border-radius:13px;
+ background:var(--panel-soft);color:var(--green);
+ font-size:22px;line-height:1;box-shadow:0 2px 7px #00000012;
+}
+#themeToggle.theme-cycle-btn:hover{background:var(--green-light)}
+/* Third color theme in addition to the existing sandstone and charcoal modes. */
+:root.ocean{
+ color-scheme:light;--page:#becbd0;--panel:#e7f0ef;
+ --panel-soft:#d6e5e5;--ink:#1b303b;--mute:#516b73;
+ --line:#91aab4;--green:#24546b;--green-light:#d2e5ec;
+ --orange:#24546b;--shadow:0 14px 42px #173e521a;
+}
+:root.ocean .library-hero-modern,
+:root.ocean .library-overview-item,
+:root.ocean .library-quick-actions button,
+:root.ocean .library-section-heading,
+:root.ocean .library-page,
+:root.ocean .library-bottom-nav{
+ border-color:var(--line);color:var(--ink);
+}
+:root.ocean .library-page .library-hero-modern .library-add,
+:root.ocean .library-overview-action[aria-pressed="true"],
+:root.ocean .library-quick-actions .library-add,
+:root.ocean .primary-btn{background:var(--green);color:#fff;border-color:var(--green)}
+:root.ocean .library-bottom-nav button.selected,
+:root.ocean .library-bottom-nav button.active{color:var(--green);background:var(--panel-soft)}

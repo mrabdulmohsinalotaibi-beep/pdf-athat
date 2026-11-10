@@ -11,6 +11,10 @@ on:
       - 'admin.*'
       - 'site-ads.*'
       - 'tests/ads.test.mjs'
+      - 'traffic.js'
+      - 'tests/traffic.test.mjs'
+      - 'tests/theme-cycle.test.cjs'
+      - '_headers'
       - 'site-entry.js'
       - 'prayer-bar.*'
       - 'peer-sync.js'
@@ -44,6 +48,12 @@ jobs:
         run: node --test tests/header-layout.test.cjs
       - name: Ad scheduling, access and safe rendering tests
         run: node --test tests/ads.test.mjs
+      - name: Private traffic analytics, security headers and appearance button tests
+        run: |
+          node --test tests/traffic.test.mjs
+          node --test tests/theme-cycle.test.cjs
+          node --check traffic.js
+          node --check 'functions/api/traffic/visit.js'
       - name: Peer-to-peer signaling and same-account isolation tests
         run: node --test tests/peer-sync.test.mjs
       - name: Encrypted backup, search and local privacy tests
@@ -70,6 +80,11 @@ jobs:
           grep -q 'id="profilePane"' desktop/dist/account.html
           grep -q 'showProfile(data.user)' desktop/dist/account.js
           test -f desktop/dist/admin.html
+          test -f desktop/dist/traffic.js
+          test -f desktop/dist/_headers
+          grep -q 'traffic.js?v=' desktop/dist/index.html
+          grep -q 'traffic.js?v=' desktop/dist/account.html
+          grep -q 'traffic.js?v=' desktop/dist/admin.html
           test -f desktop/dist/site-ads.js
           test -f desktop/dist/site-ads.css
           grep -q 'site-ads.js' desktop/dist/site-entry.js
