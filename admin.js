@@ -10,7 +10,7 @@ async function api(path,options={}){
 const post=(path,data)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
 let page=0,query='',owner=null;
 
-const adminViews=['overview','users','ads','health','audit','security','transferPanel'];
+const adminViews=['overview','traffic','users','ads','health','audit','security','transferPanel'];
 function selectAdminView(){
  const requested=location.hash.slice(1);
  const active=adminViews.includes(requested)?requested:'overview';
@@ -24,6 +24,58 @@ function selectAdminView(){
  window.scrollTo({top:0,behavior:'instant'});
 }
 window.addEventListener('hashchange',selectAdminView);
+
+const trafficNum=value=>new Intl.NumberFormat('ar-SA').format(Number(value)||0);
+const trafficDate=day=>{
+ try{return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{day:'numeric',month:'short',timeZone:'UTC'}).format(new Date(day+'T12:00:00Z'))}
+ catch{return day}
+};
+const trafficCountries=new Intl.DisplayNames(['ar'],{type:'region'});
+function trafficTable(id,entries,label){
+ const panel=$(id);panel.replaceChildren();
+ if(!entries.length){const p=document.createElement('p');p.textContent='لا توجد زيارات مسجلة بعد.';panel.append(p);return}
+ const max=Math.max(1,...entries.map(r=>Number(r.views)||0));
+ for(const entry of entries){
+  const row=document.createElement('div');row.className='traffic-breakdown-row';
+  const top=document.createElement('div');top.className='traffic-breakdown-head';
+  const country=id==='trafficCountries'&&entry.country!=='ZZ';
+  const title=document.createElement('span');title.textContent=country?trafficCountries.of(entry.country):label(entry);
+  const count=document.createElement('strong');count.textContent=trafficNum(entry.views);
+  top.append(title,count);
+  const track=document.createElement('div');track.className='traffic-track';
+  const fill=document.createElement('div');fill.className='traffic-fill';fill.style.width=(100*(Number(entry.views)||0)/max).toFixed(1)+'%';track.append(fill);
+  row.append(top,track);panel.append(row);
+ }
+}
+async function loadTraffic(){
+ const status=$('trafficStatus');status.textContent='جارٍ تحميل الزيارات…';
+ try{
+  const data=await api('/api/admin/traffic');
+  for(const [id,value] of [['trafficToday',data.daily.views],['trafficWeek',data.weekly.views],['trafficMonth',data.monthly.views],['trafficYear',data.yearly.views],['trafficVisitors',data.daily.visitors]])$(id).textContent=trafficNum(value);
+  const chart=$('trafficChart');chart.replaceChildren();
+  const counts=new Map((data.days||[]).map(row=>[row.day,Number(row.views)||0]));
+  const values=Array.from({length:30},(_,i)=>{
+   const d=new Date(data.asOf+'T12:00:00Z');d.setUTCDate(d.getUTCDate()-29+i);
+   const day=d.toISOString().slice(0,10);return {day,views:counts.get(day)||0}
+  });
+  const max=Math.max(1,...values.map(x=>x.views));
+  for(const item of values){
+   const column=document.createElement('div');column.className='traffic-column';
+   const bar=document.createElement('div');bar.className='traffic-column-bar';
+   bar.style.height=item.views?Math.max(5,100*item.views/max)+'%':'2px';
+   const description=trafficDate(item.day)+' · '+trafficNum(item.views)+' زيارة';
+   column.title=description;column.setAttribute('aria-label',description);column.append(bar);chart.append(column);
+  }
+  trafficTable('trafficCountries',data.countries||[],row=>row.country==='ZZ'?'غير محدد':row.country);
+  const types={mobile:'جوال',tablet:'جهاز لوحي',desktop:'كمبيوتر'};
+  trafficTable('trafficDevices',data.devices||[],row=>types[row.device]||'أخرى');
+  trafficTable('trafficBrowsers',data.browsers||[],row=>row.browser);
+  const pages={home:'الصفحة الرئيسية',account:'الحسابات',admin:'الإدارة'};
+  trafficTable('trafficPages',data.pages||[],row=>pages[row.page]||'أخرى');
+  status.textContent='آخر تحديث: '+new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura',{dateStyle:'medium',timeStyle:'short'}).format(new Date())+' · جمع البيانات منذ تفعيل الخدمة فقط.';
+ }catch(error){status.textContent='تعذر قراءة إحصائيات الزيارات: '+error.message}
+}
+$('trafficRefresh').onclick=loadTraffic;
 
 async function loadUsers(){
  const result=await api('/api/admin/users?page='+page+'&q='+encodeURIComponent(query));
@@ -170,7 +222,7 @@ async function refresh(){
  for(const [key,val] of [['statUsers',data.users],['statAdmins',data.admins],['statSessions',data.activeSessions],['statRecent',data.recentUsers],['statPending',data.pendingVerifications]])$(key).textContent=val;
  $('mailStatus').textContent='خدمة رسائل التحقق: '+(data.mailConfigured?'إعداداتها مفعّلة (وصول البريد يحتاج اختبارًا)':'الإعدادات غير مكتملة');
  $('healthStatus').textContent='اتصال قاعدة الحسابات: يعمل · ملفات المستخدمين محفوظة على أجهزتهم فقط';
- await Promise.all([loadUsers(),loadAudit(),loadAds()]);
+ await Promise.all([loadUsers(),loadAudit(),loadAds(),loadTraffic()]);
 }
 let transferChallengeId='';
 const transferStatus=message=>$('transferStatus').textContent=message;
