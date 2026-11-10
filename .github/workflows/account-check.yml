@@ -13,6 +13,8 @@ on:
       - 'peer-sync.js'
       - 'tests/peer-sync.test.mjs'
       - 'app-v2.js'
+      - 'index.html'
+      - 'tests/header-layout.test.cjs'
       - 'style.css'
       - 'tests/reader-hardening.test.cjs'
       - 'legacy-import.js'
@@ -31,6 +33,8 @@ jobs:
           node-version: '22'
       - name: Authentication and username tests
         run: node --test tests/auth.test.mjs
+      - name: Responsive header and original logo regression tests
+        run: node --test tests/header-layout.test.cjs
       - name: Peer-to-peer signaling and same-account isolation tests
         run: node --test tests/peer-sync.test.mjs
       - name: Encrypted backup, search and local privacy tests
@@ -60,6 +64,8 @@ jobs:
           grep -q 'installNotesHub' desktop/dist/app-v2.js
           test -f desktop/dist/prayer-bar.css
           grep -q 'prayer-bar.css' desktop/dist/index.html
+          grep -q 'class="brand-home-button"' desktop/dist/index.html
+          ! grep -q 'admin-entry.js?v=' desktop/dist/index.html
           test -f desktop/dist/legacy-import.js
           grep -q 'site-entry.js' desktop/dist/index.html
           ! grep -q 'src="./app-v2.js?v=' desktop/dist/index.html

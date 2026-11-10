@@ -28,7 +28,7 @@ for(const asset of ['app-v2.js','prayer-bar.js','peer-sync.js']){
  gate=gate.replace("import('./"+asset+"')","import('./"+asset+"?v="+version+"')");
 }
 fs.writeFileSync(gatePath,gate);
-html=html.replace('</head>','<link rel="stylesheet" href="./prayer-bar.css?v='+version+'"><script defer src="./admin-entry.js?v='+version+'"></script></head>');
+html=html.replace('</head>','<link rel="stylesheet" href="./prayer-bar.css?v='+version+'"></head>');
 fs.writeFileSync(htmlFile,html);
 
 const moduleEntry='<script type="module" src="./app-v2.js?v='+version+'"></script>';
