@@ -11,6 +11,7 @@ function fixture() {
  sqlite.exec(readFileSync(new URL('../migrations/0002_admin_role.sql', import.meta.url), 'utf8'));
  sqlite.exec(readFileSync(new URL('../migrations/0003_admin_invites.sql', import.meta.url), 'utf8'));
  sqlite.exec(readFileSync(new URL('../migrations/0004_usernames.sql', import.meta.url), 'utf8'));
+ sqlite.exec(readFileSync(new URL('../migrations/0005_admin_audit.sql', import.meta.url), 'utf8'));
  const db = { prepare(sql) {
   return { bind(...args) {
    const stmt = sqlite.prepare(sql);
@@ -131,3 +132,13 @@ test('duplicate usernames do not create usable registration challenges',()=>with
  assert.equal(f.mail.length,1);
  assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS count FROM pdf_email_challenges WHERE email='second@example.com'").get().count,0);
 }));
+
+test('admin audit schema records only allowed administrative action types',()=>{
+ const f=fixture();
+ try{
+  const stmt=f.sqlite.prepare('INSERT INTO pdf_admin_audit(id,actor_id,target_id,action,details,created_at) VALUES(?,?,?,?,?,?)');
+  stmt.run('audit1','admin1','user2','change_role','new role: user',1790000000);
+  assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS count FROM pdf_admin_audit').get().count,1);
+  assert.throws(()=>stmt.run('audit2','admin1','user2','read_pdf','forbidden',1790000000));
+ }finally{f.sqlite.close()}
+});
