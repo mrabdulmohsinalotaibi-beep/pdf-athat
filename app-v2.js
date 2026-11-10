@@ -197,6 +197,32 @@ function installNotesHub(){
 }
 installNotesHub();
 
+function installLocalStorageProtection(){
+ const backupActions=$("backupExport")?.parentElement;
+ if(!backupActions)return;
+ const protect=document.createElement("button");protect.type="button";protect.className="subtle-btn";
+ protect.textContent="حماية تخزين الجهاز";protect.title="اطلب من المتصفح الحفاظ على المكتبة المحلية وراجع المساحة المتاحة";
+ backupActions.append(protect);
+ protect.onclick=async()=>{
+  if(!navigator.storage){tell("لا يدعم المتصفح فحص مساحة التخزين. يُنصح بتنزيل نسخة احتياطية مشفرة بانتظام.");return}
+  protect.disabled=true;
+  try{
+   const estimate=await navigator.storage.estimate();
+   const size=Number(estimate.usage||0),quota=Number(estimate.quota||0);
+   const usage=quota?Math.round(size/quota*100):null;
+   let persistent=false;
+   if(navigator.storage.persisted) persistent=await navigator.storage.persisted();
+   if(!persistent&&navigator.storage.persist) persistent=await navigator.storage.persist();
+   tell((persistent?"يساعد المتصفح الآن في الحفاظ على المكتبة المحلية.":"تعذر تثبيت التخزين الدائم في هذا المتصفح.")+
+    (usage!==null?" المساحة المستخدمة: "+usage+"% من الحصة المتاحة.":"")+
+    " لا يُغني هذا الخيار عن النسخة الاحتياطية؛ حذف بيانات الموقع قد يحذف الملفات.");
+  }catch(error){tell("تعذر فحص تخزين الجهاز: "+(error.message||"خطأ"))}
+  finally{protect.disabled=false}
+ };
+}
+installLocalStorageProtection();
+
+
 const manageModeKey="pdfathat-default-reading";
 const manageRTLKey="pdfathat-default-rtl";
 const managementSelected=new Set();
