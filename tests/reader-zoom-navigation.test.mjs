@@ -10,7 +10,7 @@ test('expanded PDF reader scrolls zoomed pages rather than clipping them',()=>{
  assert.ok(ix>=0);
  const fix=css.slice(ix);
  for(const marker of ['overflow-y:auto!important','overflow-x:auto!important','height:max-content!important','max-height:none!important','max-width:none!important'])assert.ok(fix.includes(marker),marker);
- assert.match(fix,/\.reader-open \.viewer\.desktop-single\.reading-mode/);
+ assert.match(fix,/\.reader-open \.viewer\.desktop-single\.reader-zoomed\.reading-mode/);
 });
 test('desktop side navigation retains original page IDs and event handlers',()=>{
  assert.match(css,/#readerPagePrev\{/);
