@@ -32,3 +32,5 @@ test('fit-to-page stays fixed with no scrollbars until zoom is requested',()=>{
  assert.match(fit,/\.desktop-single\.reader-zoomed\.reading-mode/);
  assert.doesNotMatch(fit,/\.desktop-expanded\.reading-mode:not\(/);
 });
+
+// Release check: normal fit-to-page must never have a persistent scrollbar.
