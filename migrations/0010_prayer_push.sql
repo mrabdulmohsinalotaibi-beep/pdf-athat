@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS pdf_prayer_push_deliveries (
  PRIMARY KEY(subscription_id,event_key)
 );
 CREATE INDEX IF NOT EXISTS pdf_prayer_push_delivery_age_idx ON pdf_prayer_push_deliveries(created_at);
+
+CREATE TABLE IF NOT EXISTS pdf_prayer_push_times (
+ city_day TEXT PRIMARY KEY,
+ timings TEXT NOT NULL,
+ created_at INTEGER NOT NULL
+);
