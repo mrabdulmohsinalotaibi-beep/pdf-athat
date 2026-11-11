@@ -7,7 +7,7 @@ const file=path.join(dist,'app-v2.js');
 if(!fs.existsSync(file))throw Error('Run build:offline first');
 let source=fs.readFileSync(file,'utf8');
 const root=path.resolve(__dirname,'../..');
-const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','peer-sync.js','site-ads.js','site-ads.css','traffic.js'];
+const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','admin-prayer-notification-pilot.js','peer-sync.js','site-ads.js','site-ads.css','traffic.js'];
 const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
@@ -32,7 +32,7 @@ fs.copyFileSync(path.join(root,'_headers'),path.join(dist,'_headers'));
 
 const gatePath=path.join(dist,'site-entry.js');
 let gate=fs.readFileSync(gatePath,'utf8');
-for(const asset of ['app-v2.js','prayer-bar.js','peer-sync.js','site-ads.js']){
+for(const asset of ['app-v2.js','prayer-bar.js','admin-prayer-notification-pilot.js','peer-sync.js','site-ads.js']){
  gate=gate.replace("import('./"+asset+"')","import('./"+asset+"?v="+version+"')");
 }
 fs.writeFileSync(gatePath,gate);
@@ -84,7 +84,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 const sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));

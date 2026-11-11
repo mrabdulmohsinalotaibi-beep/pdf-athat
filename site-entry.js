@@ -61,7 +61,8 @@
    actions.append(exit);
   }
   await import('./app-v2.js');
-  import('./prayer-bar.js').catch(()=>{});
+  // Show the opt-in system notification test inside the prayer strip for every account.
+  import('./prayer-bar.js').then(()=>import('./admin-prayer-notification-pilot.js')).then(m=>m.mountPrayerNotificationTest()).catch(()=>{});
   import('./site-ads.js').catch(()=>{});
   // Never copy a registered user's library into the anonymous guest library.
   if(user){
