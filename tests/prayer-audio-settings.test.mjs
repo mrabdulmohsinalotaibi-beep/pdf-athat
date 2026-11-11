@@ -16,3 +16,5 @@ test('adhan, iqama, pre-prayer controls and local recordings exist',()=>{
  assert.match(source,/prayer-dialog-actions/);
  assert.match(style,/prayer-sound-group/);
 });
+
+// Build verification for the prayer sound settings release.
