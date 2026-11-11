@@ -23,3 +23,12 @@ test('desktop side navigation retains original page IDs and event handlers',()=>
 });
 
 // Regression coverage applies to desktop PDF viewing; no document transformations.
+
+test('fit-to-page stays fixed with no scrollbars until zoom is requested',()=>{
+ const js=readFileSync(new URL('../app-v2.js',import.meta.url),'utf8');
+ const fit=css.match(/\/\* Reader fix: zoomed pages[\s\S]*/)?.[0]||'';
+ assert.match(js,/classList\.toggle\("reader-zoomed",enabled&&readerZoom>1\.001&&!readerEditing\)/);
+ assert.match(fit,/\.desktop-expanded\.reader-zoomed\.reading-mode/);
+ assert.match(fit,/\.desktop-single\.reader-zoomed\.reading-mode/);
+ assert.doesNotMatch(fit,/\.desktop-expanded\.reading-mode:not\(/);
+});
