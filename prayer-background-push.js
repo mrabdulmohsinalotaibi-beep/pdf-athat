@@ -46,14 +46,22 @@ export async function mountPrayerBackgroundPush(){
   try{
    const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
    if(permission!=='granted')throw Error('لم تسمح بإشعارات التطبيق من إعدادات الآيفون.');
-   const registration=await navigator.serviceWorker.ready;
-   const existing=await registration.pushManager.getSubscription();
-   const subscription=existing||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:decode(publicKey)});
    const place=JSON.parse(localStorage.getItem(key)||'null');
    if(!place||place.type!=='city'||place.country!=='SA'){
     throw Error('اختر مدينة سعودية من قائمة مواقيت الصلاة أولًا، ثم احفظ المدينة.');
    }
    const settings=JSON.parse(localStorage.getItem(soundKey)||'null')||{};
+   const registration=await navigator.serviceWorker.ready;
+   let subscription=await registration.pushManager.getSubscription();
+   const desiredKey=decode(publicKey);
+   const currentKey=subscription?.options?.applicationServerKey;
+   if(subscription&&currentKey&&
+    (currentKey.byteLength!==desiredKey.byteLength||
+     Array.from(new Uint8Array(currentKey)).some((n,i)=>n!==desiredKey[i]))){
+    await subscription.unsubscribe();
+    subscription=null;
+   }
+   subscription=subscription||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:desiredKey});
    await json('/api/prayer-push/subscribe',{subscription:subscription.toJSON(),city:place.city,country:'SA',
     settings:{before:[0,5,10,15,30].includes(settings.before)?settings.before:0,
      adhan:settings.adhan!==false,iqama:settings.iqama===true,
