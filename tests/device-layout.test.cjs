@@ -34,3 +34,18 @@ test('library uses phone, tablet and desktop spacing without stretching PDF rend
  const html=read('index.html');
  assert.doesNotMatch(html,/user-scalable=no|maximum-scale=1/);
 });
+
+test('personal profile is a single dedicated readable screen at every device width',()=>{
+ const css=read('admin.css');
+ const source=read('account.js');
+ const rules=css.slice(css.indexOf('/* Signed-in account is a standalone dashboard'));
+ assert.ok(rules.length>100);
+ assert.match(rules,/body>\.container\.auth-layout\.profile-active\{/);
+ assert.match(rules,/\.auth-layout\.profile-active>\.auth-info\{display:none\}/);
+ assert.match(rules,/max-width:880px/);
+ assert.match(rules,/max-width:780px/);
+ assert.match(rules,/\.account-data\{[\s\S]*?grid-template-columns:minmax\(0,1fr\)/);
+ assert.match(rules,/\.account-field strong\[dir="ltr"\]/);
+ assert.match(source,/classList\.add\('profile-active'\)/);
+ assert.match(source,/classList\.remove\('profile-active'\)/);
+});
