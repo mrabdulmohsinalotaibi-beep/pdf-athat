@@ -80,3 +80,13 @@
  #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 30px 30px 30px}
  #app .prayer-notify-test{min-height:30px;min-width:29px;font-size:15px}
 }
+
+/* Prayer sound controls live inside the existing city/settings dialog. */
+.prayer-sound-group{margin-top:15px;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--panel-soft)}
+.prayer-sound-group h3{margin:0 0 6px;font-size:16px;color:var(--green)}
+.prayer-sound-field{display:block;margin:12px 0 8px;font-weight:650;font-size:13px}
+.prayer-sound-field select{display:block;width:100%;margin-top:5px}
+.prayer-sound-upload{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:9px;padding:9px;border:1px solid var(--line);border-radius:10px}
+.prayer-sound-file{font-size:12px;flex:1 1 100%}
+.prayer-sound-file input{display:block;margin-top:5px;max-width:100%;font-size:12px}
+.prayer-sound-upload button{flex:1 1 100px;min-height:36px;padding:7px 9px}
