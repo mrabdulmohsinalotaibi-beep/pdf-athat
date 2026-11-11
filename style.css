@@ -986,3 +986,68 @@ body{min-width:0;max-width:100%;overflow-x:clip}
 #app .prayer-bar :is(.prayer-settings,.prayer-notify-test,.prayer-dismiss){
  touch-action:manipulation;
 }
+
+/* Reader fix: zoomed pages must remain fully scrollable, including top and bottom.
+   Override the former centered/overflow:hidden desktop fit layout only when reading. */
+@media (min-width:900px) and (pointer:fine) {
+ .reader-open .viewer.desktop-expanded.reading-mode:not([data-reader-mode="grid"]):not([data-reader-mode="vertical"]) .desk{
+  display:block!important;
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  justify-content:initial!important;
+  align-items:initial!important;
+  text-align:center;
+  padding:64px 64px 36px!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+ }
+ .reader-open .viewer.desktop-expanded.reading-mode:not([data-reader-mode="grid"]):not([data-reader-mode="vertical"]) .continuous-pages{
+  display:flex;
+  width:max-content!important;
+  min-width:100%!important;
+  height:max-content!important;
+  min-height:calc(100% - 100px)!important;
+  margin-inline:auto;
+  padding:0!important;
+  align-items:center;
+  justify-content:center;
+ }
+ .reader-open .viewer.desktop-single.reading-mode .continuous-pages .read-page{
+  max-width:none!important;
+  max-height:none!important;
+  flex-shrink:0;
+ }
+ /* The page arrows live at the sides, not as a floating strip over the book. */
+ .reader-open .viewer.reading-mode .reader-page-navigation{
+  position:static!important;transform:none!important;
+  display:contents!important;
+ }
+ .reader-open .viewer.reading-mode .reader-page-navigation button{
+  position:fixed;top:50%;transform:translateY(-50%);
+  z-index:28;width:46px;min-height:58px;
+  border:1px solid var(--line);border-radius:13px;
+  background:var(--panel);color:var(--ink);opacity:.85;
+  box-shadow:0 3px 14px #0002;
+ }
+ .reader-open .viewer.reading-mode .reader-page-navigation button:hover,
+ .reader-open .viewer.reading-mode .reader-page-navigation button:focus-visible{opacity:1}
+ .reader-open .viewer.reading-mode .reader-page-navigation #readerPagePrev{
+  right:12px;left:auto;
+ }
+ .reader-open .viewer.reading-mode .reader-page-navigation #readerPageNext{
+  left:12px;right:auto;
+ }
+ .reader-open .viewer.reading-mode:not(.reader-rtl) .reader-page-navigation #readerPagePrev{left:12px;right:auto}
+ .reader-open .viewer.reading-mode:not(.reader-rtl) .reader-page-navigation #readerPageNext{right:12px;left:auto}
+ .reader-open .viewer.desktop-expanded.reading-mode .reader-page-info{
+  top:65px;bottom:auto;right:16px;z-index:28;opacity:.7;
+  min-height:31px;height:31px;
+ }
+}
+/* On touch screens retain the usual swipe/scroll behavior without a center-page
+   navigation overlay; the independent page count remains available. */
+@media(max-width:899px), (pointer:coarse){
+ .reader-open .viewer.reading-mode .reader-page-navigation{
+  bottom:calc(16px + env(safe-area-inset-bottom));
+ }
+}
