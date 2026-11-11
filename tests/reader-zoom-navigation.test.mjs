@@ -21,3 +21,5 @@ test('desktop side navigation retains original page IDs and event handlers',()=>
  assert.match(js,/\$\("readerPageNext"\)\.onclick=/);
  assert.match(css,/\.reader-page-info\{/);
 });
+
+// Regression coverage applies to desktop PDF viewing; no document transformations.
