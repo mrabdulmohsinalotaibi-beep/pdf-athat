@@ -12,7 +12,7 @@ test('desktop navigation uses existing library tab buttons without changing PDF 
  assert.match(css,/flex-direction:column/);
  for(const id of ['libraryTabAll','libraryTabRecent','libraryTabBookmarks','libraryTabFav','libraryTabManage'])assert.ok(html.includes('id="'+id+'"'),id);
  assert.match(css,/@media\(max-width:700px\)/);
- assert.doesNotMatch(css.slice(-3500),/\.viewer\b|\.reader-canvas\b/);
+ assert.doesNotMatch(css.slice(css.indexOf('/* Desktop library refinement:'),css.indexOf('/* Reader fix: zoomed pages')),/\.viewer\b|\.reader-canvas\b/);
 });
 
 test('desktop content adapts and prayer actions remain accessible',()=>{
