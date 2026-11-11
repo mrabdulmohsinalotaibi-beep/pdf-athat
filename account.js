@@ -24,6 +24,7 @@ function guard(form,handler,errorTarget=null){
  });
 }
 function showAuth(){
+ document.querySelector('.auth-layout')?.classList.remove('profile-active');
  $('profilePane').hidden=true;$('authPane').hidden=false;$('returnToProfile').hidden=true;
 }
 function forward(user){
@@ -92,6 +93,7 @@ async function accountLibrarySummary(user){
 }
 function showProfile(user){
  state.currentUser=user;
+ document.querySelector('.auth-layout')?.classList.add('profile-active');
  $('authPane').hidden=true;$('profilePane').hidden=false;$('returnToProfile').hidden=true;
  $('profileUsername').textContent=user.username||'لم يُحدد';
  $('newProfileUsername').value=user.username||'';
@@ -174,6 +176,7 @@ $('accountDeleteForm').addEventListener('submit',async event=>{
 });
 $('accountPasswordChange').onclick=()=>{
  if(!state.currentUser)return;
+ document.querySelector('.auth-layout')?.classList.remove('profile-active');
  $('profilePane').hidden=true;$('authPane').hidden=false;$('returnToProfile').hidden=false;
  tab('recover');
  $('recoverForm').elements.email.value=state.currentUser.email;
