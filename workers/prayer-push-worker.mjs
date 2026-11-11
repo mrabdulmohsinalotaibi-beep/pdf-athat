@@ -30,7 +30,7 @@ async function scheduleFor(db,city,day){
   .bind(key,JSON.stringify(timings),Math.floor(Date.now()/1000)).run();
  return timings;
 }
-async function encrypt(subscription,payload){
+export async function encrypt(subscription,payload){
  const receiver=await crypto.subtle.importKey('raw',bytes(subscription.p256dh),{name:'ECDH',namedCurve:'P-256'},false,[]);
  const sender=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits']);
  const serverPublic=new Uint8Array(await crypto.subtle.exportKey('raw',sender.publicKey));
