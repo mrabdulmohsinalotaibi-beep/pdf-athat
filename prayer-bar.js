@@ -75,7 +75,7 @@
  iqamaDelayLabel.append(iqamaSelect);
  const soundFiles=el('div','prayer-sound-files');
  const audioStatus=el('p','prayer-feedback','');
- const uploads={};
+ const soundCache={adhan:null,iqama:null};
  const soundNames={adhan:'الأذان',iqama:'الإقامة'};
  // Dedicated IndexedDB database: no access to the PDF library or private documents.
  function openSoundDB(){return new Promise((resolve,reject)=>{
@@ -96,7 +96,9 @@
   if(document.visibilityState!=='visible')return;
   try{
    if(activeAudio){activeAudio.pause();activeAudio=null}
-   const sound=await soundRecord(mode).catch(()=>null);
+   const Ctor=window.AudioContext||window.webkitAudioContext;
+   if(Ctor){audioContext=audioContext||new Ctor();await audioContext.resume()}
+   const sound=soundCache[mode];
    if(sound instanceof Blob&&sound.size){
     const url=URL.createObjectURL(sound);
     const audio=new Audio(url);activeAudio=audio;
@@ -105,10 +107,7 @@
     return;
    }
    // Default brief chime, not a substitute for a recorded adhan or iqama.
-   const Ctor=window.AudioContext||window.webkitAudioContext;
    if(!Ctor)throw Error('المتصفح لا يدعم تشغيل الصوت');
-   audioContext=audioContext||new Ctor();
-   await audioContext.resume();
    const start=audioContext.currentTime;
    for(const [i,freq] of [660,880,660].entries()){
     const osc=audioContext.createOscillator(),gain=audioContext.createGain();
@@ -132,15 +131,16 @@
    const file=input.files?.[0];if(!file)return;
    if(file.size>8*1024*1024){audioStatus.textContent='الحد الأقصى للصوت ٨ ميجابايت.';input.value='';return}
    if(!file.type.startsWith('audio/')&&!/\\.(mp3|m4a|wav)$/i.test(file.name)){audioStatus.textContent='اختر ملفًا صوتيًا صالحًا.';return}
-   try{await soundRecord(mode,file);audioStatus.textContent='تم حفظ صوت '+soundNames[mode]+' على هذا الجهاز فقط.'}
+   try{await soundRecord(mode,file);soundCache[mode]=file;audioStatus.textContent='تم حفظ صوت '+soundNames[mode]+' على هذا الجهاز فقط.'}
    catch{audioStatus.textContent='تعذر حفظ الملف الصوتي محليًا.'}
    input.value='';
   };
   test.onclick=async()=>{soundUnlocked=true;await playSound(mode)};
-  erase.onclick=async()=>{try{const db=await openSoundDB();await new Promise((resolve,reject)=>{const tx=db.transaction('sounds','readwrite');tx.objectStore('sounds').delete(mode);tx.oncomplete=resolve;tx.onerror=reject});db.close();audioStatus.textContent='تم حذف صوت '+soundNames[mode]+'، وستستخدم النغمة القصيرة بدلًا منه.'}catch{audioStatus.textContent='تعذر حذف الصوت'}};
-  row.append(uploadLabel,test,erase);soundFiles.append(row);uploads[mode]=input;
+  erase.onclick=async()=>{try{const db=await openSoundDB();await new Promise((resolve,reject)=>{const tx=db.transaction('sounds','readwrite');tx.objectStore('sounds').delete(mode);tx.oncomplete=resolve;tx.onerror=reject});db.close();soundCache[mode]=null;audioStatus.textContent='تم حذف صوت '+soundNames[mode]+'، وستستخدم النغمة القصيرة بدلًا منه.'}catch{audioStatus.textContent='تعذر حذف الصوت'}};
+  row.append(uploadLabel,test,erase);soundFiles.append(row);
  }
  function saveSoundOptions(){
+  if(audioSwitch.checked){soundUnlocked=true;const Ctor=window.AudioContext||window.webkitAudioContext;if(Ctor){audioContext=audioContext||new Ctor();audioContext.resume().catch(()=>{})}}
   soundOptions={enabled:audioSwitch.checked,before:Number(beforeSelect.value),adhan:adhanSwitch.checked,iqama:iqamaSwitch.checked,iqamaDelay:Number(iqamaSelect.value)};
   localStorage.setItem(soundKey,JSON.stringify(soundOptions));
   if(!soundOptions.enabled&&activeAudio){activeAudio.pause();activeAudio=null}
@@ -158,7 +158,7 @@
  dismiss.onclick=()=>toggleOpen(false);
  settings.onclick=cityButton.onclick=()=>{
   // Opening settings is an explicit gesture; audible alerts still require a test tap.
-  audioStatus.textContent='للسماح بالصوت على الآيفون، اضغط «تجربة الأذان» مرة واحدة أثناء فتح الموقع.';
+  audioStatus.textContent='جرّب الصوت بعد تفعيله؛ ملف الأذان والإقامة يبقى محفوظًا محليًا في هذا الجهاز.';
   citySelect.value=place.type==='city'&&place.country==='SA'&&cityChoices.some(x=>x[0]===place.city)?place.city:'other';
   custom.hidden=citySelect.value!=='other';
   cityInput.value=place.type==='city'&&citySelect.value==='other'?place.city:'';
@@ -276,9 +276,8 @@
   },()=>{feedback.textContent='لم يُسمح بالموقع. اختر مدينتك يدويًا.'},{enableHighAccuracy:false,timeout:12000,maximumAge:600000});
  };
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')tick()});
- // User gesture primes the audio engine for the current browsing session.
- const originalPlay=playSound;
- // Manual preview is the only deliberate audio unlock. Do not play when first loading a page.
+ // Initialize cached audio only; never autoplay until the user enables audio.
+ for(const mode of ['adhan','iqama'])soundRecord(mode).then(blob=>{soundCache[mode]=blob instanceof Blob?blob:null}).catch(()=>{});
 
  setInterval(tick,15000);
  load();
