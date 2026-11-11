@@ -261,3 +261,108 @@ body>.container.auth-layout .account-delete-dialog{max-width:100%}
  body>.container.auth-layout .tabs{gap:4px}
  body>.container.auth-layout .tabs button{font-size:11px}
 }
+
+
+/* Signed-in account is a standalone dashboard, not half of the login screen.
+   Explicit state avoids giant empty columns / oversized cards on tablets. */
+body>.container.auth-layout.profile-active{
+ display:block;
+ width:100%;
+ max-width:880px;
+ margin:20px auto 32px;
+ padding-inline:20px;
+}
+body>.container.auth-layout.profile-active>.auth-info{display:none}
+body>.container.auth-layout.profile-active>#profilePane{
+ display:block;
+ width:100%;
+ max-width:100%;
+ padding:clamp(16px,2.6vw,28px);
+ margin:0;
+}
+body>.container.auth-layout.profile-active>#profilePane[hidden]{display:none}
+body>.container.auth-layout.profile-active .account-heading{gap:10px}
+body>.container.auth-layout.profile-active .account-data{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;
+}
+body>.container.auth-layout.profile-active .account-data .account-field:last-child{
+ grid-column:1/-1;
+}
+body>.container.auth-layout.profile-active .account-field{
+ min-height:83px;
+ padding:14px 16px;
+ display:flex;
+ flex-direction:column;
+ justify-content:center;
+ gap:5px;
+}
+body>.container.auth-layout.profile-active .account-field strong{
+ display:block;
+ max-width:100%;
+ min-width:0;
+ font-size:16px;
+ line-height:1.55;
+ overflow-wrap:anywhere;
+ word-break:break-word;
+}
+body>.container.auth-layout.profile-active .account-field strong[dir="ltr"]{
+ direction:ltr;
+ text-align:left;
+ unicode-bidi:plaintext;
+}
+body>.container.auth-layout.profile-active .account-stats{
+ display:grid;
+ grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:12px;
+}
+body>.container.auth-layout.profile-active .account-stats>div{
+ min-height:98px;
+ justify-content:center;
+}
+body>.container.auth-layout.profile-active .account-settings{max-width:100%}
+body>.container.auth-layout.profile-active .account-setting{
+ margin:10px 0;
+ padding:14px;
+}
+body>.container.auth-layout.profile-active .account-actions{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:10px;
+}
+body>.container.auth-layout.profile-active .account-actions a,
+body>.container.auth-layout.profile-active .account-actions button{
+ min-width:0;
+ min-height:48px;
+ padding:11px 12px;
+ overflow-wrap:anywhere;
+}
+@media(min-width:641px) and (max-width:1024px){
+ body>.container.auth-layout.profile-active{max-width:780px;padding-inline:18px}
+ body>.container.auth-layout.profile-active .account-data{gap:10px}
+}
+@media(max-width:640px){
+ body>.container.auth-layout.profile-active{
+  max-width:100%;
+  padding-inline:12px;
+  margin:12px auto 20px;
+ }
+ body>.container.auth-layout.profile-active>#profilePane{padding:15px}
+ body>.container.auth-layout.profile-active .account-data{
+  grid-template-columns:minmax(0,1fr);
+  gap:9px;
+ }
+ body>.container.auth-layout.profile-active .account-data .account-field:last-child{grid-column:auto}
+ body>.container.auth-layout.profile-active .account-field{min-height:74px;padding:12px}
+ body>.container.auth-layout.profile-active .account-field strong{font-size:15px}
+ body>.container.auth-layout.profile-active .account-stats{gap:7px}
+ body>.container.auth-layout.profile-active .account-stats>div{min-height:85px}
+ body>.container.auth-layout.profile-active .account-actions{gap:8px}
+ body>.container.auth-layout.profile-active .account-actions a,
+ body>.container.auth-layout.profile-active .account-actions button{font-size:12px;line-height:1.6}
+}
+@media(max-width:360px){
+ body>.container.auth-layout.profile-active .account-actions{grid-template-columns:minmax(0,1fr)}
+ body>.container.auth-layout.profile-active .account-actions .logout-action{grid-column:auto}
+}
