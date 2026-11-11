@@ -48,7 +48,7 @@ async function encrypt(subscription,payload){
 async function jwt(privateJwk,endpoint){
  const aud=new URL(endpoint).origin;
  const enc=obj=>b64(encoder.encode(JSON.stringify(obj)));
- const body=enc({aud,exp:Math.floor(Date.now()/1000)+3600,sub:'mailto:support@athat.app'});
+ const body=enc({aud,exp:Math.floor(Date.now()/1000)+3600,sub:'https://pdf.athat.app'});
  const signed=enc({typ:'JWT',alg:'ES256'})+'.'+body;
  const privateKey=await crypto.subtle.importKey('jwk',privateJwk,{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
  const signature=new Uint8Array(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},privateKey,encoder.encode(signed)));
