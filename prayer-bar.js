@@ -46,16 +46,119 @@
  const alertControl=el('label','prayer-alert-control');
  const alertsOn=el('input');alertsOn.type='checkbox';alertsOn.checked=localStorage.getItem('pdf-athat-prayer-alerts')!=='no';
  alertControl.append(alertsOn,document.createTextNode(' إظهار تنبيه مرئي صامت عند حلول الصلاة (30 ثانية)'));
+ // Sound alerts are local and opt-in; the phone must keep this page open for them to play.
+ const soundKey='pdf-athat-prayer-sound-v1';
+ const soundDefaults={enabled:false,before:0,adhan:true,iqama:true,iqamaDelay:10};
+ const savedSound=parse(localStorage.getItem(soundKey))||{};
+ let soundOptions={...soundDefaults,...savedSound};
+ let soundUnlocked=false,activeAudio=null,audioContext=null;
+ const soundGroup=el('section','prayer-sound-group');
+ const soundHeading=el('h3','','🔊 إعدادات صوت الصلاة');
+ const soundNote=el('p','prayer-note','يعمل الصوت فقط عندما يكون الموقع مفتوحًا ويسمح المتصفح بالتشغيل. لا يمكن تشغيل الأذان أو الإقامة تلقائيًا من موقع مغلق على الآيفون.');
+ const audioSwitch=el('input');audioSwitch.type='checkbox';audioSwitch.checked=!!soundOptions.enabled;
+ const audioLabel=el('label','prayer-alert-control');audioLabel.append(audioSwitch,document.createTextNode(' تشغيل الأصوات والتنبيهات'));
+ const beforeSelect=el('select','prayer-select');
+ for(const [v,label] of [[0,'بدون تنبيه مسبق'],[5,'قبل الصلاة بـ ٥ دقائق'],[10,'قبل الصلاة بـ ١٠ دقائق'],[15,'قبل الصلاة بـ ١٥ دقيقة'],[30,'قبل الصلاة بـ ٣٠ دقيقة']]){
+  const opt=el('option','',label);opt.value=String(v);beforeSelect.append(opt);
+ }
+ beforeSelect.value=String(soundOptions.before);
+ const beforeLabel=el('label','prayer-sound-field','المنبه قبل وقت الصلاة');
+ beforeLabel.append(beforeSelect);
+ const adhanSwitch=el('input');adhanSwitch.type='checkbox';adhanSwitch.checked=!!soundOptions.adhan;
+ const adhanLabel=el('label','prayer-alert-control');adhanLabel.append(adhanSwitch,document.createTextNode(' تنبيه الأذان عند دخول وقت الصلاة'));
+ const iqamaSwitch=el('input');iqamaSwitch.type='checkbox';iqamaSwitch.checked=!!soundOptions.iqama;
+ const iqamaLabel=el('label','prayer-alert-control');iqamaLabel.append(iqamaSwitch,document.createTextNode(' تنبيه الإقامة بعد الأذان'));
+ const iqamaSelect=el('select','prayer-select');
+ for(const value of [5,10,15,20,30]){const opt=el('option','', 'بعد '+value+' دقيقة');opt.value=String(value);iqamaSelect.append(opt)}
+ iqamaSelect.value=String(soundOptions.iqamaDelay);
+ const iqamaDelayLabel=el('label','prayer-sound-field','وقت الإقامة التقريبي (قابل للتعديل، وليس وقت المسجد الرسمي)');
+ iqamaDelayLabel.append(iqamaSelect);
+ const soundFiles=el('div','prayer-sound-files');
+ const audioStatus=el('p','prayer-feedback','');
+ const uploads={};
+ const soundNames={adhan:'الأذان',iqama:'الإقامة'};
+ // Dedicated IndexedDB database: no access to the PDF library or private documents.
+ function openSoundDB(){return new Promise((resolve,reject)=>{
+  const req=indexedDB.open('pdf-athat-prayer-audio',1);
+  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('sounds'))req.result.createObjectStore('sounds')};
+  req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+ })}
+ async function soundRecord(mode,blob){
+  const db=await openSoundDB();
+  try{return await new Promise((resolve,reject)=>{
+   const tx=db.transaction('sounds',blob===undefined?'readonly':'readwrite');
+   const request=blob===undefined?tx.objectStore('sounds').get(mode):tx.objectStore('sounds').put(blob,mode);
+   request.onsuccess=()=>resolve(request.result);
+   request.onerror=()=>reject(request.error);
+  })}finally{db.close()}
+ }
+ async function playSound(mode){
+  if(document.visibilityState!=='visible')return;
+  try{
+   if(activeAudio){activeAudio.pause();activeAudio=null}
+   const sound=await soundRecord(mode).catch(()=>null);
+   if(sound instanceof Blob&&sound.size){
+    const url=URL.createObjectURL(sound);
+    const audio=new Audio(url);activeAudio=audio;
+    audio.onended=audio.onerror=()=>{URL.revokeObjectURL(url);if(activeAudio===audio)activeAudio=null};
+    await audio.play();
+    return;
+   }
+   // Default brief chime, not a substitute for a recorded adhan or iqama.
+   const Ctor=window.AudioContext||window.webkitAudioContext;
+   if(!Ctor)throw Error('المتصفح لا يدعم تشغيل الصوت');
+   audioContext=audioContext||new Ctor();
+   await audioContext.resume();
+   const start=audioContext.currentTime;
+   for(const [i,freq] of [660,880,660].entries()){
+    const osc=audioContext.createOscillator(),gain=audioContext.createGain();
+    osc.type='sine';osc.frequency.value=freq;
+    gain.gain.setValueAtTime(0.0001,start+i*.22);
+    gain.gain.exponentialRampToValueAtTime(.12,start+i*.22+.025);
+    gain.gain.exponentialRampToValueAtTime(.0001,start+i*.22+.19);
+    osc.connect(gain);gain.connect(audioContext.destination);
+    osc.start(start+i*.22);osc.stop(start+i*.22+.2);
+   }
+  }catch(error){audioStatus.textContent='تعذر تشغيل الصوت. اضغط زر التجربة أولًا أو راجع إعدادات صوت الجهاز.'}
+ }
+ for(const mode of ['adhan','iqama']){
+  const row=el('div','prayer-sound-upload');
+  const uploadLabel=el('label','prayer-sound-file','رفع صوت '+soundNames[mode]+' (MP3 / M4A / WAV)');
+  const input=el('input');input.type='file';input.accept='audio/*,.mp3,.m4a,.wav';
+  uploadLabel.append(input);
+  const test=el('button','prayer-secondary','▶ تجربة '+soundNames[mode]);test.type='button';
+  const erase=el('button','prayer-secondary','حذف الصوت');erase.type='button';
+  input.onchange=async()=>{
+   const file=input.files?.[0];if(!file)return;
+   if(file.size>8*1024*1024){audioStatus.textContent='الحد الأقصى للصوت ٨ ميجابايت.';input.value='';return}
+   if(!file.type.startsWith('audio/')&&!/\\.(mp3|m4a|wav)$/i.test(file.name)){audioStatus.textContent='اختر ملفًا صوتيًا صالحًا.';return}
+   try{await soundRecord(mode,file);audioStatus.textContent='تم حفظ صوت '+soundNames[mode]+' على هذا الجهاز فقط.'}
+   catch{audioStatus.textContent='تعذر حفظ الملف الصوتي محليًا.'}
+   input.value='';
+  };
+  test.onclick=async()=>{soundUnlocked=true;await playSound(mode)};
+  erase.onclick=async()=>{try{const db=await openSoundDB();await new Promise((resolve,reject)=>{const tx=db.transaction('sounds','readwrite');tx.objectStore('sounds').delete(mode);tx.oncomplete=resolve;tx.onerror=reject});db.close();audioStatus.textContent='تم حذف صوت '+soundNames[mode]+'، وستستخدم النغمة القصيرة بدلًا منه.'}catch{audioStatus.textContent='تعذر حذف الصوت'}};
+  row.append(uploadLabel,test,erase);soundFiles.append(row);uploads[mode]=input;
+ }
+ function saveSoundOptions(){
+  soundOptions={enabled:audioSwitch.checked,before:Number(beforeSelect.value),adhan:adhanSwitch.checked,iqama:iqamaSwitch.checked,iqamaDelay:Number(iqamaSelect.value)};
+  localStorage.setItem(soundKey,JSON.stringify(soundOptions));
+  if(!soundOptions.enabled&&activeAudio){activeAudio.pause();activeAudio=null}
+ }
+ for(const control of [audioSwitch,beforeSelect,adhanSwitch,iqamaSwitch,iqamaSelect])control.addEventListener('change',saveSoundOptions);
+ soundGroup.append(soundHeading,soundNote,audioLabel,beforeLabel,adhanLabel,iqamaLabel,iqamaDelayLabel,soundFiles,audioStatus);
  const locationButton=el('button','prayer-secondary','استخدام موقعي بإذني');locationButton.type='button';
  const saveButton=el('button','prayer-primary','حفظ المدينة');saveButton.type='button';
  const cancelButton=el('button','prayer-secondary','إلغاء');cancelButton.type='button';
  const dialogActions=el('div','prayer-dialog-actions');dialogActions.append(saveButton,locationButton,cancelButton);
  const feedback=el('p','prayer-feedback','');
- dialog.append(title,note,citySelect,custom,alertControl,dialogActions,feedback);document.body.append(dialog);
+ dialog.append(title,note,citySelect,custom,alertControl,soundGroup,dialogActions,feedback);document.body.append(dialog);
  const toggleOpen=open=>{visible=open;bar.hidden=!open;toggle.setAttribute('aria-expanded',String(open));localStorage.setItem(hiddenKey,open?'no':'yes')};
  toggle.onclick=()=>toggleOpen(!visible);
  dismiss.onclick=()=>toggleOpen(false);
  settings.onclick=cityButton.onclick=()=>{
+  // Opening settings is an explicit gesture; audible alerts still require a test tap.
+  audioStatus.textContent='للسماح بالصوت على الآيفون، اضغط «تجربة الأذان» مرة واحدة أثناء فتح الموقع.';
   citySelect.value=place.type==='city'&&place.country==='SA'&&cityChoices.some(x=>x[0]===place.city)?place.city:'other';
   custom.hidden=citySelect.value!=='other';
   cityInput.value=place.type==='city'&&citySelect.value==='other'?place.city:'';
@@ -112,6 +215,23 @@
   clearTimeout(popupTimer);popupTimer=setTimeout(()=>{toast.hidden=true},30000);
  }
  closeToast.onclick=()=>{toast.hidden=true;clearTimeout(popupTimer)};
+ function runAudioReminder(item,current,seconds){
+  if(!soundOptions.enabled||!visible||document.visibilityState!=='visible'||seconds>30||!soundUnlocked)return;
+  const events=[
+   {type:'before',at:item.when-soundOptions.before,enabled:soundOptions.before>0,mode:'adhan',label:'اقترب موعد صلاة '+item.label},
+   {type:'adhan',at:item.when,enabled:soundOptions.adhan,mode:'adhan',label:'حان وقت أذان '+item.label},
+   {type:'iqama',at:item.when+soundOptions.iqamaDelay,enabled:soundOptions.iqama,mode:'iqama',label:'تنبيه إقامة صلاة '+item.label}
+  ];
+  for(const event of events){
+   if(!event.enabled||((event.at+1440)%1440)!==current)continue;
+   const id='pdf-prayer-audio:'+JSON.stringify(place)+':'+day+':'+item.key+':'+event.type;
+   if(sessionStorage.getItem(id))continue;
+   sessionStorage.setItem(id,'yes');
+   alertText.textContent=event.label+' في '+place.label;
+   toast.hidden=false;clearTimeout(popupTimer);popupTimer=setTimeout(()=>toast.hidden=true,30000);
+   playSound(event.mode);
+  }
+ }
  function render(){
   if(!data)return;
   const current=minutes(timeNow(zone));if(current===null)return;
@@ -130,6 +250,7 @@
    const label=el('span','',item.label),clock=el('b','',human(item.raw));
    node.append(label,clock);times.append(node);
    if(item.when===current&&seconds<30)showAlert(item.label,item.key);
+   runAudioReminder(item,current,seconds);
   }
  }
  async function tick(){
@@ -155,6 +276,10 @@
   },()=>{feedback.textContent='لم يُسمح بالموقع. اختر مدينتك يدويًا.'},{enableHighAccuracy:false,timeout:12000,maximumAge:600000});
  };
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')tick()});
+ // User gesture primes the audio engine for the current browsing session.
+ const originalPlay=playSound;
+ // Manual preview is the only deliberate audio unlock. Do not play when first loading a page.
+
  setInterval(tick,15000);
  load();
 })();
