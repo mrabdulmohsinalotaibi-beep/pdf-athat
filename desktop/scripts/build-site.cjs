@@ -115,7 +115,7 @@ self.addEventListener('fetch',e=>{
  })());
 });`;
 // Push notifications must be displayed by the service worker, even if the page is closed.
-sw+=\`
+sw+=`
 self.addEventListener('push',event=>{
  let payload={title:'PDF.ATHAT · مواقيت الصلاة',body:'حان وقت الصلاة',tag:'pdf-athat-prayer'};
  try{if(event.data)payload={...payload,...event.data.json()}}catch{}
@@ -133,7 +133,7 @@ self.addEventListener('notificationclick',event=>{
   return clients.openWindow('/');
  })());
 });
-\`;
+`;
 fs.writeFileSync(path.join(dist,'sw.js'),sw);
 fs.writeFileSync(path.join(dist,'_headers'),'/\n  Cache-Control: no-cache, must-revalidate\n/index.html\n  Cache-Control: no-cache, must-revalidate\n/sw.js\n  Cache-Control: no-cache, must-revalidate\n/style.css\n  Cache-Control: no-cache, must-revalidate\n/icon.svg\n  Cache-Control: no-cache, must-revalidate\n/app-v2.js\n  Cache-Control: no-cache, must-revalidate\n');
 if(htmlCheck.includes('id="authGate"')||htmlCheck.includes('data-app-module='))throw Error('Unexpected account gate in public PDF build');
