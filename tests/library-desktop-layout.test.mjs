@@ -21,3 +21,5 @@ test('desktop content adapts and prayer actions remain accessible',()=>{
  assert.match(prayerCss,/min-width:38px;min-height:38px/);
  assert.match(prayerCss,/min-width:34px;min-height:34px/);
 });
+
+// Release gate: desktop navigation must not affect mobile PDF rendering.
