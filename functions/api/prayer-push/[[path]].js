@@ -1,6 +1,6 @@
 import { session } from '../../../server/auth.mjs';
 
-const VAPID_PUBLIC='BGreEmdlzlduyosK5xjI_L0f6ZVh8THnpDZ__ZYiZHLpxCTghB-O6qbYkolxg3w2UU_hwB-0zjterXnu-R5ap3Q';
+const VAPID_PUBLIC='BF6S-P_KDZs2Ie00IKSHXgK6seuEr23nlBIyIegHC9Xwv1gJYsjrTbPCd6WgOsi37ctdOvX2MlpcdrevC-NgIoQ';
 const json=(value,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const cities=new Set(['Makkah','Jeddah','Madinah','Riyadh','Dammam','Taif','Tabuk','Abha','Jazan','Hail','Buraydah','Najran','Al Hofuf','Yanbu']);
 const before=new Set([0,5,10,15,30]),delay=new Set([5,10,15,20,30]);
