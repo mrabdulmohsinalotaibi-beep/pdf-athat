@@ -69,3 +69,14 @@
  #app .prayer-times{flex:1 1 auto;display:flex;justify-content:space-around;overflow:visible}
  #app .prayer-time{min-width:65px}
 }
+
+/* Notification bell is a separate prayer-strip control on all device sizes. */
+#app .prayer-notify-test{flex:0 0 auto;display:grid;place-items:center;min-width:32px;min-height:32px;padding:0 5px;border:0;border-radius:8px;background:transparent;font-size:17px;cursor:pointer}
+@media(max-width:980px){
+ #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 34px 34px 34px;grid-template-areas:"place notify settings close" "times times times times"}
+ #app .prayer-notify-test{grid-area:notify}
+}
+@media(max-width:460px){
+ #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 30px 30px 30px}
+ #app .prayer-notify-test{min-height:30px;min-width:29px;font-size:15px}
+}
