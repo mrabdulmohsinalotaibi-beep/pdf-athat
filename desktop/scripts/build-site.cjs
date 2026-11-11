@@ -10,6 +10,8 @@ const root=path.resolve(__dirname,'../..');
 // Verify the prayer panel remains valid JavaScript and sound settings pass regression tests.
 require('node:child_process').execFileSync(process.execPath,['--check',path.join(root,'prayer-bar.js')],{stdio:'inherit'});
 require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/prayer-audio-settings.test.mjs')],{stdio:'inherit'});
+require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/prayer-background-push.test.mjs')],{stdio:'inherit'});
+for(const name of ['prayer-background-push.js','functions/api/prayer-push/[[path]].js','workers/prayer-push-worker.mjs'])require('node:child_process').execFileSync(process.execPath,['--check',path.join(root,name)],{stdio:'inherit'});
 const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','admin-prayer-notification-pilot.js','prayer-background-push.js','peer-sync.js','site-ads.js','site-ads.css','traffic.js'];
 const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
