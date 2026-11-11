@@ -69,7 +69,7 @@ async function send(env,subscription,event){
  if(!r.ok)throw Error('push_http_'+r.status);
  return 'sent';
 }
-function eventsFor(row,times,day,now){
+export function eventsFor(row,times,day,now){
  const entries=[['Fajr','الفجر'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']];
  const [y,m,d]=day.split('-').map(Number);
  const output=[];
