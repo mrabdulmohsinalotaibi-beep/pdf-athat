@@ -130,7 +130,7 @@
   input.onchange=async()=>{
    const file=input.files?.[0];if(!file)return;
    if(file.size>8*1024*1024){audioStatus.textContent='الحد الأقصى للصوت ٨ ميجابايت.';input.value='';return}
-   if(!file.type.startsWith('audio/')&&!/\\.(mp3|m4a|wav)$/i.test(file.name)){audioStatus.textContent='اختر ملفًا صوتيًا صالحًا.';return}
+   if(!file.type.startsWith('audio/')&&!/\.(mp3|m4a|wav)$/i.test(file.name)){audioStatus.textContent='اختر ملفًا صوتيًا صالحًا.';return}
    try{await soundRecord(mode,file);soundCache[mode]=file;audioStatus.textContent='تم حفظ صوت '+soundNames[mode]+' على هذا الجهاز فقط.'}
    catch{audioStatus.textContent='تعذر حفظ الملف الصوتي محليًا.'}
    input.value='';
