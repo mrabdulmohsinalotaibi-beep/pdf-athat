@@ -10,7 +10,10 @@ const root=path.resolve(__dirname,'../..');
 // Verify the prayer panel remains valid JavaScript and sound settings pass regression tests.
 require('node:child_process').execFileSync(process.execPath,['--check',path.join(root,'prayer-bar.js')],{stdio:'inherit'});
 require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/prayer-audio-settings.test.mjs')],{stdio:'inherit'});
-const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','admin-prayer-notification-pilot.js','peer-sync.js','site-ads.js','site-ads.css','traffic.js'];
+require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/prayer-background-push.test.mjs')],{stdio:'inherit'});
+require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/prayer-webpush-crypto.test.mjs')],{stdio:'inherit'});
+for(const name of ['prayer-background-push.js','functions/api/prayer-push/[[path]].js','workers/prayer-push-worker.mjs'])require('node:child_process').execFileSync(process.execPath,['--check',path.join(root,name)],{stdio:'inherit'});
+const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','admin-prayer-notification-pilot.js','prayer-background-push.js','peer-sync.js','site-ads.js','site-ads.css','traffic.js'];
 const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
@@ -35,7 +38,7 @@ fs.copyFileSync(path.join(root,'_headers'),path.join(dist,'_headers'));
 
 const gatePath=path.join(dist,'site-entry.js');
 let gate=fs.readFileSync(gatePath,'utf8');
-for(const asset of ['app-v2.js','prayer-bar.js','admin-prayer-notification-pilot.js','peer-sync.js','site-ads.js']){
+for(const asset of ['app-v2.js','prayer-bar.js','admin-prayer-notification-pilot.js','prayer-background-push.js','peer-sync.js','site-ads.js']){
  gate=gate.replace("import('./"+asset+"')","import('./"+asset+"?v="+version+"')");
 }
 fs.writeFileSync(gatePath,gate);
@@ -87,8 +90,8 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
-const sw=`const CACHE="pdf-athat-offline-${version}";
+const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./prayer-background-push.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+let sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('pdf-athat-')&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()])));
@@ -112,6 +115,26 @@ self.addEventListener('fetch',e=>{
   }
  })());
 });`;
+// Push notifications must be displayed by the service worker, even if the page is closed.
+sw+=`
+self.addEventListener('push',event=>{
+ let payload={title:'PDF.ATHAT · مواقيت الصلاة',body:'حان وقت الصلاة',tag:'pdf-athat-prayer'};
+ try{if(event.data)payload={...payload,...event.data.json()}}catch{}
+ event.waitUntil(self.registration.showNotification(payload.title,{
+  body:payload.body,icon:'./icon.svg',badge:'./icon.svg',
+  tag:payload.tag||'pdf-athat-prayer',data:{url:'/'}
+ }));
+});
+self.addEventListener('notificationclick',event=>{
+ event.notification.close();
+ event.waitUntil((async()=>{
+  const clientsList=await clients.matchAll({type:'window',includeUncontrolled:true});
+  const target=clientsList.find(client=>new URL(client.url).origin===self.location.origin);
+  if(target)return target.focus();
+  return clients.openWindow('/');
+ })());
+});
+`;
 fs.writeFileSync(path.join(dist,'sw.js'),sw);
 fs.writeFileSync(path.join(dist,'_headers'),'/\n  Cache-Control: no-cache, must-revalidate\n/index.html\n  Cache-Control: no-cache, must-revalidate\n/sw.js\n  Cache-Control: no-cache, must-revalidate\n/style.css\n  Cache-Control: no-cache, must-revalidate\n/icon.svg\n  Cache-Control: no-cache, must-revalidate\n/app-v2.js\n  Cache-Control: no-cache, must-revalidate\n');
 if(htmlCheck.includes('id="authGate"')||htmlCheck.includes('data-app-module='))throw Error('Unexpected account gate in public PDF build');

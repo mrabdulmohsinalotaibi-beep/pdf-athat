@@ -1,0 +1,88 @@
+// Opt-in background Web Push preferences, added to the existing prayer settings dialog.
+// Web Push delivers the default iOS notification sound; uploaded adhan/iqama audio cannot play in background.
+export async function mountPrayerBackgroundPush(){
+ const dialog=document.querySelector('.prayer-dialog');
+ if(!dialog||dialog.querySelector('[data-prayer-push]'))return;
+ const box=document.createElement('section');
+ box.dataset.prayerPush='true';box.className='prayer-sound-group';
+ const heading=document.createElement('h3');heading.textContent='📲 تنبيهات الصلاة والموقع مغلق';
+ const note=document.createElement('p');note.className='prayer-note';
+ note.textContent='تصل إشعارات النظام عند دخول الصلاة أو قبلها أو عند الإقامة حسب إعداداتك. صوت الإشعار من إعدادات الهاتف، ولا يشغّل الموقع الأذان كاملًا في الخلفية.';
+ const activate=document.createElement('button');activate.type='button';activate.className='prayer-primary';
+ activate.textContent='تفعيل / تحديث تنبيهات الخلفية';
+ const disable=document.createElement('button');disable.type='button';disable.className='prayer-secondary';
+ disable.textContent='إيقاف تنبيهات الخلفية على هذا الجهاز';
+ const message=document.createElement('p');message.className='prayer-feedback';message.setAttribute('role','status');
+ box.append(heading,note,activate,disable,message);
+ const actions=box.querySelectorAll('button');for(const b of actions)b.style.margin='4px';
+ dialog.querySelector('.prayer-dialog-actions')?.before(box);
+ if(!box.isConnected)dialog.append(box);
+ let publicKey=null;
+ const key='pdf-athat-prayer-city-v1',soundKey='pdf-athat-prayer-sound-v1';
+ const isGuest=window.__pdfGuestMode===true;
+ const json=async (path,body)=>{
+  const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(data.error||'تعذر الاتصال بخدمة التنبيهات');
+  return data;
+ };
+ try{
+  const response=await fetch('/api/prayer-push/config',{cache:'no-store'});
+  const result=await response.json();
+  if(result.ready&&typeof result.publicKey==='string')publicKey=result.publicKey;
+ }catch{}
+ function supported(){
+  if(isGuest){message.textContent='سجّل الدخول بحسابك لتفعيل إشعارات الخلفية.';return false}
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
+   message.textContent='هذا الجهاز لا يدعم Web Push؛ على الآيفون افتح الموقع من أيقونته المثبتة بالشاشة الرئيسية.';return false;
+  }
+  if(!publicKey){message.textContent='الخدمة قيد التجهيز؛ لا يمكن تفعيل التنبيهات بعد.';return false}
+  return true;
+ }
+ const decode=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
+ activate.onclick=async()=>{
+  if(!supported())return;
+  activate.disabled=true;message.textContent='جاري تفعيل إشعارات الخلفية...';
+  try{
+   const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+   if(permission!=='granted')throw Error('لم تسمح بإشعارات التطبيق من إعدادات الآيفون.');
+   const place=JSON.parse(localStorage.getItem(key)||'null');
+   if(!place||place.type!=='city'||place.country!=='SA'){
+    throw Error('اختر مدينة سعودية من قائمة مواقيت الصلاة أولًا، ثم احفظ المدينة.');
+   }
+   const settings=JSON.parse(localStorage.getItem(soundKey)||'null')||{};
+   const registration=await navigator.serviceWorker.ready;
+   let subscription=await registration.pushManager.getSubscription();
+   const desiredKey=decode(publicKey);
+   const currentKey=subscription?.options?.applicationServerKey;
+   if(subscription&&currentKey&&
+    (currentKey.byteLength!==desiredKey.byteLength||
+     Array.from(new Uint8Array(currentKey)).some((n,i)=>n!==desiredKey[i]))){
+    await subscription.unsubscribe();
+    subscription=null;
+   }
+   subscription=subscription||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:desiredKey});
+   await json('/api/prayer-push/subscribe',{subscription:subscription.toJSON(),city:place.city,country:'SA',
+    settings:{before:[0,5,10,15,30].includes(settings.before)?settings.before:0,
+     adhan:settings.adhan!==false,iqama:settings.iqama===true,
+     iqamaDelay:[5,10,15,20,30].includes(settings.iqamaDelay)?settings.iqamaDelay:10}
+   });
+   message.textContent='تم اشتراك هذا الجهاز. ستصل إشعارات الصلاة حتى لو كان الموقع مغلقًا، بحسب السماح بالوصول وإعدادات النظام.';
+  }catch(error){message.textContent='لم يكتمل التفعيل: '+(error?.message||'خطأ غير معروف')}
+  finally{activate.disabled=false}
+ };
+ disable.onclick=async()=>{
+  disable.disabled=true;
+  try{
+   const registration=await navigator.serviceWorker.ready;
+   const subscription=await registration.pushManager.getSubscription();
+   if(subscription){
+    await json('/api/prayer-push/unsubscribe',{subscription:subscription.toJSON()});
+    await subscription.unsubscribe();
+   }
+   message.textContent='توقفت تنبيهات الخلفية على هذا الجهاز.';
+  }catch(error){message.textContent='تعذر إيقاف التنبيهات: '+(error?.message||'خطأ غير معروف')}
+  finally{disable.disabled=false}
+ };
+ if(!publicKey)message.textContent='إشعارات الخلفية لم تُفعّل بعد على الخادم. بقية إعدادات الصوت تعمل أثناء فتح الموقع.';
+}
