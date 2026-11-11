@@ -1,5 +1,6 @@
 import { session } from '../../../server/auth.mjs';
 
+const VAPID_PUBLIC='BGreEmdlzlduyosK5xjI_L0f6ZVh8THnpDZ__ZYiZHLpxCTghB-O6qbYkolxg3w2UU_hwB-0zjterXnu-R5ap3Q';
 const json=(value,status=200)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 const cities=new Set(['Makkah','Jeddah','Madinah','Riyadh','Dammam','Taif','Tabuk','Abha','Jazan','Hail','Buraydah','Najran','Al Hofuf','Yanbu']);
 const before=new Set([0,5,10,15,30]),delay=new Set([5,10,15,20,30]);
@@ -19,9 +20,12 @@ export async function onRequest({request,env}){
  if(!env.PDF_AUTH_DB)return json({error:'خدمة الإشعارات غير متاحة'},503);
  const pathname=new URL(request.url).pathname;
  const action=pathname.replace(/^\/api\/prayer-push\/?/,'');
- if(request.method==='GET'&&action==='config'){
-  return json({publicKey:env.PRAYER_VAPID_PUBLIC||null,ready:!!env.PRAYER_VAPID_PUBLIC});
- }
+ let serviceReady=false;
+ try{
+  const live=await sql(env.PDF_AUTH_DB,"SELECT heartbeat_at FROM pdf_prayer_push_worker_status WHERE key='cron'").first();
+  serviceReady=!!live&&Date.now()/1000-Number(live.heartbeat_at)<300;
+ }catch{}
+ if(request.method==='GET'&&action==='config')return json({publicKey:VAPID_PUBLIC,ready:serviceReady});
  let user;
  try{user=await session(env.PDF_AUTH_DB,request)}catch{return json({error:'تعذر التحقق من الجلسة'},503)}
  if(!user?.id)return json({error:'سجّل الدخول لتفعيل إشعارات الصلاة في الخلفية'},401);
@@ -43,7 +47,7 @@ export async function onRequest({request,env}){
   return json({ok:true});
  }
  if(action!=='subscribe')return json({error:'الإجراء غير معروف'},404);
- if(!env.PRAYER_VAPID_PUBLIC)return json({error:'خدمة إشعارات الخلفية لم تُفعّل بعد'},503);
+ if(!serviceReady)return json({error:'خدمة إشعارات الخلفية لم تُفعّل بعد'},503);
  const keys=payload?.subscription?.keys||{};
  const city=payload?.city,country=payload?.country;
  const settings=payload?.settings||{};
