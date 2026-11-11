@@ -23,6 +23,7 @@ on:
       - 'index.html'
       - 'tests/header-layout.test.cjs'
       - 'tests/cover-quality.test.cjs'
+      - 'tests/device-layout.test.cjs'
       - 'style.css'
       - 'tests/reader-hardening.test.cjs'
       - 'legacy-import.js'
@@ -47,6 +48,8 @@ jobs:
         run: node --test tests/auth.test.mjs
       - name: Responsive header and original logo regression tests
         run: node --test tests/header-layout.test.cjs
+      - name: Phone tablet and desktop layout stability regression tests
+        run: node --test tests/device-layout.test.cjs
       - name: Sharp PDF covers and full-page preview regression tests
         run: node --test tests/cover-quality.test.cjs
       - name: Ad scheduling, access and safe rendering tests

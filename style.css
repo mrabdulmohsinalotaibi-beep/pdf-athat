@@ -851,3 +851,77 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 :root.sketch .library-page .library-cards.responsive-view .library-cover{
  background:#FFFFFF;
 }
+
+
+/* Stable three-device layout. Panels retain a predictable width; PDF pages
+   keep their own fit/zoom controls and aren't forced into a cropped CSS box. */
+:root{--athat-page-max:1180px;--athat-content-gutter:24px;--athat-control-height:44px}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;max-width:100%}
+body{min-width:0;max-width:100%;overflow-x:clip}
+#app,#app>.workspace,#app .main-panel,#app .library-page{min-width:0;max-width:100%}
+#app .library-content{
+ box-sizing:border-box;
+ width:100%;max-width:var(--athat-page-max);
+ margin-inline:auto;
+ padding-inline:var(--athat-content-gutter);
+ overflow-x:clip;
+}
+#app .library-content :is(.library-hero-modern,.library-search-row,.library-overview,.library-quick-actions,.library-files-section,.library-folders,.library-cards){max-width:100%;min-width:0}
+#app .library-content :is(.library-book-card,.library-book-open,.library-book-details,.library-overview-item,.library-hero-copy,.library-resume-details){min-width:0}
+#app .library-content :is(.library-book-name,.library-resume-name){overflow-wrap:anywhere;word-break:break-word}
+#app .library-content :is(input:not([type="checkbox"]),select,textarea){min-height:var(--athat-control-height);font-size:16px;line-height:1.4;max-width:100%;box-sizing:border-box}
+#app .library-content :is(button,.library-add,.library-quick-actions button){min-height:var(--athat-control-height)}
+#app .library-content .library-cards.responsive-view{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+#app .library-content .library-overview{grid-template-columns:repeat(4,minmax(0,1fr))}
+#app .library-content .library-quick-actions{gap:10px}
+#app>.appbar{box-sizing:border-box;max-width:100%;padding-inline:max(12px,calc((100vw - 1180px)/2))}
+#app>.appbar .header-actions{min-width:0;max-width:100%}
+#app .reader-topbar{max-width:100%;min-width:0}
+#app .reader-topbar button{flex-shrink:0}
+#app .viewer,#app .desk{max-width:100%}
+/* PDF rendering canvas retains exact original dimensions and reader zoom logic. */
+@media(min-width:1025px){
+ :root{--athat-page-max:1180px;--athat-content-gutter:24px}
+ #app .library-content .library-cards.responsive-view{grid-template-columns:repeat(4,minmax(0,1fr))}
+ #app .library-content .library-overview{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(min-width:641px) and (max-width:1024px){
+ :root{--athat-page-max:920px;--athat-content-gutter:18px}
+ #app .library-content{padding-top:18px}
+ #app .library-content .library-cards.responsive-view{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+ #app .library-content .library-overview{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+ #app .library-content .library-quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #app .library-content .library-quick-actions>*{min-width:0}
+ #app .library-content .library-hero-modern{min-height:180px}
+ #app>.appbar{padding-inline:14px}
+}
+@media(max-width:640px){
+ :root{--athat-page-max:100%;--athat-content-gutter:12px}
+ #app .library-content{padding-top:12px;padding-bottom:20px}
+ #app .library-content .library-cards.responsive-view{grid-template-columns:minmax(0,1fr);gap:9px}
+ #app .library-content .library-overview{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ #app .library-content .library-overview-item{min-height:76px;padding:8px 5px}
+ #app .library-content .library-quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ #app .library-content .library-quick-actions>*{min-width:0;width:100%;padding-inline:8px}
+ #app .library-content .library-cards.responsive-view .library-book-open{padding:10px;gap:9px}
+ #app .library-content .library-cards.responsive-view .library-cover{width:72px;height:96px;flex:none}
+ #app .library-content .library-hero-modern{min-height:0;padding:14px;gap:10px}
+ #app .library-content .library-hero-modern h1{font-size:clamp(20px,5.5vw,26px);line-height:1.45}
+ #app .library-content .library-hero-modern p{font-size:12px;line-height:1.65}
+ #app .library-content .library-search-row{width:100%}
+ #app>.appbar{padding-inline:10px}
+ #app>.appbar .header-actions{overflow-x:auto}
+ #app .library-bottom-nav{min-height:64px;gap:3px}
+ #app .library-bottom-nav button{flex:1;min-width:0;max-width:90px;padding-inline:2px}
+ #app .library-bottom-nav button small{font-size:10px}
+ #app .reader-topbar{max-width:100%;padding-inline:6px;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none}
+ #app .reader-topbar::-webkit-scrollbar{display:none}
+}
+@media(max-width:360px){
+ #app .library-content .library-cards.responsive-view{gap:7px}
+ #app .library-content .library-cards.responsive-view .library-cover{height:86px;width:64px}
+ #app .library-content .library-quick-actions{gap:6px}
+}
+
+/* Small landscape phones must keep readable book rows without side scrolling. */
+@media(min-width:641px) and (max-width:700px){#app .library-content .library-cards.responsive-view{grid-template-columns:minmax(0,1fr)}}
