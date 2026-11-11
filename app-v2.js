@@ -19,6 +19,8 @@ function applyDesktopReader(){
  $("viewer").classList.toggle("desktop-expanded",enabled);
  $("viewer").classList.toggle("desktop-auto-hide",enabled&&desktopReaderSettings.autoHide);
  $("viewer").classList.toggle("desktop-single",enabled&&desktopSingle());
+ // Keep fit-to-page mode fixed; permit scrollbars only after explicit zoom.
+ $("viewer").classList.toggle("reader-zoomed",enabled&&readerZoom>1.001&&!readerEditing);
 }
 function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open(window.__pdfAccountId?"pdf-athat-account-"+window.__pdfAccountId:(window.__pdfGuestDBName||"pdf-athat-v1"),1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains("documents"))r.result.createObjectStore("documents",{keyPath:"id"});if(!r.result.objectStoreNames.contains("strokes"))r.result.createObjectStore("strokes",{keyPath:"id"})};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
 function tx(stores,mode,fn){return new Promise((ok,no)=>{const t=db.transaction(stores,mode);let result;const r=fn(t);if(r&&"onsuccess"in r)r.onsuccess=()=>result=r.result;t.oncomplete=()=>ok(result);t.onerror=()=>no(t.error);t.onabort=()=>no(t.error||Error("Transaction aborted"))})}
