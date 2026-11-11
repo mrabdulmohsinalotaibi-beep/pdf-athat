@@ -1,18 +1,22 @@
-# Background prayer reminders
-Web Push notifications are **opt-in** per registered account and device. Guest mode has no background push. On iPhone, the website must be added to Home Screen (iOS 16.4+).
+# إشعارات الصلاة في الخلفية — PDF.ATHAT
 
-Files: `functions/api/prayer-push/[[path]].js` (authenticated subscriptions), `prayer-background-push.js` (settings), generated `sw.js` (push handler), `workers/prayer-push-worker.mjs` (Cloudflare Worker scheduled once per minute). Files are never read or uploaded.
+هذه إضافة اختيارية لمستخدمي الموقع المسجلين. ملفات PDF والملاحظات تظل محفوظة محليًا ولا تقرؤها خدمة الإشعارات.
 
-Required configuration:
-1. Apply `migrations/0010_prayer_push.sql` **once** to the existing `PDF_AUTH_DB` D1 database.
-2. Put the base64url VAPID public key in the `PRAYER_VAPID_PUBLIC` environment variable of the Pages production and preview configurations (public, no secret). Keep the matching private JWK only in the scheduled Worker's `PRAYER_VAPID_PRIVATE_JWK` encrypted secret.
-3. Deploy the Worker with `PDF_AUTH_DB` binding to the existing D1 database, and configure a `*/1 * * * *` Cron Trigger (UTC).
-4. Test a full subscription and a near-due test on an installed iPhone PWA. Push delivery and sound are subject to device connectivity and notification settings.
+## الإعداد الحالي
 
-Privacy and safety:
-- Push endpoints and keys are stored in D1 only after an explicit click.
-- API requires the authenticated session for subscribe/unsubscribe.
-- Endpoints are restricted to known push-service domains.
-- Maximum 6 devices per account; no PDF contents in the push system.
-- Users can unsubscribe each device. The iPhone notification sound is chosen by the OS; uploaded audio only plays when the page is open.
-- The scheduler stores a deduplication key and caches daily city timings.
+- Web Push VAPID: تم توليد زوج مفاتيح جديد في Cloudflare. المفتاح الخاص في Secret باسم `PRAYER_VAPID_PRIVATE_JWK` داخل Worker `pdf-athat-prayer-push` فقط، والمفتاح العام في API للموقع وفي إعداد Worker.
+- D1: جداول `migrations/0010_prayer_push.sql` مستقلة في قاعدة `PDF_AUTH_DB`، وتشمل نبضة صحة لجدولة Worker.
+- Cron: `* * * * *` (مرة كل دقيقة). بعد تشغيل المهمة تحفظ نبضة `pdf_prayer_push_worker_status`. يرفض API الاشتراك إذا لم يكن Worker يعمل مؤخرًا.
+- Safari iOS: يتطلب iOS 16.4 أو أحدث، وإضافة موقع PDF.ATHAT إلى الشاشة الرئيسية، والسماح بالإشعارات.
+- انقر «تفعيل / تحديث تنبيهات الخلفية» داخل إعدادات شريط الصلاة. يمكن إلغاء تنبيه الجهاز من المكان نفسه.
+- إشعارات النظام لا تدعم تشغيل ملف أذان مخصص كامل تلقائيًا عند إغلاق الموقع. الأصوات المحلية تعمل أثناء فتح الصفحة فقط.
+- مواقيت السعودية تستند إلى AlAdhan method=4. تحقق من فروق تقويم أم القرى ومواقيت المساجد قبل الاعتماد عليها للأذان الرسمي.
+- حد الاشتراكات: 6 أجهزة للحساب. أوقات التنبيه تُخزن في الاشتراك، وتحديثها يتطلب إعادة الضغط على تفعيل/تحديث.
+- لا تخزن الخدمة الكتب أو المستندات أو محتوى الملاحظات.
+
+## فحوص الإطلاق
+
+1. `node --test tests/prayer-background-push.test.mjs tests/prayer-webpush-crypto.test.mjs`
+2. بناء Cloudflare Pages (يشغّل هذه الاختبارات تلقائيًا).
+3. التأكد من نبضة Worker في D1، ثم التأكد من نجاح اشتراك Safari المثبت وإشعار حقيقي.
+4. راجع حدود الإرسال وحالات انتهاء الاشتراك (404/410) والعدّاد المنفصل لكل حدث.
