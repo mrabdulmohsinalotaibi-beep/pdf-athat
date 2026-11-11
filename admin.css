@@ -179,3 +179,85 @@ textarea{resize:vertical;min-height:85px}
 .traffic-fill{background:var(--wine);height:100%;border-radius:99px}
 @media(max-width:950px){.traffic-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:620px){.traffic-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.traffic-grids{grid-template-columns:1fr}.traffic-chart{height:145px;gap:2px}.traffic-stat{padding:11px 5px}}
+
+
+/* 2026-11: stable three-class UI system (phone <=640, tablet 641–1024, desktop >=1025).
+   Never scale the entire page; keep normal browser text zoom and allow content wrapping. */
+:root{--ui-control-height:44px;--ui-radius:13px;--ui-gap:12px}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-width:0;overflow-x:clip}
+body>.bar{min-height:66px}
+body>.container{width:100%;max-width:1180px;margin:20px auto;padding-inline:20px}
+body>.container :is(.panel,.auth-info,.account-profile,.account-field,.account-setting,.traffic-panel){min-width:0;max-width:100%}
+body>.container :is(h1,h2,h3,p,small,strong,span,label,a,summary){overflow-wrap:anywhere}
+body>.container :is(input:not([type="checkbox"]),textarea,select){min-height:var(--ui-control-height);max-width:100%;font-size:16px;line-height:1.45}
+body>.container :is(button,.account-actions a,.account-actions button,.admin-login-link){min-height:var(--ui-control-height);line-height:1.5}
+body>.container :is(.stats .panel,.traffic-stat){min-height:108px}
+body>.container .tableWrap{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain}
+/* Account forms should be single-purpose fixed-width panels even on large monitors. */
+body>.container.auth-layout{max-width:1000px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+body>.container.auth-layout>.auth-info{max-width:100%;padding:16px}
+body>.container.auth-layout :is(.auth-box,.account-profile){width:100%;padding:20px}
+body>.container.auth-layout .account-profile .account-data{grid-template-columns:minmax(0,1fr)}
+body>.container.auth-layout .account-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+body>.container.auth-layout .account-stats>div{min-height:100px;justify-content:center}
+body>.container.auth-layout .account-field strong{font-size:15px;line-height:1.6;overflow-wrap:anywhere;word-break:break-word}
+body>.container.auth-layout .account-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+body>.container.auth-layout .account-actions a{min-height:48px}
+body>.container.auth-layout .account-setting form{min-width:0}
+body>.container.auth-layout .tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+body>.container.auth-layout .tabs button{min-width:0;padding:8px 6px;white-space:normal}
+body>.container.auth-layout .account-delete-dialog{max-width:100%}
+@media(min-width:1025px){
+ body>.container{max-width:1180px;padding-inline:24px}
+ body>.container.auth-layout{max-width:1000px}
+ body>.container .stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+ body>.container .traffic-stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+ body>.container .admin-side{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:641px) and (max-width:1024px){
+ body>.container{max-width:920px;padding-inline:20px;margin:18px auto}
+ body>.container.auth-layout{max-width:920px;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:14px}
+ body>.container.auth-layout>.auth-info{padding:12px}
+ body>.container.auth-layout :is(.auth-box,.account-profile){padding:18px}
+ body>.container .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+ body>.container .traffic-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+ body>.container .sections{grid-template-columns:minmax(0,1fr)}
+ body>.container .admin-side{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:640px){
+ body>.bar{padding:10px 12px;min-height:60px;gap:8px}
+ body>.bar :is(.brand,.bar-links){min-width:0}
+ body>.bar .brand strong{font-size:16px}
+ body>.container{max-width:100%;padding-inline:12px;margin:12px auto}
+ body>.container.auth-layout{grid-template-columns:minmax(0,1fr);gap:12px}
+ body>.container.auth-layout>.auth-info{padding:8px 4px}
+ body>.container.auth-layout .auth-info h1{font-size:26px;line-height:1.5}
+ body>.container.auth-layout :is(.auth-box,.account-profile){padding:15px}
+ body>.container.auth-layout .account-profile .account-heading{align-items:flex-start}
+ body>.container.auth-layout .account-profile h2{font-size:21px}
+ body>.container.auth-layout .account-stats{gap:7px}
+ body>.container.auth-layout .account-stats>div{min-height:89px;padding:8px 3px}
+ body>.container.auth-layout .account-stats strong{font-size:21px}
+ body>.container.auth-layout .account-actions{gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+ body>.container.auth-layout .account-actions a{font-size:12px}
+ body>.container.auth-layout .tabs button{font-size:12px}
+ body>.container .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body>.container .stat-card{min-height:108px}
+ body>.container .traffic-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ body>.container .sections,.admin-side{grid-template-columns:minmax(0,1fr)}
+ body>.container .admin-side #transferPanel{grid-column:auto}
+ body>.container .ad-form-grid,.traffic-grids{grid-template-columns:minmax(0,1fr)}
+ body>.container .heading-actions{width:100%}
+ body>.container .search-controls{display:flex;flex-wrap:wrap}
+ body>.container .search-controls input{flex:1 1 100%}
+ body>.container .search-controls button{flex:1 1 120px;width:auto}
+ body>.container .panel{padding:15px}
+ body>.container .tableWrap{max-width:100%}
+}
+@media(max-width:360px){
+ body>.container.auth-layout .account-actions{grid-template-columns:minmax(0,1fr)}
+ body>.container.auth-layout .account-actions .logout-action{grid-column:auto}
+ body>.container.auth-layout .tabs{gap:4px}
+ body>.container.auth-layout .tabs button{font-size:11px}
+}
