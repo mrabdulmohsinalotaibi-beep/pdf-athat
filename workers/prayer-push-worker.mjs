@@ -89,6 +89,7 @@ export function eventsFor(row,times,day,now){
 export async function processMinute(env,now=Date.now()){
  if(!env.PDF_AUTH_DB||!env.PRAYER_VAPID_PRIVATE_JWK||!env.PRAYER_VAPID_PUBLIC)throw Error('push_config_missing');
  const db=env.PDF_AUTH_DB,day=isoDate(now);
+ await db.prepare("INSERT INTO pdf_prayer_push_worker_status(key,heartbeat_at) VALUES('cron',?) ON CONFLICT(key) DO UPDATE SET heartbeat_at=excluded.heartbeat_at").bind(Math.floor(now/1000)).run();
  const subscriptionRows=await db.prepare('SELECT id,endpoint,p256dh,auth,city,before_minutes,adhan,iqama,iqama_delay FROM pdf_prayer_push_subscriptions WHERE enabled=1 LIMIT 500').all();
  const rows=subscriptionRows.results||[];
  const cities=[...new Set(rows.map(r=>r.city))],schedules=new Map();
