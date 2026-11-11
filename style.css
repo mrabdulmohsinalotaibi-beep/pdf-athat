@@ -990,7 +990,7 @@ body{min-width:0;max-width:100%;overflow-x:clip}
 /* Reader fix: zoomed pages must remain fully scrollable, including top and bottom.
    Override the former centered/overflow:hidden desktop fit layout only when reading. */
 @media (min-width:900px) and (pointer:fine) {
- .reader-open .viewer.desktop-expanded.reading-mode:not([data-reader-mode="grid"]):not([data-reader-mode="vertical"]) .desk{
+ .reader-open .viewer.desktop-expanded.reader-zoomed.reading-mode:not([data-reader-mode="grid"]):not([data-reader-mode="vertical"]) .desk{
   display:block!important;
   overflow-x:auto!important;
   overflow-y:auto!important;
@@ -1001,18 +1001,18 @@ body{min-width:0;max-width:100%;overflow-x:clip}
   overscroll-behavior:contain;
   scrollbar-gutter:stable;
  }
- .reader-open .viewer.desktop-expanded.reading-mode:not([data-reader-mode="grid"]):not([data-reader-mode="vertical"]) .continuous-pages{
+ .reader-open .viewer.desktop-expanded.reader-zoomed.reading-mode:not([data-reader-mode="grid"]):not([data-reader-mode="vertical"]) .continuous-pages{
   display:flex;
   width:max-content!important;
   min-width:100%!important;
   height:max-content!important;
-  min-height:calc(100% - 100px)!important;
+  min-height:0!important;
   margin-inline:auto;
   padding:0!important;
   align-items:center;
   justify-content:center;
  }
- .reader-open .viewer.desktop-single.reading-mode .continuous-pages .read-page{
+ .reader-open .viewer.desktop-single.reader-zoomed.reading-mode .continuous-pages .read-page{
   max-width:none!important;
   max-height:none!important;
   flex-shrink:0;
