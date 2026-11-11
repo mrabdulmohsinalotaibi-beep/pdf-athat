@@ -32,3 +32,8 @@ CREATE TABLE IF NOT EXISTS pdf_prayer_push_times (
  timings TEXT NOT NULL,
  created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS pdf_prayer_push_worker_status (
+ key TEXT PRIMARY KEY,
+ heartbeat_at INTEGER NOT NULL
+);
