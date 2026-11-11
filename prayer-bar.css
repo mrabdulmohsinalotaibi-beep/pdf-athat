@@ -90,3 +90,18 @@
 .prayer-sound-file{font-size:12px;flex:1 1 100%}
 .prayer-sound-file input{display:block;margin-top:5px;max-width:100%;font-size:12px}
 .prayer-sound-upload button{flex:1 1 100px;min-height:36px;padding:7px 9px}
+
+/* More usable prayer action targets while keeping the strip compact. */
+@media(min-width:981px){
+ #app .prayer-bar :is(.prayer-settings,.prayer-notify-test,.prayer-dismiss){
+  min-width:38px;min-height:38px;border-radius:10px;font-size:19px;
+ }
+}
+@media(min-width:461px) and (max-width:980px){
+ #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 38px 38px 38px}
+ #app .prayer-bar :is(.prayer-settings,.prayer-notify-test,.prayer-dismiss){min-width:38px;min-height:38px}
+}
+@media(max-width:460px){
+ #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 34px 34px 34px}
+ #app .prayer-bar :is(.prayer-settings,.prayer-notify-test,.prayer-dismiss){min-width:34px;min-height:34px}
+}
