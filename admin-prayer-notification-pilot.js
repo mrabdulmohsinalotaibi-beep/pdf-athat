@@ -10,7 +10,6 @@ export function mountPrayerNotificationTest(){
  button.textContent='🔔';
  button.title='تجربة إشعار الصلاة';
  button.setAttribute('aria-label','تجربة إشعار الصلاة');
- button.style.cssText='flex:0 0 auto;min-width:36px;min-height:36px;';
  const status=document.createElement('span');
  status.setAttribute('role','status');
  status.setAttribute('aria-live','polite');
