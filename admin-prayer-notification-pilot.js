@@ -6,7 +6,7 @@ export function mountPrayerNotificationTest(){
  const button=document.createElement('button');
  button.type='button';
  button.dataset.prayerNotifyTest='true';
- button.className='prayer-settings';
+ button.className='prayer-notify-test';
  button.textContent='🔔';
  button.title='تجربة إشعار الصلاة';
  button.setAttribute('aria-label','تجربة إشعار الصلاة');
