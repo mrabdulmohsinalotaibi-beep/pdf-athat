@@ -20,8 +20,11 @@ function fixture(user){
   return fields.get(id);
  };
  const tabs=['login','signup','recover'].map(tab=>({dataset:{tab},setAttribute(){},onclick:null}));
+ const classes=new Set();
+ const layout={classList:{add(value){classes.add(value)},remove(value){classes.delete(value)},contains(value){return classes.has(value)}}};
  const doc={
   getElementById:node,
+  querySelector(selector){return selector==='.auth-layout'?layout:null},
   querySelectorAll(){return tabs},
   createElement(name){const el=node('generated-'+name+'-'+fields.size);el.tagName=name;return el}
  };
@@ -40,8 +43,21 @@ function fixture(user){
  };
  vm.runInNewContext(source,sandbox,{filename:'account.js'});
  const settle=async()=>{await new Promise(resolve=>setImmediate(resolve));await new Promise(resolve=>setImmediate(resolve))};
- return {node,redirects,requests,settle,localValues};
+ return {node,redirects,requests,settle,localValues,layout};
 }
+test('account view becomes a full-width profile, while sign-out restores the normal login layout',async()=>{
+ const user={id:'reader-profile',username:'reader',email:'reader@example.com',role:'user'};
+ const f=fixture(user);await f.settle();
+ assert.equal(f.layout.classList.contains('profile-active'),true);
+ await f.node('profileLogout').onclick();
+ assert.equal(f.layout.classList.contains('profile-active'),false);
+ assert.equal(f.node('authPane').hidden,false);
+ assert.equal(f.node('profilePane').hidden,true);
+});
+test('visitor login retains promotional split, not the personal profile layout',async()=>{
+ const f=fixture(null);await f.settle();
+ assert.equal(f.layout.classList.contains('profile-active'),false);
+});
 test('signed-in ordinary user gets personal account page, not login or redirect',async()=>{
  const user={id:'user-id-01',username:'reader5',email:'reader@example.com',role:'user'};
  const f=fixture(user);await f.settle();
