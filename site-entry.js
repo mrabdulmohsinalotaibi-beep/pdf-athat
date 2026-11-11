@@ -62,6 +62,8 @@
   }
   await import('./app-v2.js');
   import('./prayer-bar.js').catch(()=>{});
+  // Pilot is visible only after server-verified admin role; never enabled for guests.
+  if(user?.role==='admin')import('./admin-prayer-notification-pilot.js').then(m=>m.mountAdminPrayerNotificationPilot(user)).catch(()=>{});
   import('./site-ads.js').catch(()=>{});
   // Never copy a registered user's library into the anonymous guest library.
   if(user){
