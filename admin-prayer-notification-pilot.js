@@ -8,18 +8,28 @@ export function mountPrayerNotificationTest(){
  button.dataset.prayerNotifyTest='true';
  button.className='prayer-notify-test';
  button.textContent='🔔';
- button.title='اختبار إشعار على هذا الجهاز (لا يختبر الإرسال الخلفي)';
- button.setAttribute('aria-label','تجربة إشعار محلي؛ الإشعارات الخلفية من إعدادات الصلاة');
- const status=document.createElement('span');
- status.setAttribute('role','status');
- status.setAttribute('aria-live','polite');
- status.style.cssText='display:block;width:100%;font-size:12px;color:#780000;text-align:right;padding:2px 8px;';
- // Place the bell next to prayer settings, not in the global header.
+ button.title='إعدادات إشعارات الصلاة';
+ button.setAttribute('aria-label','فتح إعدادات إشعارات الصلاة');
+ // One compact bell in the strip. The test stays inside the existing settings dialog.
  const settings=bar.querySelector('.prayer-settings');
  if(settings)settings.insertAdjacentElement('beforebegin',button);
  else bar.append(button);
- bar.insertAdjacentElement('afterend',status);
- button.addEventListener('click',async()=>{
+ const dialog=document.querySelector('.prayer-dialog');
+ const testSection=document.createElement('section');
+ testSection.className='prayer-sound-group';
+ const testButton=document.createElement('button');
+ testButton.type='button';testButton.className='prayer-secondary';
+ testButton.textContent='🔔 تجربة إشعار النظام (اختبار محلي)';
+ const status=document.createElement('p');
+ status.className='prayer-feedback';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+ testSection.append(testButton,status);
+ dialog?.querySelector('.prayer-dialog-actions')?.before(testSection);
+ if(dialog&&!testSection.isConnected)dialog.append(testSection);
+ button.addEventListener('click',()=>{
+  if(dialog?.open){dialog.querySelector('[data-prayer-push]')?.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  else settings?.click();
+ });
+ testButton.addEventListener('click',async()=>{
   status.textContent='';
   if(!('Notification' in window)||!('serviceWorker' in navigator)){
    status.textContent='إشعارات الويب غير مدعومة هنا؛ على الآيفون أضف الموقع إلى الشاشة الرئيسية وافتحه من أيقونته.';
