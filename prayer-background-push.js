@@ -20,20 +20,14 @@ export async function mountPrayerBackgroundPush(){
  let publicKey=null;
  const key='pdf-athat-prayer-city-v1',soundKey='pdf-athat-prayer-sound-v1';
  const isGuest=window.__pdfGuestMode===true;
- const prayerBar=document.querySelector('.prayer-bar');
- const shortcut=document.createElement('button');shortcut.type='button';shortcut.className='prayer-settings';
- shortcut.textContent='🔔 تفعيل الإشعارات';shortcut.title='تفعيل تنبيهات الصلاة حتى والتطبيق مغلق';
- shortcut.setAttribute('aria-label','تفعيل إشعارات الصلاة في الخلفية');
- prayerBar?.querySelector('.prayer-settings')?.before(shortcut);
- shortcut.addEventListener('click',()=>activate.click());
 
  const deviceStatus=document.createElement('p');deviceStatus.className='prayer-feedback';deviceStatus.setAttribute('role','status');box.insertBefore(deviceStatus,activate);
  const refreshDeviceStatus=async()=>{
   if(!('serviceWorker' in navigator)||!('PushManager' in window)){
    deviceStatus.textContent='حالة الجهاز: إشعارات الخلفية غير مدعومة هنا؛ على الآيفون ثبّت الموقع على الشاشة الرئيسية.';
-   shortcut.textContent='🔔 غير مدعوم';return;
+   return;
   }
-  if(isGuest){deviceStatus.textContent='حالة الجهاز: وضع الزائر. سجّل الدخول لتفعيل إشعارات الخلفية.';shortcut.textContent='🔔 تسجيل الدخول';return}
+  if(isGuest){deviceStatus.textContent='حالة الجهاز: وضع الزائر. سجّل الدخول لتفعيل إشعارات الخلفية.';return}
   try{
    const registration=await navigator.serviceWorker.ready;
    const sub=await registration.pushManager.getSubscription();
@@ -46,11 +40,8 @@ export async function mountPrayerBackgroundPush(){
    deviceStatus.textContent=active?
     'حالة الجهاز: مفعّل لدى خادم التنبيهات. تصل إشعارات الصلاة والتطبيق مغلق وفق إعدادات الجهاز.':
     'حالة الجهاز: لم يكتمل ربط هذا الآيفون بالخادم. اضغط تفعيل الإشعارات.';
-   shortcut.textContent=active?'🔔 الإشعارات مفعّلة':'🔔 تفعيل الإشعارات';
-   shortcut.title=active?'إدارة إشعارات الصلاة في الخلفية':'تفعيل تنبيهات الصلاة حتى والتطبيق مغلق';
   }catch{
    deviceStatus.textContent='تعذر التأكد من حالة الإشعارات على الخادم. افتح إعدادات الصلاة وحاول التفعيل.';
-   shortcut.textContent='🔔 فحص التنبيهات';
   }
  };
 
