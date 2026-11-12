@@ -27,7 +27,7 @@ export async function mountPrayerBackgroundPush(){
   }
   if(isGuest){deviceStatus.textContent='حالة الجهاز: وضع الزائر. سجّل الدخول لتفعيل إشعارات الخلفية.';return;}
   try{const r=await navigator.serviceWorker.ready;const subscription=await r.pushManager.getSubscription();
-   deviceStatus.textContent=subscription?'حالة الجهاز: يوجد اشتراك إشعارات على هذا الآيفون. اضغط تحديث عند تغيير المدينة أو التنبيهات.':'حالة الجهاز: لم يتم تفعيل إشعارات الخلفية بعد. اضغط زر التفعيل أدناه.';
+   deviceStatus.textContent=subscription?'حالة الجهاز: يوجد اشتراك Push على الآيفون. اضغط «تحديث» لضمان مزامنته مع المدينة وإعدادات الخادم.':'حالة الجهاز: لم يتم تفعيل إشعارات الخلفية بعد. اضغط زر التفعيل أدناه.';
   }catch{deviceStatus.textContent='تعذر قراءة حالة الاشتراك. حدّث التطبيق وحاول مرة أخرى.';}
  };
  const json=async (path,body)=>{
@@ -56,8 +56,8 @@ export async function mountPrayerBackgroundPush(){
   try{
    const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
    if(permission!=='granted')throw Error('لم تسمح بإشعارات التطبيق من إعدادات الآيفون.');
-   const place=JSON.parse(localStorage.getItem(key)||'null');
-   if(!place||place.type!=='city'||place.country!=='SA'){
+   const place=JSON.parse(localStorage.getItem(key)||'null')||{type:'city',city:'Makkah',country:'SA'};
+   if(place.type!=='city'||place.country!=='SA'){
     throw Error('اختر مدينة سعودية من قائمة مواقيت الصلاة أولًا، ثم احفظ المدينة.');
    }
    const settings=JSON.parse(localStorage.getItem(soundKey)||'null')||{};
