@@ -8,8 +8,8 @@ export function mountPrayerNotificationTest(){
  button.dataset.prayerNotifyTest='true';
  button.className='prayer-notify-test';
  button.textContent='🔔';
- button.title='تجربة إشعار الصلاة';
- button.setAttribute('aria-label','تجربة إشعار الصلاة');
+ button.title='اختبار إشعار على هذا الجهاز (لا يختبر الإرسال الخلفي)';
+ button.setAttribute('aria-label','تجربة إشعار محلي؛ الإشعارات الخلفية من إعدادات الصلاة');
  const status=document.createElement('span');
  status.setAttribute('role','status');
  status.setAttribute('aria-live','polite');
@@ -33,10 +33,10 @@ export function mountPrayerNotificationTest(){
    }
    const registration=await navigator.serviceWorker.ready;
    await registration.showNotification('PDF.ATHAT · تجربة إشعار الصلاة',{
-    body:'وصل إشعار تجريبي بنجاح. الإشعارات التلقائية عند دخول وقت الصلاة غير مفعلة بعد.',
+    body:'اختبار محلي ناجح. لتشغيل تنبيهات الصلاة والتطبيق مغلق افتح إعدادات الصلاة وفعّل تنبيهات الخلفية.',
     icon:'./icon.svg',badge:'./icon.svg',tag:'pdf-athat-prayer-test'
    });
-   status.textContent='تم إرسال إشعار تجريبي إلى نظام الجهاز. تحقق من مركز الإشعارات.';
+   status.textContent='نجح الاختبار المحلي فقط. لتفعيل الإشعارات أثناء إغلاق التطبيق افتح ⚙ إعدادات الصلاة ثم اضغط «تفعيل / تحديث تنبيهات الخلفية».';
   }catch(error){
    status.textContent='تعذر إرسال الإشعار: '+(error?.message||'خطأ غير معروف');
   }
