@@ -73,6 +73,23 @@
  iqamaSelect.value=String(soundOptions.iqamaDelay);
  const iqamaDelayLabel=el('label','prayer-sound-field','وقت الإقامة التقريبي (قابل للتعديل، وليس وقت المسجد الرسمي)');
  iqamaDelayLabel.append(iqamaSelect);
+ const adhanPresetGroup=el('section','prayer-sound-group');
+ const presetHeading=el('h3','','🕌 أصوات الأذان الجاهزة');
+ const presetNote=el('p','prayer-note','اختر أذان مكة أو المدينة واستمع إليه. التسجيلات تُشغَّل عبر الإنترنت من مكتبة مواقيت؛ يمكن إبقاء صوتك الخاص. عند إغلاق تطبيق الآيفون تستخدم إشعارات الدفع صوت النظام فقط.');
+ const presetLabel=el('label','prayer-sound-field','اختر صوت الأذان');
+ const presetSelect=el('select','prayer-select');
+ for(const [value,label] of [['custom','الصوت الخاص الذي رفعته'],['makkah','أذان مكة المكرمة — الحرم المكي'],['madinah','أذان المدينة المنورة — المسجد النبوي'],['default','النغمة القصيرة الافتراضية']]){
+  const option=el('option','',label);option.value=value;presetSelect.append(option);
+ }
+ presetSelect.value=['custom','makkah','madinah','default'].includes(soundOptions.adhanPreset)?soundOptions.adhanPreset:'custom';
+ presetLabel.append(presetSelect);
+ const presetPreview=el('button','prayer-secondary','▶ استمع إلى الأذان المختار');
+ presetPreview.type='button';
+ adhanPresetGroup.append(presetHeading,presetNote,presetLabel,presetPreview);
+ const presetUrls=Object.freeze({
+  makkah:'https://cdn.mawaqit.net/audio/adhan-maquah.mp3',
+  madinah:'https://cdn.mawaqit.net/audio/adhan-madina.mp3'
+ });
  const soundFiles=el('div','prayer-sound-files');
  const audioStatus=el('p','prayer-feedback','');
  const soundCache={adhan:null,iqama:null};
@@ -98,6 +115,14 @@
    if(activeAudio){activeAudio.pause();activeAudio=null}
    const Ctor=window.AudioContext||window.webkitAudioContext;
    if(Ctor){audioContext=audioContext||new Ctor();await audioContext.resume()}
+   const preset=mode==='adhan'?presetSelect.value:null;
+   if(preset&&presetUrls[preset]){
+    const audio=new Audio(presetUrls[preset]);audio.preload='auto';activeAudio=audio;
+    audio.onerror=()=>{if(activeAudio===audio)activeAudio=null;audioStatus.textContent='تعذّر تحميل أذان الحرمين. تحقق من الاتصال بالإنترنت أو استخدم رفع ملف صوتي.'};
+    audio.onended=()=>{if(activeAudio===audio)activeAudio=null};
+    await audio.play();
+    return;
+   }
    const sound=soundCache[mode];
    if(sound instanceof Blob&&sound.size){
     const url=URL.createObjectURL(sound);
@@ -139,14 +164,16 @@
   erase.onclick=async()=>{try{const db=await openSoundDB();await new Promise((resolve,reject)=>{const tx=db.transaction('sounds','readwrite');tx.objectStore('sounds').delete(mode);tx.oncomplete=resolve;tx.onerror=reject});db.close();soundCache[mode]=null;audioStatus.textContent='تم حذف صوت '+soundNames[mode]+'، وستستخدم النغمة القصيرة بدلًا منه.'}catch{audioStatus.textContent='تعذر حذف الصوت'}};
   row.append(uploadLabel,test,erase);soundFiles.append(row);
  }
+ presetPreview.onclick=async()=>{soundUnlocked=true;await playSound('adhan')};
+ presetSelect.addEventListener('change',()=>{if(activeAudio){activeAudio.pause();activeAudio=null}saveSoundOptions()});
  function saveSoundOptions(){
   if(audioSwitch.checked){soundUnlocked=true;const Ctor=window.AudioContext||window.webkitAudioContext;if(Ctor){audioContext=audioContext||new Ctor();audioContext.resume().catch(()=>{})}}
-  soundOptions={enabled:audioSwitch.checked,before:Number(beforeSelect.value),adhan:adhanSwitch.checked,iqama:iqamaSwitch.checked,iqamaDelay:Number(iqamaSelect.value)};
+  soundOptions={enabled:audioSwitch.checked,before:Number(beforeSelect.value),adhan:adhanSwitch.checked,iqama:iqamaSwitch.checked,iqamaDelay:Number(iqamaSelect.value),adhanPreset:presetSelect.value};
   localStorage.setItem(soundKey,JSON.stringify(soundOptions));
   if(!soundOptions.enabled&&activeAudio){activeAudio.pause();activeAudio=null}
  }
  for(const control of [audioSwitch,beforeSelect,adhanSwitch,iqamaSwitch,iqamaSelect])control.addEventListener('change',saveSoundOptions);
- soundGroup.append(soundHeading,soundNote,audioLabel,beforeLabel,adhanLabel,iqamaLabel,iqamaDelayLabel,soundFiles,audioStatus);
+ soundGroup.append(soundHeading,soundNote,audioLabel,beforeLabel,adhanLabel,iqamaLabel,iqamaDelayLabel,adhanPresetGroup,soundFiles,audioStatus);
  const locationButton=el('button','prayer-secondary','استخدام موقعي بإذني');locationButton.type='button';
  const saveButton=el('button','prayer-primary','حفظ المدينة');saveButton.type='button';
  const cancelButton=el('button','prayer-secondary','إلغاء');cancelButton.type='button';
