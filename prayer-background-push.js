@@ -7,7 +7,7 @@ export async function mountPrayerBackgroundPush(){
  box.dataset.prayerPush='true';box.className='prayer-sound-group';
  const heading=document.createElement('h3');heading.textContent='📲 تنبيهات الصلاة والموقع مغلق';
  const note=document.createElement('p');note.className='prayer-note';
- note.textContent='تصل إشعارات النظام عند دخول الصلاة أو قبلها أو عند الإقامة حسب إعداداتك. صوت الإشعار من إعدادات الهاتف، ولا يشغّل الموقع الأذان كاملًا في الخلفية.';
+ note.textContent='بعد تفعيل هذا الجهاز تصل تنبيهات الصلاة حتى عند إغلاق التطبيق، حسب سماح الآيفون وإعداداتك. يستخدم تنبيه النظام صوته الافتراضي، وليس ملف الأذان المحفوظ محليًا.';
  const activate=document.createElement('button');activate.type='button';activate.className='prayer-primary';
  activate.textContent='تفعيل / تحديث تنبيهات الخلفية';
  const disable=document.createElement('button');disable.type='button';disable.className='prayer-secondary';
@@ -20,6 +20,16 @@ export async function mountPrayerBackgroundPush(){
  let publicKey=null;
  const key='pdf-athat-prayer-city-v1',soundKey='pdf-athat-prayer-sound-v1';
  const isGuest=window.__pdfGuestMode===true;
+ const deviceStatus=document.createElement('p');deviceStatus.className='prayer-feedback';deviceStatus.setAttribute('role','status');box.insertBefore(deviceStatus,activate);
+ const refreshDeviceStatus=async()=>{
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){
+   deviceStatus.textContent='حالة الجهاز: لا يدعم إشعارات الخلفية في هذا المتصفح. في الآيفون أضف الموقع إلى الشاشة الرئيسية.';return;
+  }
+  if(isGuest){deviceStatus.textContent='حالة الجهاز: وضع الزائر. سجّل الدخول لتفعيل إشعارات الخلفية.';return;}
+  try{const r=await navigator.serviceWorker.ready;const subscription=await r.pushManager.getSubscription();
+   deviceStatus.textContent=subscription?'حالة الجهاز: يوجد اشتراك إشعارات على هذا الآيفون. اضغط تحديث عند تغيير المدينة أو التنبيهات.':'حالة الجهاز: لم يتم تفعيل إشعارات الخلفية بعد. اضغط زر التفعيل أدناه.';
+  }catch{deviceStatus.textContent='تعذر قراءة حالة الاشتراك. حدّث التطبيق وحاول مرة أخرى.';}
+ };
  const json=async (path,body)=>{
   const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await response.json().catch(()=>({}));
@@ -67,7 +77,8 @@ export async function mountPrayerBackgroundPush(){
      adhan:settings.adhan!==false,iqama:settings.iqama===true,
      iqamaDelay:[5,10,15,20,30].includes(settings.iqamaDelay)?settings.iqamaDelay:10}
    });
-   message.textContent='تم اشتراك هذا الجهاز. ستصل إشعارات الصلاة حتى لو كان الموقع مغلقًا، بحسب السماح بالوصول وإعدادات النظام.';
+   message.textContent='تم تسجيل اشتراك هذا الجهاز لدى خدمة الإشعارات المجدولة. جرّب إغلاق التطبيق وانتظر موعد التنبيه التالي؛ قد يتأخر وصوله بحسب iOS والشبكة.';
+   await refreshDeviceStatus();
   }catch(error){message.textContent='لم يكتمل التفعيل: '+(error?.message||'خطأ غير معروف')}
   finally{activate.disabled=false}
  };
@@ -81,8 +92,10 @@ export async function mountPrayerBackgroundPush(){
     await subscription.unsubscribe();
    }
    message.textContent='توقفت تنبيهات الخلفية على هذا الجهاز.';
+   await refreshDeviceStatus();
   }catch(error){message.textContent='تعذر إيقاف التنبيهات: '+(error?.message||'خطأ غير معروف')}
   finally{disable.disabled=false}
  };
- if(!publicKey)message.textContent='إشعارات الخلفية لم تُفعّل بعد على الخادم. بقية إعدادات الصوت تعمل أثناء فتح الموقع.';
+ if(!publicKey)message.textContent='خدمة الإشعارات غير جاهزة الآن؛ جرّب لاحقًا. الأصوات المحلية لا تعمل بعد إغلاق التطبيق.';
+ refreshDeviceStatus();
 }
