@@ -20,16 +20,40 @@ export async function mountPrayerBackgroundPush(){
  let publicKey=null;
  const key='pdf-athat-prayer-city-v1',soundKey='pdf-athat-prayer-sound-v1';
  const isGuest=window.__pdfGuestMode===true;
+ const prayerBar=document.querySelector('.prayer-bar');
+ const shortcut=document.createElement('button');shortcut.type='button';shortcut.className='prayer-settings';
+ shortcut.textContent='🔔 تفعيل الإشعارات';shortcut.title='تفعيل تنبيهات الصلاة حتى والتطبيق مغلق';
+ shortcut.setAttribute('aria-label','تفعيل إشعارات الصلاة في الخلفية');
+ prayerBar?.querySelector('.prayer-settings')?.before(shortcut);
+ shortcut.addEventListener('click',()=>activate.click());
+
  const deviceStatus=document.createElement('p');deviceStatus.className='prayer-feedback';deviceStatus.setAttribute('role','status');box.insertBefore(deviceStatus,activate);
  const refreshDeviceStatus=async()=>{
   if(!('serviceWorker' in navigator)||!('PushManager' in window)){
-   deviceStatus.textContent='حالة الجهاز: لا يدعم إشعارات الخلفية في هذا المتصفح. في الآيفون أضف الموقع إلى الشاشة الرئيسية.';return;
+   deviceStatus.textContent='حالة الجهاز: إشعارات الخلفية غير مدعومة هنا؛ على الآيفون ثبّت الموقع على الشاشة الرئيسية.';
+   shortcut.textContent='🔔 غير مدعوم';return;
   }
-  if(isGuest){deviceStatus.textContent='حالة الجهاز: وضع الزائر. سجّل الدخول لتفعيل إشعارات الخلفية.';return;}
-  try{const r=await navigator.serviceWorker.ready;const subscription=await r.pushManager.getSubscription();
-   deviceStatus.textContent=subscription?'حالة الجهاز: يوجد اشتراك Push على الآيفون. اضغط «تحديث» لضمان مزامنته مع المدينة وإعدادات الخادم.':'حالة الجهاز: لم يتم تفعيل إشعارات الخلفية بعد. اضغط زر التفعيل أدناه.';
-  }catch{deviceStatus.textContent='تعذر قراءة حالة الاشتراك. حدّث التطبيق وحاول مرة أخرى.';}
+  if(isGuest){deviceStatus.textContent='حالة الجهاز: وضع الزائر. سجّل الدخول لتفعيل إشعارات الخلفية.';shortcut.textContent='🔔 تسجيل الدخول';return}
+  try{
+   const registration=await navigator.serviceWorker.ready;
+   const sub=await registration.pushManager.getSubscription();
+   let serverEnabled=false;
+   if(sub&&Notification.permission==='granted'){
+    const response=await fetch('/api/prayer-push/status',{credentials:'same-origin',cache:'no-store'});
+    if(response.ok)serverEnabled=!!(await response.json()).enabled;
+   }
+   const active=!!sub&&serverEnabled&&Notification.permission==='granted';
+   deviceStatus.textContent=active?
+    'حالة الجهاز: مفعّل لدى خادم التنبيهات. تصل إشعارات الصلاة والتطبيق مغلق وفق إعدادات الجهاز.':
+    'حالة الجهاز: لم يكتمل ربط هذا الآيفون بالخادم. اضغط تفعيل الإشعارات.';
+   shortcut.textContent=active?'🔔 الإشعارات مفعّلة':'🔔 تفعيل الإشعارات';
+   shortcut.title=active?'إدارة إشعارات الصلاة في الخلفية':'تفعيل تنبيهات الصلاة حتى والتطبيق مغلق';
+  }catch{
+   deviceStatus.textContent='تعذر التأكد من حالة الإشعارات على الخادم. افتح إعدادات الصلاة وحاول التفعيل.';
+   shortcut.textContent='🔔 فحص التنبيهات';
+  }
  };
+
  const json=async (path,body)=>{
   const response=await fetch(path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const data=await response.json().catch(()=>({}));
@@ -50,6 +74,17 @@ export async function mountPrayerBackgroundPush(){
   return true;
  }
  const decode=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
+ const saveSubscription=async subscription=>{
+  const place=JSON.parse(localStorage.getItem(key)||'null');
+  if(!place||place.type!=='city'||place.country!=='SA')
+   throw Error('اختر مدينة سعودية من إعدادات مواقيت الصلاة ثم احفظها لتفعيل الإشعارات.');
+  const settings=JSON.parse(localStorage.getItem(soundKey)||'null')||{};
+  return json('/api/prayer-push/subscribe',{subscription:subscription.toJSON(),city:place.city,country:'SA',
+   settings:{before:[0,5,10,15,30].includes(settings.before)?settings.before:0,
+    adhan:settings.adhan!==false,iqama:settings.iqama===true,
+    iqamaDelay:[5,10,15,20,30].includes(settings.iqamaDelay)?settings.iqamaDelay:10}
+  });
+ };
  activate.onclick=async()=>{
   if(!supported())return;
   activate.disabled=true;message.textContent='جاري تفعيل إشعارات الخلفية...';
@@ -72,11 +107,7 @@ export async function mountPrayerBackgroundPush(){
     subscription=null;
    }
    subscription=subscription||await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:desiredKey});
-   await json('/api/prayer-push/subscribe',{subscription:subscription.toJSON(),city:place.city,country:'SA',
-    settings:{before:[0,5,10,15,30].includes(settings.before)?settings.before:0,
-     adhan:settings.adhan!==false,iqama:settings.iqama===true,
-     iqamaDelay:[5,10,15,20,30].includes(settings.iqamaDelay)?settings.iqamaDelay:10}
-   });
+   await saveSubscription(subscription);
    message.textContent='تم تسجيل اشتراك هذا الجهاز لدى خدمة الإشعارات المجدولة. جرّب إغلاق التطبيق وانتظر موعد التنبيه التالي؛ قد يتأخر وصوله بحسب iOS والشبكة.';
    await refreshDeviceStatus();
   }catch(error){message.textContent='لم يكتمل التفعيل: '+(error?.message||'خطأ غير معروف')}
@@ -97,5 +128,24 @@ export async function mountPrayerBackgroundPush(){
   finally{disable.disabled=false}
  };
  if(!publicKey)message.textContent='خدمة الإشعارات غير جاهزة الآن؛ جرّب لاحقًا. الأصوات المحلية لا تعمل بعد إغلاق التطبيق.';
+ // A granted device can re-register silently after a session change or settings edit.
+ // Never request notification permission without the user's direct tap.
+ let syncing=false,lastSync=0;
+ const syncExisting=async(force=false)=>{
+  if(syncing||isGuest||!publicKey||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
+  if(!force&&Date.now()-lastSync<60000)return;
+  syncing=true;lastSync=Date.now();
+  try{
+   const registration=await navigator.serviceWorker.ready;
+   const sub=await registration.pushManager.getSubscription();
+   if(sub){await saveSubscription(sub);await refreshDeviceStatus()}
+  }catch(error){console.warn('prayer_push_resync_failed',error?.message||error)}
+  finally{syncing=false}
+ };
+ window.addEventListener('focus',()=>syncExisting());
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncExisting()});
+ window.addEventListener('storage',event=>{if(event.key===key||event.key===soundKey)syncExisting(true)});
+ dialog.addEventListener('close',()=>syncExisting(true));
  refreshDeviceStatus();
+ syncExisting(true);
 }
