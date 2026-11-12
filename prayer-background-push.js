@@ -75,8 +75,8 @@ export async function mountPrayerBackgroundPush(){
  }
  const decode=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-s.length%4)%4)),c=>c.charCodeAt(0));
  const saveSubscription=async subscription=>{
-  const place=JSON.parse(localStorage.getItem(key)||'null');
-  if(!place||place.type!=='city'||place.country!=='SA')
+  const place=JSON.parse(localStorage.getItem(key)||'null')||{type:'city',city:'Makkah',country:'SA'};
+  if(place.type!=='city'||place.country!=='SA')
    throw Error('اختر مدينة سعودية من إعدادات مواقيت الصلاة ثم احفظها لتفعيل الإشعارات.');
   const settings=JSON.parse(localStorage.getItem(soundKey)||'null')||{};
   return json('/api/prayer-push/subscribe',{subscription:subscription.toJSON(),city:place.city,country:'SA',
@@ -132,7 +132,7 @@ export async function mountPrayerBackgroundPush(){
  // Never request notification permission without the user's direct tap.
  let syncing=false,lastSync=0;
  const syncExisting=async(force=false)=>{
-  if(syncing||isGuest||!publicKey||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
+  if(syncing||isGuest||!publicKey||!('Notification' in window)||Notification.permission!=='granted'||!('serviceWorker' in navigator))return;
   if(!force&&Date.now()-lastSync<60000)return;
   syncing=true;lastSync=Date.now();
   try{
