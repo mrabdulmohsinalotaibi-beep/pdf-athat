@@ -105,3 +105,37 @@
  #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 34px 34px 34px}
  #app .prayer-bar :is(.prayer-settings,.prayer-notify-test,.prayer-dismiss){min-width:34px;min-height:34px}
 }
+
+/* Consolidated prayer controls — prevents notification buttons from covering prayer times. */
+#app>.prayer-bar{box-sizing:border-box;width:100%;min-width:0;max-width:100%;overflow:hidden}
+#app>.prayer-bar :is(.prayer-notify-test,.prayer-settings,.prayer-dismiss){flex:none;white-space:nowrap;width:38px;max-width:38px;padding:0!important;text-align:center;line-height:1}
+#app>.prayer-bar .prayer-place{min-width:0;overflow:hidden}
+#app>.prayer-bar .prayer-times{min-width:0;max-width:100%}
+@media(max-width:980px){
+ #app>.prayer-bar{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 38px 38px 38px!important;
+  grid-template-areas:"place notify settings close" "times times times times"!important;
+  grid-template-rows:auto auto;
+  gap:7px 5px!important;
+  align-items:center;
+  height:auto!important;
+  min-height:0!important;
+  padding:9px 12px!important;
+ }
+ #app>.prayer-bar .prayer-place{grid-area:place;display:flex;flex-flow:row wrap;align-items:center;gap:2px 8px}
+ #app>.prayer-bar .prayer-notify-test{grid-area:notify}
+ #app>.prayer-bar .prayer-settings{grid-area:settings}
+ #app>.prayer-bar .prayer-dismiss{grid-area:close}
+ #app>.prayer-bar .prayer-times{
+  grid-area:times;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  justify-items:stretch;gap:3px;overflow:hidden;
+ }
+ #app>.prayer-bar .prayer-time{min-width:0;overflow:hidden;text-align:center}
+ #app>.prayer-bar .prayer-hijri{flex-basis:100%}
+}
+@media(max-width:460px){
+ #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 32px 32px 32px!important;padding:8px!important}
+ #app>.prayer-bar :is(.prayer-notify-test,.prayer-settings,.prayer-dismiss){width:32px;max-width:32px;min-width:32px;min-height:32px}
+ #app>.prayer-bar .prayer-time{font-size:10px}
+}
