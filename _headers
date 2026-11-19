@@ -11,3 +11,9 @@
 
 /admin.html
   Cache-Control: no-store
+
+/account.js
+  Cache-Control: no-store, max-age=0
+
+/legacy-import.js
+  Cache-Control: no-store, max-age=0
