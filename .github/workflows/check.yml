@@ -18,6 +18,7 @@ jobs:
 
       - run: node --check server/auth.mjs && node --check web/auth.js
       - run: node tests/auth.test.mjs && node tests/auth-build.test.cjs
+      - run: node --test tests/account-profile.test.cjs
       - run: npm install --ignore-scripts --no-audit --no-fund
         working-directory: desktop
       - run: npm run test:offline && node scripts/build-site.cjs
