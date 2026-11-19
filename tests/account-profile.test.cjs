@@ -160,53 +160,29 @@ test('reader guest mode has no authentication, no cloud sync, and uses existing 
  assert.doesNotMatch(entry,/indexedDB\.deleteDatabase/);
 });
 
-test('linking visitor library rotates guest database only after verifying account copies',()=>{
- const fs=require('node:fs'),path=require('node:path');
- const importer=fs.readFileSync(path.resolve(__dirname,'../legacy-import.js'),'utf8');
- const reader=fs.readFileSync(path.resolve(__dirname,'../app-v2.js'),'utf8');
- const entry=fs.readFileSync(path.resolve(__dirname,'../site-entry.js'),'utf8');
- assert.match(importer,/const target='pdf-athat-account-'\+userId/);
- assert.match(importer,/const source=requested &&/);
- assert.match(importer,/pdf-athat-v1/);
- assert.match(importer,/const requested=new URLSearchParams\(location\.search\)\.get\('guest-db'\)/);
- assert.match(importer,/await transfer\(oldDB,newDB,show\)/);
- assert.match(importer,/for\(const item of checks\)/);
- assert.match(importer,/localStorage\.setItem\(guestKey,next\)/);
- assert.ok(importer.indexOf('await transfer(oldDB,newDB)')<importer.indexOf('localStorage.setItem(guestKey,next)'));
- assert.doesNotMatch(importer,/deleteDatabase|objectStore\(['"]documents['"]\)\.clear\(/);
- assert.match(reader,/window\.__pdfAccountId\?"pdf-athat-account-"\+window\.__pdfAccountId:\(window\.__pdfGuestDBName\|\|"pdf-athat-v1"\)/);
- assert.match(entry,/if\(guestMode\)window\.addEventListener\('storage'/);
- assert.match(entry,/event\.key==='pdf-athat-active-guest-library'/);
-});
 
-test('linking old guest files is discoverable in personal profile and home, including empty source',()=>{
- const fs=require('node:fs'),path=require('node:path');
- const importer=fs.readFileSync(path.resolve(__dirname,'../legacy-import.js'),'utf8');
- assert.match(html,/id="profileLinkGuest"[^>]*|href="\.\/\?link-guest=1" id="profileLinkGuest"/);
- assert.match(importer,/const quick=\$\('\.library-quick-actions'\)/);
- assert.match(importer,/button\.id='guestAccountLinkButton'/);
- assert.match(importer,/if\(!\(await hasDatabase\(source\)\)\)/);
- assert.match(importer,/مكتبة الزائر الحالية فارغة/);
- assert.match(importer,/new URLSearchParams\(location\.search\)\.get\('link-guest'\)/);
- assert.ok(importer.indexOf('const result=await transfer(oldDB,newDB,show)')<importer.indexOf('localStorage.setItem(guestKey,next)'));
-});
-
-test('guest library recovery is visible in account settings with individual library selection',()=>{
+test('one recovery action is visible only in signed-in account settings',()=>{
+ const legacy=require('node:fs').readFileSync(require('node:path').resolve(__dirname,'../legacy-import.js'),'utf8');
+ const entry=require('node:fs').readFileSync(require('node:path').resolve(__dirname,'../site-entry.js'),'utf8');
  assert.match(html,/id="guestLibrarySetting"/);
  assert.match(html,/id="scanGuestLibraries"/);
- assert.match(html,/id="guestLibraryCandidates"/);
- assert.match(source,/indexedDB\.databases\(\)/);
- assert.match(source,/guest-db=/);
+ assert.match(html,/id="guestRecoveryProgress"/);
+ assert.match(html,/id="guestRecoveryResult"/);
+ assert.doesNotMatch(html,/id="profileLinkGuest"/);
+ assert.doesNotMatch(source,/guest-db=/);
+ assert.doesNotMatch(entry,/import\('\.\/legacy-import\.js'\)/);
+ assert.match(source,/recoverLocalLibraries\(state\.currentUser\.id/);
+ assert.match(legacy,/export async function recoverLocalLibraries/);
+ assert.doesNotMatch(legacy,/indexedDB\.deleteDatabase|objectStore\(['"]documents['"]\)\.clear\(/);
 });
-
-test('guest library transfer reports record-by-record progress and offers integrity verification',()=>{
- const importer=require('node:fs').readFileSync(require('node:path').resolve(__dirname,'../legacy-import.js'),'utf8');
- assert.match(importer,/function makeProgress\(anchor\)/);
- assert.match(importer,/document\.createElement\('progress'\)/);
- assert.match(importer,/onProgress\(\+\+completed,total,'جارٍ نقل ملفات PDF'\)/);
- assert.match(importer,/onProgress\(\+\+completed,total,'جارٍ التحقق من سلامة النقل'\)/);
- assert.match(importer,/async function verifyLibrary\(oldDB,newDB/);
- assert.match(importer,/verifyButton\.textContent='✓ التحقق من اكتمال النقل'/);
- assert.match(importer,/verify-guest/);
- assert.match(source,/التحقق من اكتمال النقل/);
+test('recovery covers previous guest libraries, PDF content and comments with verification',()=>{
+ const legacy=require('node:fs').readFileSync(require('node:path').resolve(__dirname,'../legacy-import.js'),'utf8');
+ assert.match(legacy,/indexedDB\.databases/);
+ assert.match(legacy,/pdf-athat-v1/);
+ assert.match(legacy,/pdf-athat-guest-/);
+ assert.match(legacy,/sameFile/);
+ assert.match(legacy,/sameNote/);
+ assert.match(legacy,/collisionId/);
+ assert.match(legacy,/progress\('جارٍ التحقق من سلامة الملفات والتعليقات'\)/);
+ assert.match(legacy,/source\?\.close\(\)/);
 });
