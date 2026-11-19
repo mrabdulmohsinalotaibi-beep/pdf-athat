@@ -92,48 +92,29 @@ async function accountLibrarySummary(user){
  }
 }
 async function scanGuestLibraries(){
- const statusEl=$('guestLibraryScanStatus'),list=$('guestLibraryCandidates'),btn=$('scanGuestLibraries');
- list.replaceChildren();btn.disabled=true;statusEl.textContent='جارٍ فحص المكتبات المحلية…';
+ const btn=$('scanGuestLibraries'),status=$('guestLibraryScanStatus'),bar=$('guestRecoveryProgress'),result=$('guestRecoveryResult');
+ if(!state.currentUser)return;
+ btn.disabled=true;bar.hidden=false;bar.value=0;result.textContent='';
+ status.textContent='جارٍ البحث عن مكتبات PDF السابقة…';
  try{
-  if(!('indexedDB' in window)||typeof indexedDB.databases!=='function'){
-   statusEl.textContent='لا يدعم هذا المتصفح تعداد المكتبات تلقائيًا. جرّب رابط الربط الموجود أعلى الصفحة في المتصفح القديم.';return;
+  const {recoverLocalLibraries}=await import('./legacy-import.js');
+  const summary=await recoverLocalLibraries(state.currentUser.id,(done,total,message)=>{
+   bar.value=total?Math.round(done/total*100):0;
+   status.textContent=message+' — '+done+' / '+total+' ('+bar.value+'٪)';
+  });
+  if(!summary.libraries){
+   bar.hidden=true;
+   status.textContent='لم توجد ملفات سابقة قابلة للاستعادة في هذا المتصفح. استخدم الجهاز والمتصفح الأصليين، ولا تمسح بياناتهما.';
+   return;
   }
-  const databases=await indexedDB.databases();
-  const names=[...new Set(databases.map(d=>d.name).filter(n=>n==='pdf-athat-v1'||/^pdf-athat-guest-[a-f0-9-]{36}$/.test(n||'')))];
-  if(!names.length){
-   statusEl.textContent='لم تظهر مكتبة زائر سابقة في هذا المتصفح. افتح PDF الذات على نفس الجهاز والمتصفح الذي استخدمت فيه المكتبة قبل التسجيل.';return;
-  }
-  let available=0;
-  for(const name of names){
-   let db;
-   try{
-    db=await new Promise((resolve,reject)=>{const request=indexedDB.open(name);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
-    if(!db.objectStoreNames.contains('documents')||!db.objectStoreNames.contains('strokes'))continue;
-    const counts=await new Promise((resolve,reject)=>{
-     const tx=db.transaction(['documents','strokes'],'readonly');
-     const docs=tx.objectStore('documents').count(),notes=tx.objectStore('strokes').count();
-     tx.oncomplete=()=>resolve({files:docs.result,notes:notes.result});
-     tx.onerror=()=>reject(tx.error);
-    });
-    if(!counts.files&&!counts.notes)continue;
-    available++;
-    const item=document.createElement('div');item.style.cssText='padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff9f2';
-    const info=document.createElement('strong');info.textContent=counts.files+' ملف PDF · '+counts.notes+' تعليق';
-    const link=document.createElement('a');link.className='secondary-action';
-    link.style.cssText='display:inline-flex;margin-top:9px;padding:9px 12px;text-decoration:none';
-    link.textContent='ربط هذه المكتبة بحسابي';
-    link.href='./?link-guest=1&guest-db='+encodeURIComponent(name);
-    const verify=document.createElement('a');verify.className='secondary-action';
-    verify.style.cssText='display:inline-flex;margin:9px 0 0 8px;padding:9px 12px;text-decoration:none';
-    verify.textContent='التحقق من اكتمال النقل';
-    verify.href='./?verify-guest=1&guest-db='+encodeURIComponent(name);
-    item.append(info,document.createElement('div'),link,verify);list.append(item);
-   }catch(error){console.warn('guest_library_scan',error?.name)}
-   finally{db?.close()}
-  }
-  statusEl.textContent=available?'عُثر على '+available+' مكتبة محلية قابلة للربط. اختر المكتبة المطلوبة، وستظهر لك خطوة تأكيد قبل النقل.':'لم يُعثر على ملفات سابقة داخل المكتبات الموجودة في هذا المتصفح.';
- }catch(error){statusEl.textContent='تعذر فحص التخزين المحلي: '+(error.message||'خطأ غير معروف')}
- finally{btn.disabled=false}
+  bar.value=100;
+  status.textContent='اكتملت الاستعادة والتحقق من سلامة جميع العناصر.';
+  result.textContent='تم التحقق من '+summary.documents+' ملف PDF و'+summary.notes+' تعليق عبر '+summary.libraries+' مكتبة سابقة. أضيف منها '+summary.importedDocs+' ملف و'+summary.importedNotes+' تعليق جديد.';
+  await accountLibrarySummary(state.currentUser);
+ }catch(error){
+  status.textContent='تعذرت الاستعادة أو لم يكتمل التحقق. لم تُحذف الملفات القديمة.';
+  result.textContent=error?.message||'خطأ غير معروف';
+ }finally{btn.disabled=false}
 }
 $('scanGuestLibraries').onclick=()=>void scanGuestLibraries();
 function showProfile(user){
@@ -153,7 +134,7 @@ function showProfile(user){
  $('profileSync').textContent=syncing?'مفعّلة على هذا الجهاز':'غير مفعّلة على هذا الجهاز';
  profileStatus('');
  void accountLibrarySummary(user);
- void scanGuestLibraries();
+
 }
 
 function messageFor(id,text){$(id).textContent=text||''}
