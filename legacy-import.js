@@ -106,6 +106,11 @@ export async function recoverLocalLibraries(userId,onProgress=()=>{}){
     localStorage.setItem(key,JSON.stringify(merged));
    }finally{source?.close()}
   }
+  // After verified recovery, keep old bytes as a recovery archive but isolate guest mode.
+  const active=localStorage.getItem('pdf-athat-active-guest-library')||'pdf-athat-v1';
+  if(candidates.some(item=>item.name===active)){
+   localStorage.setItem('pdf-athat-active-guest-library','pdf-athat-guest-'+crypto.randomUUID());
+  }
   progress('اكتمل النقل والتحقق');
   return {
    libraries:candidates.length,
