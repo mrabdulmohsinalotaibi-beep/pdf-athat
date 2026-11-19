@@ -366,3 +366,72 @@ body>.container.auth-layout.profile-active .account-actions button{
  body>.container.auth-layout.profile-active .account-actions{grid-template-columns:minmax(0,1fr)}
  body>.container.auth-layout.profile-active .account-actions .logout-action{grid-column:auto}
 }
+
+
+/* PDF.ATHAT administrative shell — modern adaptive layout */
+body:has(#dashboard:not([hidden])){--sand:#f6f2ec;--card:#fff;--wine:#760c19;--ink:#322923;--line:#e3d7cb;background:#f6f2ec}
+body:has(#dashboard:not([hidden])) .bar{background:#fff;border-bottom:1px solid #ebe4de;min-height:70px;padding:12px clamp(16px,3vw,34px)}
+body:has(#dashboard:not([hidden])) .container{max-width:none;width:100%;padding:0 26px;margin:0 auto}
+body:has(#dashboard:not([hidden])) #dashboard{padding:28px 0 42px 246px;min-height:calc(100vh - 70px)}
+body:has(#dashboard:not([hidden])) .admin-sections{position:fixed;top:70px;right:0;bottom:0;left:auto;width:232px;z-index:40;display:flex;flex-direction:column;align-items:stretch;overflow-y:auto;gap:5px;margin:0;padding:22px 12px;background:#fff;border-left:1px solid #ebe4de;white-space:normal}
+body:has(#dashboard:not([hidden])) .admin-sections a{border:0;border-radius:11px;background:transparent;color:#65594f;font-weight:600;font-size:13px;min-height:44px;padding:11px 13px;display:block;text-decoration:none}
+body:has(#dashboard:not([hidden])) .admin-sections a:is(:hover,[aria-current=page]){background:#f6e9e7;color:#760c19}
+.admin-nav-title{display:flex;gap:10px;align-items:center;padding:0 8px 20px;margin-bottom:8px;border-bottom:1px solid #eee8e2;color:#322923}
+.admin-nav-title span{display:flex;flex-direction:column;line-height:1.4}
+.admin-nav-title small{font-size:11px;color:#86756d}
+#adminNavClose{display:none}
+.admin-nav-backdrop,.admin-mobile-bottom{display:none}
+body:has(#dashboard:not([hidden])) .heading{background:#760c19;color:#fff;border-radius:20px;padding:25px 28px;align-items:center;gap:12px;margin-bottom:20px}
+body:has(#dashboard:not([hidden])) .heading .eyebrow{color:#f3d4ce}
+body:has(#dashboard:not([hidden])) .heading h1{color:#fff;font-size:clamp(23px,3vw,32px)}
+body:has(#dashboard:not([hidden])) .heading p{color:#f8e9e6}
+body:has(#dashboard:not([hidden])) .heading-actions button{border-color:#f2ddd7;color:#fff;background:#ffffff18;font-size:12px}
+body:has(#dashboard:not([hidden])) .heading-actions button:hover{background:#ffffff30}
+body:has(#dashboard:not([hidden])) .panel{background:#fff;border:1px solid #ece4db;border-radius:16px;box-shadow:0 5px 20px #49352209}
+body:has(#dashboard:not([hidden])) .stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:16px}
+body:has(#dashboard:not([hidden])) .stat-card{min-height:142px;padding:20px;justify-content:center;gap:5px!important}
+body:has(#dashboard:not([hidden])) .stat-card small{font-size:13px;color:#74665c}
+body:has(#dashboard:not([hidden])) .stat-card strong{font-size:33px;color:#760c19}
+body:has(#dashboard:not([hidden])) .stat-card span{font-size:12px;color:#8b7a6b}
+.admin-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.admin-shortcuts a{min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:15px;border:1px solid #eae1d8;background:#fff;text-decoration:none;color:#3c302b;font-size:13px;font-weight:600;text-align:center;padding:12px}
+.admin-shortcuts a span{display:grid;place-items:center;background:#f7eae5;color:#760c19;width:36px;height:36px;border-radius:11px;font-size:21px}
+.admin-shortcuts a:hover{border-color:#760c19}
+body:has(#dashboard:not([hidden])) .sections{grid-template-columns:minmax(0,1fr);gap:15px}
+body:has(#dashboard:not([hidden])) .admin-side{grid-template-columns:repeat(2,minmax(0,1fr))}
+body:has(#dashboard:not([hidden])) .tableWrap{border-color:#ebe2d9}
+body:has(#dashboard:not([hidden])) .tableWrap th{background:#f8f3ee}
+body:has(#dashboard:not([hidden])) input,body:has(#dashboard:not([hidden])) select,body:has(#dashboard:not([hidden])) textarea{border-color:#ded2c6}
+body:has(#dashboard:not([hidden])) .panel-heading{gap:14px}
+body:has(#dashboard:not([hidden])) :is(a,button,input,select,textarea):focus-visible{outline:3px solid #bc8a6c;outline-offset:2px}
+@media(max-width:1100px){
+ body:has(#dashboard:not([hidden])) .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .admin-shortcuts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:850px){
+ body:has(#dashboard:not([hidden])) .container{padding:0 14px}
+ body:has(#dashboard:not([hidden])) #dashboard{padding:17px 0 90px;min-height:calc(100vh - 70px)}
+ body:has(#dashboard:not([hidden])) .admin-sections{top:0;bottom:0;right:0;width:min(310px,86vw);z-index:101;transform:translateX(105%);transition:transform .22s ease;box-shadow:-10px 0 30px #0001}
+ body:has(#dashboard:not([hidden])) .admin-sections.is-open{transform:translateX(0)}
+ #adminNavClose{display:block;margin-right:auto;background:#f4eae5;color:#760c19;font-size:24px;padding:0;width:36px;height:36px}
+ body:has(#dashboard:not([hidden])) .admin-nav-backdrop:not([hidden]){display:block;position:fixed;inset:0;background:#1b14147a;z-index:100}
+ body:has(#dashboard:not([hidden])) .admin-mobile-bottom{position:fixed;bottom:0;left:0;right:0;z-index:90;display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px max(10px,env(safe-area-inset-bottom));background:#fff;border-top:1px solid #ebe2da;box-shadow:0 -4px 18px #3e302411}
+ .admin-mobile-bottom a,.admin-mobile-bottom button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;text-align:center;border:0;background:transparent;color:#77675f;text-decoration:none;padding:5px 2px;font-size:12px;font-weight:600;line-height:1.4}
+ .admin-mobile-bottom span{font-size:22px;line-height:1.2}
+ .admin-mobile-bottom small{font-size:11px}
+ .admin-mobile-bottom a[aria-current=page]{color:#760c19}
+ body:has(#dashboard:not([hidden])) .heading{padding:20px 18px;border-radius:16px}
+}
+@media(max-width:520px){
+ body:has(#dashboard:not([hidden])) .bar{padding:10px 12px}
+ body:has(#dashboard:not([hidden])) .heading{flex-wrap:wrap}
+ body:has(#dashboard:not([hidden])) .heading-actions{width:100%}
+ body:has(#dashboard:not([hidden])) .heading-actions button{flex:1}
+ body:has(#dashboard:not([hidden])) .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ body:has(#dashboard:not([hidden])) .stat-card{min-height:120px;padding:14px}
+ body:has(#dashboard:not([hidden])) .stat-card strong{font-size:29px}
+ body:has(#dashboard:not([hidden])) .admin-side{grid-template-columns:1fr}
+ body:has(#dashboard:not([hidden])) .admin-side #transferPanel{grid-column:auto}
+ .admin-shortcuts{gap:8px}
+ .admin-shortcuts a{font-size:12px;padding:9px;min-height:78px}
+}
