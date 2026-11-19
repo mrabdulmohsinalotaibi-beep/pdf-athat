@@ -1,249 +1,117 @@
-// Move the *visible ownership* of a guest library into the signed-in account.
-// The old guest IndexedDB is retained as a local recovery archive, not exposed
-// through guest mode after a verified import. No PDF leaves this device.
-(()=>{
-'use strict';
-const userId=window.__pdfAccountId;
-if(!userId||!('indexedDB' in window))return;
-const requested=new URLSearchParams(location.search).get('guest-db');
-const source=requested && (requested==='pdf-athat-v1'||/^pdf-athat-guest-[a-f0-9-]{36}$/.test(requested))
- ? requested : (window.__pdfGuestDBName||'pdf-athat-v1');
-const target='pdf-athat-account-'+userId;
-if(source===target)return;
-const guestKey='pdf-athat-active-guest-library';
-const folderKey=name=>name==='pdf-athat-v1'?'pdfathat-folders':'pdfathat-folders:'+name;
-const accountFolders='pdfathat-folders:'+userId;
-const $=selector=>document.querySelector(selector);
-const open=name=>new Promise((resolve,reject)=>{
- const req=indexedDB.open(name);
- req.onsuccess=()=>resolve(req.result);
- req.onerror=()=>reject(req.error);
+// Single, opt-in recovery path: Account settings -> Restore local library.
+// Copies only from local guest IndexedDB stores. Never deletes source data or uploads PDFs.
+const validSource=name=>name==='pdf-athat-v1'||/^pdf-athat-guest-[a-f0-9-]{36}$/.test(name||'');
+const openDB=name=>new Promise((resolve,reject)=>{
+ const request=indexedDB.open(name);
+ request.onupgradeneeded=()=>{if(name.startsWith('pdf-athat-account-')){
+  const db=request.result;
+  if(!db.objectStoreNames.contains('documents'))db.createObjectStore('documents',{keyPath:'id'});
+  if(!db.objectStoreNames.contains('strokes'))db.createObjectStore('strokes',{keyPath:'id'});
+ }};
+ request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);
 });
-const hasDatabase=async name=>{
- if(!indexedDB.databases)return name==='pdf-athat-v1';
- return (await indexedDB.databases()).some(item=>item.name===name);
+const getAll=(db,store)=>new Promise((resolve,reject)=>{
+ const req=db.transaction(store,'readonly').objectStore(store).getAll();
+ req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+});
+const get=(db,store,id)=>new Promise((resolve,reject)=>{
+ const req=db.transaction(store,'readonly').objectStore(store).get(id);
+ req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+});
+const put=(db,store,record)=>new Promise((resolve,reject)=>{
+ const tx=db.transaction(store,'readwrite');tx.objectStore(store).add(record);
+ tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('فشل حفظ أحد العناصر'));
+});
+const hex=buf=>Array.from(new Uint8Array(buf),v=>v.toString(16).padStart(2,'0')).join('');
+const hash=async data=>hex(await crypto.subtle.digest('SHA-256',data));
+const collisionId=async(db,store,oldId,name)=>{const h=await hash(new TextEncoder().encode(db+'|'+store+'|'+oldId+'|'+name));return h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-8'+h.slice(17,20)+'-'+h.slice(20,32)};
+const sameFile=async(a,b)=>{
+ if(!(a?.file instanceof Blob)||!(b?.file instanceof Blob)||a.file.size!==b.file.size)return false;
+ return (await hash(await a.file.arrayBuffer()))===(await hash(await b.file.arrayBuffer()));
 };
-const readAll=(db,store)=>new Promise((resolve,reject)=>{
- const tx=db.transaction(store,'readonly'),req=tx.objectStore(store).getAll();
- req.onsuccess=()=>resolve(req.result);
- req.onerror=()=>reject(req.error);
-});
-const readOne=(db,store,id)=>new Promise((resolve,reject)=>{
- const tx=db.transaction(store,'readonly'),req=tx.objectStore(store).get(id);
- req.onsuccess=()=>resolve(req.result);
- req.onerror=()=>reject(req.error);
-});
-const add=(db,store,record)=>new Promise((resolve,reject)=>{
- const tx=db.transaction(store,'readwrite'),req=tx.objectStore(store).add(record);
- tx.oncomplete=()=>resolve();
- tx.onerror=()=>reject(tx.error);
- tx.onabort=()=>reject(tx.error||Error('تعذر حفظ السجل في الحساب'));
- req.onerror=()=>{};
-});
-const hex=bytes=>Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('');
-const sha=async bytes=>hex(await crypto.subtle.digest('SHA-256',bytes));
-const stableId=async(store,id,content='')=>{
- const digest=await sha(new TextEncoder().encode(source+'|'+store+'|'+id+'|'+content));
- return digest.slice(0,8)+'-'+digest.slice(8,12)+'-4'+digest.slice(13,16)+'-8'+digest.slice(17,20)+'-'+digest.slice(20,32);
-};
-const getFile=record=>record?.file instanceof Blob?record.file:null;
-async function equalFiles(a,b){
- const x=getFile(a),y=getFile(b);
- if(!x||!y||x.size!==y.size)return false;
- return (await sha(await x.arrayBuffer()))===(await sha(await y.arrayBuffer()));
+const sameNote=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const foldersKey=name=>name==='pdf-athat-v1'?'pdfathat-folders':'pdfathat-folders:'+name;
+function folders(key){try{const a=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(a)?a.filter(x=>typeof x==='string'&&x.trim()&&x.length<=40):[]}catch{return []}}
+async function sources(){
+ if(typeof indexedDB.databases==='function'){
+  const all=await indexedDB.databases();
+  return [...new Set(all.map(x=>x.name).filter(validSource))];
+ }
+ // Old browsers without databases() can still recover the original guest library.
+ return ['pdf-athat-v1'];
 }
-function parseFolders(key){
- try{const data=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(data)?data.filter(x=>typeof x==='string'&&x.trim()&&x.length<=40):[]}
- catch{return []}
-}
-function makeProgress(anchor){
- const wrap=document.createElement('div');wrap.id='guestTransferProgress';
- wrap.style.cssText='margin:12px 0;padding:13px;border-radius:12px;border:1px solid #b8a08b;background:#fff8ef;max-width:560px';
- const title=document.createElement('strong');title.textContent='حالة نقل المكتبة';
- const meter=document.createElement('progress');meter.max=100;meter.value=0;
- meter.style.cssText='display:block;width:100%;height:18px;margin:12px 0;accent-color:#39845b';
- meter.setAttribute('aria-label','نسبة تقدم نقل المكتبة');
- const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
- status.style.cssText='font-size:13px;margin:6px 0;color:#513d31';
- wrap.append(title,meter,status);anchor.after(wrap);
- return (done,total,label)=>{
-  const percent=total?Math.min(100,Math.round(done/total*100)):0;
-  meter.value=percent;
-  status.textContent=label+' — '+done+' من '+total+' ('+percent+'٪)';
- };
-}
-async function verifyLibrary(oldDB,newDB,onProgress=()=>{}){
- const docs=await readAll(oldDB,'documents');
- const notes=await readAll(oldDB,'strokes');
- const docMap=new Map(),total=docs.length+notes.length;
- let done=0;
- for(const doc of docs){
-  if(!doc?.id)throw Error('ملف قديم بلا معرّف');
-  let id=doc.id,found=await readOne(newDB,'documents',id);
-  if(!found||!(await equalFiles(found,doc))){
-   id=await stableId('documents',doc.id,doc.name||'');
-   found=await readOne(newDB,'documents',id);
-  }
-  if(!found||!(await equalFiles(found,doc)))throw Error('الملف '+(doc.name||doc.id)+' غير مطابق أو لم يُنقل');
-  docMap.set(doc.id,id);
-  onProgress(++done,total,'جارٍ التحقق من ملفات PDF');
- }
- for(const note of notes){
-  const expected={...note,documentId:docMap.get(note.documentId)||note.documentId};
-  let found=await readOne(newDB,'strokes',note.id);
-  if(!found||JSON.stringify(found)!==JSON.stringify(expected)){
-   const id=await stableId('strokes',note.id);
-   found=await readOne(newDB,'strokes',id);
-   expected.id=id;
-  }
-  if(!found||JSON.stringify(found)!==JSON.stringify(expected))throw Error('تعليق لم يُنقل أو لا يطابق الأصل');
-  onProgress(++done,total,'جارٍ التحقق من التعليقات');
- }
- onProgress(total,total,'اكتمل التحقق من جميع الملفات والتعليقات');
- return {documents:docs.length,notes:notes.length};
-}
-async function transfer(oldDB,newDB,onProgress=()=>{}){
- const docs=await readAll(oldDB,'documents');
- const notes=await readAll(oldDB,'strokes');
- const docMap=new Map(),checks=[];
- let importedDocs=0,importedNotes=0;
- const total=2*(docs.length+notes.length);let completed=0;
- onProgress(0,total,'بدء نسخ الملفات والتعليقات');
- for(const doc of docs){
-  if(!doc||typeof doc.id!=='string'||!doc.id)throw Error('ملف قديم بلا معرّف؛ لم تُغلق مكتبة الزائر');
-  let id=doc.id;
-  let found=await readOne(newDB,'documents',id);
-  if(found&&!(await equalFiles(found,doc))){
-   id=await stableId('documents',doc.id,doc.name||'');
-   found=await readOne(newDB,'documents',id);
-   if(found&&!(await equalFiles(found,doc)))throw Error('تعارض ملف بنفس المعرّف؛ أُبقيت مكتبة الزائر كما هي');
-  }
-  if(!found){await add(newDB,'documents',{...doc,id});importedDocs++}
-  docMap.set(doc.id,id);
-  checks.push({store:'documents',id,source:doc});
-  onProgress(++completed,total,'جارٍ نقل ملفات PDF');
- }
- for(const note of notes){
-  if(!note||typeof note.id!=='string'||!note.id)throw Error('تعليق قديم بلا معرّف؛ لم تُغلق مكتبة الزائر');
-  const original={...note,documentId:docMap.get(note.documentId)||note.documentId};
-  let id=note.id;
-  let found=await readOne(newDB,'strokes',id);
-  if(found&&JSON.stringify(found)!==JSON.stringify(original)){
-   id=await stableId('strokes',note.id);
-   found=await readOne(newDB,'strokes',id);
-   if(found&&JSON.stringify(found)!==JSON.stringify({...original,id}))
-    throw Error('تعارض تعليق؛ أُبقيت مكتبة الزائر كما هي');
-  }
-  const record={...original,id};
-  if(!found){await add(newDB,'strokes',record);importedNotes++}
-  checks.push({store:'strokes',id,source:record});
-  onProgress(++completed,total,'جارٍ نقل التعليقات');
- }
- // If another open tab modified the visitor's collection during copying,
- // do not rotate access to it until a fresh, complete transfer succeeds.
- const [latestDocs,latestNotes]=await Promise.all([
-  readAll(oldDB,'documents'),readAll(oldDB,'strokes')
- ]);
- if(latestDocs.length!==docs.length||latestNotes.length!==notes.length||
-    latestDocs.some((v,i)=>v.id!==docs[i]?.id)||
-    latestNotes.some((v,i)=>v.id!==notes[i]?.id))
-  throw Error('تغيّرت مكتبة الزائر أثناء الربط؛ أعد المحاولة بعد إغلاق التبويبات الأخرى');
- // Verify the destination while the source library is still accessible.
- for(const item of checks){
-  const record=await readOne(newDB,item.store,item.id);
-  if(!record)throw Error('لم يكتمل التحقق من نقل بياناتك');
-  if(item.store==='documents' && !(await equalFiles(record,item.source)))
-   throw Error('لم يكتمل التحقق من ملف PDF؛ مكتبة الزائر محفوظة');
-  if(item.store==='strokes' && JSON.stringify(record)!==JSON.stringify(item.source))
-   throw Error('لم يكتمل التحقق من التعليقات؛ مكتبة الزائر محفوظة');
-  onProgress(++completed,total,'جارٍ التحقق من سلامة النقل');
- }
- return {documents:docs.length,notes:notes.length,importedDocs,importedNotes};
-}
-async function offer(){
- const bar=$('#manageBackup .manage-controls');
- const quick=$('.library-quick-actions');
- if(!bar&&!quick)return;
- const button=document.createElement('button');
- button.type='button';button.id='guestAccountLinkButton';button.className='subtle-btn';
- button.textContent='🔐 ربط ملفات الزائر بحسابي';
- button.title='ربط ملفات الزائر القديمة بحسابي حتى لا تظهر بعد تسجيل الخروج';
- button.style.cssText='font-size:12px;padding:9px 12px;min-height:41px;border:1px solid #780000;border-radius:10px;white-space:normal';
- (quick||bar).append(button);
- if(bar&&quick){
-  const backupButton=document.createElement('button');
-  backupButton.type='button';backupButton.textContent='ربط ملفات الزائر بحسابي';
-  backupButton.title=button.title;backupButton.id='guestBackupLinkButton';
-  backupButton.className='subtle-btn';backupButton.style.cssText='font-size:12px;padding:8px';
-  backupButton.onclick=()=>button.click();
-  bar.append(backupButton);
- }
- const show=makeProgress(button);
- const verifyButton=document.createElement('button');verifyButton.type='button';verifyButton.className='subtle-btn';
- verifyButton.textContent='✓ التحقق من اكتمال النقل';verifyButton.style.cssText=button.style.cssText+';margin:6px';
- button.after(verifyButton);
- verifyButton.onclick=async()=>{
-  let oldDB,newDB;
-  verifyButton.disabled=true;
+export async function recoverLocalLibraries(userId,onProgress=()=>{}){
+ if(!userId||!('indexedDB' in window))throw Error('يجب تسجيل الدخول على الجهاز الذي يحتوي الملفات القديمة');
+ const names=await sources(), target='pdf-athat-account-'+userId;
+ const candidates=[];
+ for(const name of names){
+  let db;
   try{
-   if(!(await hasDatabase(source)))throw Error('لم تُعثر مكتبة سابقة على هذا الجهاز');
-   oldDB=await open(source);
-   newDB=await open(target);
-   if(!newDB.objectStoreNames.contains('documents')||!newDB.objectStoreNames.contains('strokes'))throw Error('مكتبة الحساب غير جاهزة');
-   const result=await verifyLibrary(oldDB,newDB,show);
-   alert('نجح التحقق: '+result.documents+' ملف PDF و'+result.notes+' تعليق مطابق للأصل في حسابك.');
-  }catch(error){alert('لم يكتمل التحقق: '+error.message+'؛ المكتبة الأصلية محفوظة.')}
-  finally{oldDB?.close();newDB?.close();verifyButton.disabled=false}
- };
- button.onclick=async()=>{
-  button.disabled=true;button.textContent='جارٍ فحص مكتبة الزائر…';
-  let oldDB,newDB;
-  try{
-   if(!(await hasDatabase(source))){
-    alert('لا توجد مكتبة زائر قديمة على هذا الجهاز لربطها. إذا كانت ملفاتك تظهر في حسابك فقط، فهي معزولة بالفعل عن وضع الزائر. افتح الجهاز والمتصفح اللذين يحتويان ملفات الزائر القديمة لإجراء الربط.');
-    return;
-   }
-   oldDB=await open(source);
-   if(!oldDB.objectStoreNames.contains('documents')||!oldDB.objectStoreNames.contains('strokes'))
-    throw Error('لم يُعثر على ملفات زائر صالحة في هذه المكتبة');
-   const oldDocs=await readAll(oldDB,'documents'),oldNotes=await readAll(oldDB,'strokes');
-   if(!oldDocs.length&&!oldNotes.length){
-    alert('مكتبة الزائر الحالية فارغة؛ لا توجد ملفات أو تعليقات لربطها. ملفات حسابك المسجّل لا تظهر في وضع الزائر.');
-    return;
-   }
-   if(!confirm('عُثر على '+oldDocs.length+' ملف و'+oldNotes.length+' تعليق في مكتبة الزائر. سنربطها بحسابك الحالي على هذا الجهاز ثم نجعل مكتبة الزائر فارغة. سنحتفظ بنسخة استرداد محلية ولن نرفع ملفاتك إلى الخادم. هل توافق؟'))return;
-   newDB=await open(target);
-   if(!newDB.objectStoreNames.contains('documents')||!newDB.objectStoreNames.contains('strokes'))
-    throw Error('مكتبة الحساب غير جاهزة؛ أعد فتح الصفحة وحاول مجددًا');
-   button.textContent='جارٍ الربط والتحقق من سلامة الملفات…';
-   const result=await transfer(oldDB,newDB,show);
-   const names=[...new Set([...parseFolders(folderKey(source)),...parseFolders(accountFolders)])];
-   localStorage.setItem(accountFolders,JSON.stringify(names));
-   // Rotate only the currently active guest library; historical archives remain untouched.
-   if(source===(window.__pdfGuestDBName||'pdf-athat-v1')){
-    const next='pdf-athat-guest-'+crypto.randomUUID();
-    localStorage.setItem(guestKey,next);
-    window.__pdfGuestDBName=next;
-   }
-   alert('اكتمل ربط '+result.documents+' ملف و'+result.notes+' تعليق بحسابك. عند تسجيل الخروج والدخول كزائر ستظهر مكتبة فارغة، وتبقى الملفات داخل حسابك على الجهاز.');
-   location.reload();
-  }catch(error){
-   alert('تعذر ربط مكتبة الزائر؛ لم تُحذف ملفاتك القديمة: '+(error.message||'خطأ'));
-  }finally{
-   oldDB?.close();newDB?.close();
-   button.disabled=false;button.textContent='🔐 ربط ملفات الزائر بحسابي';
+   db=await openDB(name);
+   if(!db.objectStoreNames.contains('documents')||!db.objectStoreNames.contains('strokes'))continue;
+   const docs=await getAll(db,'documents'),notes=await getAll(db,'strokes');
+   if(docs.length||notes.length)candidates.push({name,docs,notes});
+  }finally{db?.close()}
+ }
+ const total=candidates.reduce((sum,x)=>sum+2*(x.docs.length+x.notes.length),0);
+ if(!total)return {libraries:0,documents:0,notes:0,importedDocs:0,importedNotes:0};
+ let done=0,importedDocs=0,importedNotes=0;
+ const progress=label=>onProgress(done,total,label);
+ const destination=await openDB(target);
+ try{
+  for(const {name,docs,notes} of candidates){
+   let source;
+   try{
+    source=await openDB(name);
+    const map=new Map(),checks=[];
+    progress('جارٍ استعادة الملفات من المكتبات السابقة');
+    for(const doc of docs){
+     if(typeof doc?.id!=='string'||!doc.id)throw Error('ملف قديم بلا معرّف في '+name);
+     let id=doc.id,existing=await get(destination,'documents',id);
+     if(existing&&!(await sameFile(existing,doc))){
+      id=await collisionId(name,'documents',doc.id,doc.name||'');
+      existing=await get(destination,'documents',id);
+      if(existing&&!(await sameFile(existing,doc)))throw Error('تعارض غير قابل للحل في الملف '+(doc.name||doc.id));
+     }
+     if(!existing){await put(destination,'documents',{...doc,id});importedDocs++}
+     map.set(doc.id,id);checks.push({store:'documents',id,expected:{...doc,id}});
+     done++;progress('جارٍ نقل ملفات PDF');
+    }
+    for(const note of notes){
+     if(typeof note?.id!=='string'||!note.id)throw Error('تعليق سابق بلا معرّف في '+name);
+     const base={...note,documentId:map.get(note.documentId)||note.documentId};
+     let id=note.id,existing=await get(destination,'strokes',id);
+     if(existing&&!sameNote(existing,base)){
+      id=await collisionId(name,'strokes',note.id,'');
+      existing=await get(destination,'strokes',id);
+      if(existing&&!sameNote(existing,{...base,id}))throw Error('تعارض غير قابل للحل في تعليق قديم');
+     }
+     const expected={...base,id};
+     if(!existing){await put(destination,'strokes',expected);importedNotes++}
+     checks.push({store:'strokes',id,expected});
+     done++;progress('جارٍ نقل التعليقات');
+    }
+    const [currentDocs,currentNotes]=await Promise.all([getAll(source,'documents'),getAll(source,'strokes')]);
+    if(currentDocs.length!==docs.length||currentNotes.length!==notes.length||
+       currentDocs.some((x,i)=>x.id!==docs[i].id)||currentNotes.some((x,i)=>x.id!==notes[i].id))
+      throw Error('تغيرت المكتبة القديمة أثناء الاستعادة؛ أوقف استخدامها وأعد المحاولة');
+    for(const item of checks){
+     const saved=await get(destination,item.store,item.id);
+     if(!saved||(item.store==='documents'?!(await sameFile(saved,item.expected)):!sameNote(saved,item.expected)))
+      throw Error('لم ينجح التحقق من أحد العناصر؛ النسخة الأصلية محفوظة');
+     done++;progress('جارٍ التحقق من سلامة الملفات والتعليقات');
+    }
+    const key='pdfathat-folders:'+userId;
+    const merged=[...new Set([...folders(key),...folders(foldersKey(name))])];
+    localStorage.setItem(key,JSON.stringify(merged));
+   }finally{source?.close()}
   }
- };
- if(new URLSearchParams(location.search).get('verify-guest')==='1'){
-  verifyButton.scrollIntoView({behavior:'smooth',block:'center'});
-  verifyButton.focus({preventScroll:true});
-  verifyButton.click();
- }
- if(new URLSearchParams(location.search).get('link-guest')==='1'){
-  button.style.outline='3px solid #b47b44';
-  button.scrollIntoView({behavior:'smooth',block:'center'});
-  button.focus({preventScroll:true});
- }
+  progress('اكتمل النقل والتحقق');
+  return {
+   libraries:candidates.length,
+   documents:candidates.reduce((n,x)=>n+x.docs.length,0),
+   notes:candidates.reduce((n,x)=>n+x.notes.length,0),
+   importedDocs,importedNotes
+  };
+ }finally{destination.close()}
 }
-offer().catch(error=>console.warn('legacy_library_link',error?.name));
-})();
