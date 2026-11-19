@@ -198,3 +198,15 @@ test('guest library recovery is visible in account settings with individual libr
  assert.match(source,/indexedDB\.databases\(\)/);
  assert.match(source,/guest-db=/);
 });
+
+test('guest library transfer reports record-by-record progress and offers integrity verification',()=>{
+ const importer=require('node:fs').readFileSync(require('node:path').resolve(__dirname,'../legacy-import.js'),'utf8');
+ assert.match(importer,/function makeProgress\(anchor\)/);
+ assert.match(importer,/document\.createElement\('progress'\)/);
+ assert.match(importer,/onProgress\(\+\+completed,total,'جارٍ نقل ملفات PDF'\)/);
+ assert.match(importer,/onProgress\(\+\+completed,total,'جارٍ التحقق من سلامة النقل'\)/);
+ assert.match(importer,/async function verifyLibrary\(oldDB,newDB/);
+ assert.match(importer,/verifyButton\.textContent='✓ التحقق من اكتمال النقل'/);
+ assert.match(importer,/verify-guest/);
+ assert.match(source,/التحقق من اكتمال النقل/);
+});
