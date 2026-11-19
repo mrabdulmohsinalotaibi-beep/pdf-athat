@@ -172,6 +172,8 @@ test('one recovery action is visible only in signed-in account settings',()=>{
  assert.doesNotMatch(source,/guest-db=/);
  assert.doesNotMatch(entry,/import\('\.\/legacy-import\.js'\)/);
  assert.match(source,/recoverLocalLibraries\(state\.currentUser\.id/);
+ assert.match(source,/async function recoverLocalLibraries\(/);
+ assert.doesNotMatch(source,/import\('\.\/legacy-import\.js'\)/);
  assert.match(legacy,/export async function recoverLocalLibraries/);
  assert.doesNotMatch(legacy,/indexedDB\.deleteDatabase|objectStore\(['"]documents['"]\)\.clear\(/);
 });
