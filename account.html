@@ -93,6 +93,14 @@
  
 <div class="account-settings">
  <h3>إعدادات الحساب والأمان</h3>
+ <section class="account-setting" id="guestLibrarySetting" aria-labelledby="guestLibraryHeading">
+  <h4 id="guestLibraryHeading" style="margin:0 0 8px;color:var(--wine)">نقل مكتبتي السابقة إلى الحساب</h4>
+  <p>إذا استخدمت PDF الذات قبل إنشاء الحساب، افحص الملفات المحفوظة على هذا الجهاز والمتصفح واربطها بحسابك. لا تحذف ملفات الزائر، وسيتم التحقق من النسخة المنقولة قبل إتمام الربط.</p>
+  <button type="button" id="scanGuestLibraries" class="secondary-action" style="padding:10px 14px">فحص المكتبات السابقة على هذا الجهاز</button>
+  <p id="guestLibraryScanStatus" class="account-setting-status" role="status" aria-live="polite">افحص مكتبتك القديمة لعرض عدد الملفات والتعليقات قبل النقل.</p>
+  <div id="guestLibraryCandidates" style="display:grid;gap:8px"></div>
+  <p>إذا كانت الملفات على جهاز آخر، افتح هذا الإعداد من الجهاز والمتصفح القديمين أولًا، أو استعد نسخة احتياطية من ذلك الجهاز.</p>
+ </section>
  <details class="account-setting" id="usernameSetting">
   <summary>تعديل اسم المستخدم</summary>
   <p>اسم المستخدم فريد، ويمكنك تسجيل الدخول به أو ببريدك. تغيير الاسم لا يغيّر مكتبتك.</p>
