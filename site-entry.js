@@ -69,7 +69,6 @@
   import('./site-ads.js').catch(()=>{});
   // Never copy a registered user's library into the anonymous guest library.
   if(user){
-   import('./legacy-import.js').catch(()=>{});
    import('./peer-sync.js').catch(error=>console.warn('peer_sync_disabled',error?.name));
   }
 
