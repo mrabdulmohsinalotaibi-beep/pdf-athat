@@ -5,7 +5,9 @@
 'use strict';
 const userId=window.__pdfAccountId;
 if(!userId||!('indexedDB' in window))return;
-const source=window.__pdfGuestDBName||'pdf-athat-v1';
+const requested=new URLSearchParams(location.search).get('guest-db');
+const source=requested && (requested==='pdf-athat-v1'||/^pdf-athat-guest-[a-f0-9-]{36}$/.test(requested))
+ ? requested : (window.__pdfGuestDBName||'pdf-athat-v1');
 const target='pdf-athat-account-'+userId;
 if(source===target)return;
 const guestKey='pdf-athat-active-guest-library';
@@ -149,9 +151,12 @@ async function offer(){
    const result=await transfer(oldDB,newDB);
    const names=[...new Set([...parseFolders(folderKey(source)),...parseFolders(accountFolders)])];
    localStorage.setItem(accountFolders,JSON.stringify(names));
-   const next='pdf-athat-guest-'+crypto.randomUUID();
-   localStorage.setItem(guestKey,next);
-   window.__pdfGuestDBName=next;
+   // Rotate only the currently active guest library; historical archives remain untouched.
+   if(source===(window.__pdfGuestDBName||'pdf-athat-v1')){
+    const next='pdf-athat-guest-'+crypto.randomUUID();
+    localStorage.setItem(guestKey,next);
+    window.__pdfGuestDBName=next;
+   }
    alert('اكتمل ربط '+result.documents+' ملف و'+result.notes+' تعليق بحسابك. عند تسجيل الخروج والدخول كزائر ستظهر مكتبة فارغة، وتبقى الملفات داخل حسابك على الجهاز.');
    location.reload();
   }catch(error){
