@@ -123,7 +123,11 @@ async function scanGuestLibraries(){
     link.style.cssText='display:inline-flex;margin-top:9px;padding:9px 12px;text-decoration:none';
     link.textContent='ربط هذه المكتبة بحسابي';
     link.href='./?link-guest=1&guest-db='+encodeURIComponent(name);
-    item.append(info,document.createElement('div'),link);list.append(item);
+    const verify=document.createElement('a');verify.className='secondary-action';
+    verify.style.cssText='display:inline-flex;margin:9px 0 0 8px;padding:9px 12px;text-decoration:none';
+    verify.textContent='التحقق من اكتمال النقل';
+    verify.href='./?verify-guest=1&guest-db='+encodeURIComponent(name);
+    item.append(info,document.createElement('div'),link,verify);list.append(item);
    }catch(error){console.warn('guest_library_scan',error?.name)}
    finally{db?.close()}
   }
