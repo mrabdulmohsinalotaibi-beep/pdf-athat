@@ -56,11 +56,59 @@ function parseFolders(key){
  try{const data=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(data)?data.filter(x=>typeof x==='string'&&x.trim()&&x.length<=40):[]}
  catch{return []}
 }
-async function transfer(oldDB,newDB){
+function makeProgress(anchor){
+ const wrap=document.createElement('div');wrap.id='guestTransferProgress';
+ wrap.style.cssText='margin:12px 0;padding:13px;border-radius:12px;border:1px solid #b8a08b;background:#fff8ef;max-width:560px';
+ const title=document.createElement('strong');title.textContent='حالة نقل المكتبة';
+ const meter=document.createElement('progress');meter.max=100;meter.value=0;
+ meter.style.cssText='display:block;width:100%;height:18px;margin:12px 0;accent-color:#39845b';
+ meter.setAttribute('aria-label','نسبة تقدم نقل المكتبة');
+ const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+ status.style.cssText='font-size:13px;margin:6px 0;color:#513d31';
+ wrap.append(title,meter,status);anchor.after(wrap);
+ return (done,total,label)=>{
+  const percent=total?Math.min(100,Math.round(done/total*100)):0;
+  meter.value=percent;
+  status.textContent=label+' — '+done+' من '+total+' ('+percent+'٪)';
+ };
+}
+async function verifyLibrary(oldDB,newDB,onProgress=()=>{}){
+ const docs=await readAll(oldDB,'documents');
+ const notes=await readAll(oldDB,'strokes');
+ const docMap=new Map(),total=docs.length+notes.length;
+ let done=0;
+ for(const doc of docs){
+  if(!doc?.id)throw Error('ملف قديم بلا معرّف');
+  let id=doc.id,found=await readOne(newDB,'documents',id);
+  if(!found||!(await equalFiles(found,doc))){
+   id=await stableId('documents',doc.id,doc.name||'');
+   found=await readOne(newDB,'documents',id);
+  }
+  if(!found||!(await equalFiles(found,doc)))throw Error('الملف '+(doc.name||doc.id)+' غير مطابق أو لم يُنقل');
+  docMap.set(doc.id,id);
+  onProgress(++done,total,'جارٍ التحقق من ملفات PDF');
+ }
+ for(const note of notes){
+  const expected={...note,documentId:docMap.get(note.documentId)||note.documentId};
+  let found=await readOne(newDB,'strokes',note.id);
+  if(!found||JSON.stringify(found)!==JSON.stringify(expected)){
+   const id=await stableId('strokes',note.id);
+   found=await readOne(newDB,'strokes',id);
+   expected.id=id;
+  }
+  if(!found||JSON.stringify(found)!==JSON.stringify(expected))throw Error('تعليق لم يُنقل أو لا يطابق الأصل');
+  onProgress(++done,total,'جارٍ التحقق من التعليقات');
+ }
+ onProgress(total,total,'اكتمل التحقق من جميع الملفات والتعليقات');
+ return {documents:docs.length,notes:notes.length};
+}
+async function transfer(oldDB,newDB,onProgress=()=>{}){
  const docs=await readAll(oldDB,'documents');
  const notes=await readAll(oldDB,'strokes');
  const docMap=new Map(),checks=[];
  let importedDocs=0,importedNotes=0;
+ const total=2*(docs.length+notes.length);let completed=0;
+ onProgress(0,total,'بدء نسخ الملفات والتعليقات');
  for(const doc of docs){
   if(!doc||typeof doc.id!=='string'||!doc.id)throw Error('ملف قديم بلا معرّف؛ لم تُغلق مكتبة الزائر');
   let id=doc.id;
@@ -73,6 +121,7 @@ async function transfer(oldDB,newDB){
   if(!found){await add(newDB,'documents',{...doc,id});importedDocs++}
   docMap.set(doc.id,id);
   checks.push({store:'documents',id,source:doc});
+  onProgress(++completed,total,'جارٍ نقل ملفات PDF');
  }
  for(const note of notes){
   if(!note||typeof note.id!=='string'||!note.id)throw Error('تعليق قديم بلا معرّف؛ لم تُغلق مكتبة الزائر');
@@ -88,6 +137,7 @@ async function transfer(oldDB,newDB){
   const record={...original,id};
   if(!found){await add(newDB,'strokes',record);importedNotes++}
   checks.push({store:'strokes',id,source:record});
+  onProgress(++completed,total,'جارٍ نقل التعليقات');
  }
  // If another open tab modified the visitor's collection during copying,
  // do not rotate access to it until a fresh, complete transfer succeeds.
@@ -106,6 +156,7 @@ async function transfer(oldDB,newDB){
    throw Error('لم يكتمل التحقق من ملف PDF؛ مكتبة الزائر محفوظة');
   if(item.store==='strokes' && JSON.stringify(record)!==JSON.stringify(item.source))
    throw Error('لم يكتمل التحقق من التعليقات؛ مكتبة الزائر محفوظة');
+  onProgress(++completed,total,'جارٍ التحقق من سلامة النقل');
  }
  return {documents:docs.length,notes:notes.length,importedDocs,importedNotes};
 }
@@ -127,6 +178,23 @@ async function offer(){
   backupButton.onclick=()=>button.click();
   bar.append(backupButton);
  }
+ const show=makeProgress(button);
+ const verifyButton=document.createElement('button');verifyButton.type='button';verifyButton.className='subtle-btn';
+ verifyButton.textContent='✓ التحقق من اكتمال النقل';verifyButton.style.cssText=button.style.cssText+';margin:6px';
+ button.after(verifyButton);
+ verifyButton.onclick=async()=>{
+  let oldDB,newDB;
+  verifyButton.disabled=true;
+  try{
+   if(!(await hasDatabase(source)))throw Error('لم تُعثر مكتبة سابقة على هذا الجهاز');
+   oldDB=await open(source);
+   newDB=await open(target);
+   if(!newDB.objectStoreNames.contains('documents')||!newDB.objectStoreNames.contains('strokes'))throw Error('مكتبة الحساب غير جاهزة');
+   const result=await verifyLibrary(oldDB,newDB,show);
+   alert('نجح التحقق: '+result.documents+' ملف PDF و'+result.notes+' تعليق مطابق للأصل في حسابك.');
+  }catch(error){alert('لم يكتمل التحقق: '+error.message+'؛ المكتبة الأصلية محفوظة.')}
+  finally{oldDB?.close();newDB?.close();verifyButton.disabled=false}
+ };
  button.onclick=async()=>{
   button.disabled=true;button.textContent='جارٍ فحص مكتبة الزائر…';
   let oldDB,newDB;
@@ -148,7 +216,7 @@ async function offer(){
    if(!newDB.objectStoreNames.contains('documents')||!newDB.objectStoreNames.contains('strokes'))
     throw Error('مكتبة الحساب غير جاهزة؛ أعد فتح الصفحة وحاول مجددًا');
    button.textContent='جارٍ الربط والتحقق من سلامة الملفات…';
-   const result=await transfer(oldDB,newDB);
+   const result=await transfer(oldDB,newDB,show);
    const names=[...new Set([...parseFolders(folderKey(source)),...parseFolders(accountFolders)])];
    localStorage.setItem(accountFolders,JSON.stringify(names));
    // Rotate only the currently active guest library; historical archives remain untouched.
@@ -166,6 +234,11 @@ async function offer(){
    button.disabled=false;button.textContent='🔐 ربط ملفات الزائر بحسابي';
   }
  };
+ if(new URLSearchParams(location.search).get('verify-guest')==='1'){
+  verifyButton.scrollIntoView({behavior:'smooth',block:'center'});
+  verifyButton.focus({preventScroll:true});
+  verifyButton.click();
+ }
  if(new URLSearchParams(location.search).get('link-guest')==='1'){
   button.style.outline='3px solid #b47b44';
   button.scrollIntoView({behavior:'smooth',block:'center'});
