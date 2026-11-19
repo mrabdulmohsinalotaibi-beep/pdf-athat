@@ -15,7 +15,7 @@ function selectAdminView(){
  const requested=location.hash.slice(1);
  const active=adminViews.includes(requested)?requested:'overview';
  for(const id of adminViews)$(id).hidden=id!==active;
- for(const link of document.querySelectorAll('.admin-sections a')){
+ for(const link of document.querySelectorAll('.admin-sections a, .admin-mobile-bottom a')){
   const current=link.getAttribute('href')==='#'+active;
   if(current)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
  }
@@ -23,7 +23,23 @@ function selectAdminView(){
  if(holder)holder.hidden=active==='overview';
  window.scrollTo({top:0,behavior:'instant'});
 }
-window.addEventListener('hashchange',selectAdminView);
+const nav=document.getElementById('adminSections');
+const navBackdrop=document.getElementById('adminNavBackdrop');
+const navOpen=document.getElementById('adminNavOpen');
+const navClose=document.getElementById('adminNavClose');
+function toggleAdminNav(open){
+ nav.classList.toggle('is-open',open);
+ navBackdrop.hidden=!open;
+ navOpen.setAttribute('aria-expanded',String(open));
+ if(open)nav.querySelector('a')?.focus();
+}
+navOpen.addEventListener('click',()=>toggleAdminNav(true));
+navClose.addEventListener('click',()=>toggleAdminNav(false));
+navBackdrop.addEventListener('click',()=>toggleAdminNav(false));
+document.addEventListener('keydown',event=>{if(event.key==='Escape')toggleAdminNav(false)});
+nav.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>toggleAdminNav(false)));
+window.addEventListener('hashchange',()=>{selectAdminView();toggleAdminNav(false)});
+
 
 const trafficNum=value=>new Intl.NumberFormat('ar-SA').format(Number(value)||0);
 const trafficDate=day=>{
