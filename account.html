@@ -81,7 +81,6 @@
  </div>
  <div class="account-actions">
   <a class="primary-action" href="./">فتح مكتبتي</a>
-  <a class="secondary-action" href="./?link-guest=1" id="profileLinkGuest">🔐 ربط ملفات الزائر بحسابي</a>
   <a class="secondary-action" href="./">المزامنة والملفات</a>
   <a class="secondary-action" href="./">إدارة مكتبتي والنسخ</a>
   <button type="button" id="accountPasswordChange" class="secondary-action">استعادة أو تغيير كلمة المرور</button>
@@ -96,10 +95,10 @@
  <section class="account-setting" id="guestLibrarySetting" aria-labelledby="guestLibraryHeading">
   <h4 id="guestLibraryHeading" style="margin:0 0 8px;color:var(--wine)">نقل مكتبتي السابقة إلى الحساب</h4>
   <p>إذا استخدمت PDF الذات قبل إنشاء الحساب، افحص الملفات المحفوظة على هذا الجهاز والمتصفح واربطها بحسابك. لا تحذف ملفات الزائر، وسيتم التحقق من النسخة المنقولة قبل إتمام الربط.</p>
-  <button type="button" id="scanGuestLibraries" class="secondary-action" style="padding:10px 14px">فحص المكتبات السابقة على هذا الجهاز</button>
-  <p id="guestLibraryScanStatus" class="account-setting-status" role="status" aria-live="polite">افحص مكتبتك القديمة لعرض عدد الملفات والتعليقات قبل النقل.</p>
-  <div id="guestLibraryCandidates" style="display:grid;gap:8px"></div>
-  <p>إذا كانت الملفات على جهاز آخر، افتح هذا الإعداد من الجهاز والمتصفح القديمين أولًا، أو استعد نسخة احتياطية من ذلك الجهاز.</p>
+  <button type="button" id="scanGuestLibraries" class="secondary-action" style="padding:12px 16px;min-height:46px;width:100%">استعادة الملفات الموجودة على هذا الجهاز وربطها بحسابي</button>
+  <p id="guestLibraryScanStatus" class="account-setting-status" role="status" aria-live="polite">سيبحث عن جميع المكتبات السابقة داخل هذا المتصفح، ثم ينقل الملفات والتعليقات ويتحقق منها. لا يحذف الأصول.</p>
+  <progress id="guestRecoveryProgress" max="100" value="0" style="width:100%;height:16px;accent-color:#39845b" hidden aria-label="تقدم استعادة المكتبة"></progress>
+  <p id="guestRecoveryResult" class="account-setting-status" role="status" aria-live="polite"></p>
  </section>
  <details class="account-setting" id="usernameSetting">
   <summary>تعديل اسم المستخدم</summary>
