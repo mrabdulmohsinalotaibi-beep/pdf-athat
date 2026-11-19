@@ -169,7 +169,7 @@ test('linking visitor library rotates guest database only after verifying accoun
  assert.match(importer,/const source=requested &&/);
  assert.match(importer,/pdf-athat-v1/);
  assert.match(importer,/const requested=new URLSearchParams\(location\.search\)\.get\('guest-db'\)/);
- assert.match(importer,/await transfer\(oldDB,newDB\)/);
+ assert.match(importer,/await transfer\(oldDB,newDB,show\)/);
  assert.match(importer,/for\(const item of checks\)/);
  assert.match(importer,/localStorage\.setItem\(guestKey,next\)/);
  assert.ok(importer.indexOf('await transfer(oldDB,newDB)')<importer.indexOf('localStorage.setItem(guestKey,next)'));
@@ -188,7 +188,7 @@ test('linking old guest files is discoverable in personal profile and home, incl
  assert.match(importer,/if\(!\(await hasDatabase\(source\)\)\)/);
  assert.match(importer,/مكتبة الزائر الحالية فارغة/);
  assert.match(importer,/new URLSearchParams\(location\.search\)\.get\('link-guest'\)/);
- assert.ok(importer.indexOf('const result=await transfer(oldDB,newDB)')<importer.indexOf('localStorage.setItem(guestKey,next)'));
+ assert.ok(importer.indexOf('const result=await transfer(oldDB,newDB,show)')<importer.indexOf('localStorage.setItem(guestKey,next)'));
 });
 
 test('guest library recovery is visible in account settings with individual library selection',()=>{
