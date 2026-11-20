@@ -1,6 +1,5 @@
 // Split oversized PDFs locally. Nothing is uploaded to a server.
 export const PDF_PART_LIMIT = 75 * 1024 * 1024;
-export const PDF_SPLIT_INPUT_LIMIT = 300 * 1024 * 1024;
 export const readableSize = bytes => (bytes / (1024 * 1024)).toFixed(1) + " ميجابايت";
 
 /**
@@ -9,10 +8,16 @@ export const readableSize = bytes => (bytes / (1024 * 1024)).toFixed(1) + " مي
  * fewer pages; the source File is never modified.
  */
 export async function* splitLargePdf(file, PDFDocument, onProgress = () => {}) {
-  if (file.size > PDF_SPLIT_INPUT_LIMIT) {
-    throw Error("هذا الكتاب أكبر من 300 ميجابايت؛ حفاظًا على ذاكرة الجهاز، قسّمه أولًا بأداة مخصصة ثم أضف الأجزاء.");
+  // No arbitrary input-size ceiling: device memory and available disk space
+  // determine what can be handled. Keep the original file unchanged.
+  let source;
+  try {
+    source = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
+  } catch (error) {
+    if (error instanceof RangeError || /memory|alloc|array buffer/i.test(String(error?.message || "")))
+      throw Error("ذاكرة الجهاز لا تكفي لفتح الكتاب وتقسيمه. جرّب من الكمبيوتر، أو حرّر مساحة الذاكرة ثم أعد المحاولة.");
+    throw error;
   }
-  const source = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
   const totalPages = source.getPageCount();
   if (!totalPages) throw Error("لا توجد صفحات في هذا الكتاب.");
   const name = file.name.replace(/\.pdf$/i, "");
