@@ -14,9 +14,19 @@ localStorage.setItem(peerKey,deviceId);
 let enabled=localStorage.getItem(enabledKey)==='yes', live=false, working=false;
 const connections=new Map(), nick='PDF.ATHAT '+(navigator.platform||'جهاز').slice(0,20);
 let heartbeatTimer=null,pollTimer=null,onlineCount=0,lastStatus='';
+const syncLabels={stopped:'متوقفة',syncing:'تتم المزامنة',synced:'تمت المزامنة'};
+function refreshVisual(){
+ const peers=[...connections.values()];
+ const phase=!enabled||!navigator.onLine||peers.some(peer=>peer.peerError)
+  ?'stopped':peers.length&&peers.every(peer=>peer.connected&&peer.done&&!peer.pendingRequests.size)
+  ?'synced':peers.length?'syncing':'stopped';
+ button.dataset.syncState=phase;statusLine.dataset.syncState=phase;
+ button.textContent='مزامنة';button.title=lastStatus||syncLabels[phase];
+ button.setAttribute('aria-label','حالة المزامنة: '+syncLabels[phase]+'. '+(lastStatus||'اضغط لعرض التفاصيل'));
+}
 const status=(text)=>{
- if(text===lastStatus)return;lastStatus=text;
- statusLine.textContent=text;button.title=text;
+ if(text!==lastStatus){lastStatus=text;statusLine.textContent=text;}
+ refreshVisual();
 };
 const button=document.createElement('button');button.type='button';button.className='subtle-btn peer-sync-btn';button.textContent='⇄ مزامنة';
 const actions=document.querySelector('.header-actions');if(!actions)return;
@@ -36,7 +46,7 @@ const retry=document.createElement('button');retry.type='button';retry.textConte
 const close=document.createElement('button');close.type='button';close.textContent='إغلاق';close.className='subtle-btn';close.onclick=()=>dialog.close();
 controls.append(activate,retry,close);dialog.append(h,intro,statusLine,details,hint,controls);document.body.append(dialog);
 button.onclick=()=>dialog.showModal();
-function updateToggle(){activate.textContent=enabled?'إيقاف المزامنة على هذا الجهاز':'تفعيل المزامنة على هذا الجهاز';button.textContent=enabled?'⇄ مزامنة ✓':'⇄ مزامنة'}
+function updateToggle(){activate.textContent=enabled?'إيقاف المزامنة على هذا الجهاز':'تفعيل المزامنة على هذا الجهاز';refreshVisual()}
 updateToggle();
 async function request(action,body={}){
  const response=await fetch('/api/sync/'+action,{
@@ -109,7 +119,7 @@ function connection(remoteId){
  if(previous&&previous.pc.connectionState!=='closed'&&previous.pc.connectionState!=='failed')return previous;
  previous?.pc.close();
  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
- const state={id:remoteId,pc,channel:null,sendQueue:Promise.resolve(),receiveQueue:Promise.resolve(),parts:new Map(),incoming:null,pendingNotes:[],connected:false};
+ const state={id:remoteId,pc,channel:null,sendQueue:Promise.resolve(),receiveQueue:Promise.resolve(),parts:new Map(),incoming:null,pendingNotes:[],pendingRequests:new Set(),connected:false,peerReady:false,localComplete:false,remoteComplete:false,peerError:false,done:false};
  connections.set(remoteId,state);
  pc.ondatachannel=event=>attach(state,event.channel);
  pc.onconnectionstatechange=()=>{
@@ -119,7 +129,22 @@ function connection(remoteId){
    if(enabled)status('انقطع الاتصال بأحد الأجهزة؛ ستُعاد المحاولة عندما يتصل.');
   }
  };
+ refreshVisual();
  return state;
+}
+function maybeFinish(state){
+ if(!enabled||!state.connected||state.peerError||!state.peerReady||state.pendingRequests.size||state.incoming)return;
+ if(!state.localComplete){
+  state.localComplete=true;
+  enqueue(state,()=>sendJSON(state,{type:'sync-complete'}));
+ }
+ if(state.remoteComplete&&!state.done){
+  void state.sendQueue.then(()=>{
+   if(!enabled||!state.connected||state.peerError||!state.remoteComplete||state.pendingRequests.size)return;
+   state.done=true;
+   status('تمت المزامنة بين الأجهزة: اكتمل تبادل الملفات والملاحظات المطلوبة.');
+  });
+ }
 }
 async function fullyGathered(pc){
  if(pc.iceGatheringState==='complete')return;
@@ -154,7 +179,7 @@ async function answer(remoteId,payload){
 function attach(state,channel){
  state.channel=channel;channel.binaryType='arraybuffer';channel.bufferedAmountLowThreshold=64000;
  channel.onopen=async()=>{
-  state.connected=true;status('متصل بجهاز آخر: نقل الكتب والملاحظات الناقصة جارٍ…');
+  state.connected=true;state.done=false;status('متصل بجهاز آخر: نقل الكتب والملاحظات الناقصة جارٍ…');
   try{
    const docs=(await readAll('documents')).filter(d=>!d.deleted);
    const savedFolders=(()=>{try{return JSON.parse(localStorage.getItem('pdfathat-folders:'+account)||'[]')}catch{return []}})();
@@ -172,15 +197,15 @@ function attach(state,channel){
    const notes=await readAll('strokes');
    for(const note of notes)enqueue(state,()=>sendJSON(state,{type:'note',note}));
    enqueue(state,()=>sendJSON(state,{type:'ready'}));
-  }catch(error){status('تعذر قراءة مكتبة هذا الجهاز: '+error.message)}
+  }catch(error){state.peerError=true;status('تعذر قراءة مكتبة هذا الجهاز: '+error.message)}
  };
  channel.onmessage=event=>{
-  state.receiveQueue=state.receiveQueue.then(()=>receive(state,event.data)).catch(error=>{console.warn('peer_sync_receive',error?.name);status('تعذر استلام جزء من المزامنة؛ حاول إعادة الاتصال.')});
+  state.receiveQueue=state.receiveQueue.then(()=>receive(state,event.data)).catch(error=>{console.warn('peer_sync_receive',error?.name);state.peerError=true;status('تعذر استلام جزء من المزامنة؛ حاول إعادة الاتصال.')});
  };
- channel.onclose=()=>{state.connected=false};
+ channel.onclose=()=>{state.connected=false;state.done=false;refreshVisual()};
 }
 function enqueue(state,job){
- state.sendQueue=state.sendQueue.then(job).catch(error=>{console.warn('peer_sync_send',error?.name);status('توقف النقل مؤقتًا: '+error.message)});
+ state.sendQueue=state.sendQueue.then(job).catch(error=>{console.warn('peer_sync_send',error?.name);state.peerError=true;status('توقف النقل مؤقتًا: '+error.message)});
 }
 async function sendJSON(state,payload){
  const channel=state.channel;if(!channel||channel.readyState!=='open')throw Error('الجهاز الآخر غير متصل');
@@ -195,10 +220,10 @@ async function sendJSON(state,payload){
 }
 async function sendFile(state,id){
  const doc=await getOne('documents',id);
- if(!doc||doc.deleted||!(doc.file instanceof Blob))return;
- if(doc.file.size>75*1024*1024){status('تخطيت ملفًا أكبر من 75 ميجابايت؛ استخدم النسخة الاحتياطية لنقله.');return}
+ if(!doc||doc.deleted||!(doc.file instanceof Blob)){await sendJSON(state,{type:'doc-unavailable',id});return}
+ if(doc.file.size>75*1024*1024){await sendJSON(state,{type:'doc-unavailable',id});status('تعذر نقل ملف أكبر من 75 ميجابايت؛ استخدم النسخة الاحتياطية.');return}
  const content=await doc.file.arrayBuffer();
- if(!new TextDecoder().decode(content.slice(0,16)).includes('%PDF-'))return;
+ if(!new TextDecoder().decode(content.slice(0,16)).includes('%PDF-')){await sendJSON(state,{type:'doc-unavailable',id});return;}
  const metadata={...doc};delete metadata.file;
  await sendJSON(state,{type:'doc-start',id:doc.id,name:doc.name,size:content.byteLength,sha256:await digest(content),metadata});
  const channel=state.channel;
@@ -273,18 +298,21 @@ async function handle(state,msg){
  }else if(msg.type==='manifest'){
   if(!Array.isArray(msg.docs)||msg.docs.length>100)return;
   const missing=[];
+  state.done=false;refreshVisual();
   for(const doc of msg.docs){
    if(typeof doc.id!=='string'||doc.id.length>150||!Number.isInteger(doc.size)||doc.size<0)continue;
    const local=await getOne('documents',doc.id);
-   if(!local)missing.push(doc.id);
+   if(!local){missing.push(doc.id);state.pendingRequests.add(doc.id)}
    else await keepRemoteMetadata(doc);
   }
   for(let i=0;i<missing.length;i+=20)enqueue(state,()=>sendJSON(state,{type:'want',ids:missing.slice(i,i+20)}));
  }else if(msg.type==='want'){
+  state.done=false;refreshVisual();
   if(!Array.isArray(msg.ids)||msg.ids.length>20)return;
   for(const id of msg.ids)if(typeof id==='string'&&id.length<150)enqueue(state,()=>sendFile(state,id));
  }else if(msg.type==='doc-start'){
   if(state.incoming||typeof msg.id!=='string'||msg.id.length>150||!Number.isInteger(msg.size)||msg.size>75*1024*1024||msg.size<=0||! /^[a-f0-9]{64}$/.test(msg.sha256||''))return;
+  state.done=false;refreshVisual();
   state.incoming={id:msg.id,name:String(msg.name||'').slice(0,250),metadata:msg.metadata,expected:msg.size,hash:msg.sha256,size:0,chunks:[]};
  }else if(msg.type==='doc-end'){
   const item=state.incoming;state.incoming=null;
@@ -300,10 +328,19 @@ async function handle(state,msg){
   }
   const pending=state.pendingNotes;state.pendingNotes=[];
   for(const note of pending)await addNote(state,note);
+  state.pendingRequests.delete(item.id);maybeFinish(state);
  }else if(msg.type==='note'){
   await addNote(state,msg.note);
+ }else if(msg.type==='doc-unavailable'){
+  if(state.pendingRequests.has(msg.id)){
+   state.pendingRequests.delete(msg.id);state.peerError=true;
+   status('تعذر نقل أحد الملفات من الجهاز الآخر؛ لم تكتمل المزامنة.');
+  }
  }else if(msg.type==='ready'){
-  status('الأجهزة متصلة. اكتملت مراجعة المكتبات، وستنتقل الإضافات عند الاتصال.');
+  state.peerReady=true;maybeFinish(state);
+  if(!state.done)status('مراجعة المكتبتين اكتملت؛ يجري إنهاء نقل الملفات والتعليقات.');
+ }else if(msg.type==='sync-complete'){
+  state.remoteComplete=true;maybeFinish(state);
  }
 }
 async function heartbeat(){
@@ -311,7 +348,7 @@ async function heartbeat(){
  try{
   const data=await request('heartbeat',{name:nick});
   onlineCount=data.peers.length;
-  if(!onlineCount)status('المزامنة مفعلة. افتح الموقع بالحساب نفسه على الجهاز الثاني.');
+  if(!onlineCount&&!connections.size)status('بانتظار جهاز ثانٍ بالحساب نفسه؛ لم تبدأ المزامنة بعد.');
   for(const peer of data.peers)if(deviceId<peer.id&&!connections.has(peer.id))void call(peer.id);
  }catch(error){status('خدمة ربط الأجهزة غير متاحة: '+error.message)}
 }
@@ -339,7 +376,7 @@ async function start(){
  pollTimer=setInterval(()=>{void poll()},4500);
 }
 function stop(){
- if(!live)return;live=false;
+ if(!live){status('المزامنة متوقفة على هذا الجهاز. ملفاتك المحلية محفوظة.');return}live=false;
  clearInterval(heartbeatTimer);clearInterval(pollTimer);
  for(const peer of connections.values()){try{peer.pc.close()}catch{}}
  connections.clear();
@@ -351,8 +388,12 @@ activate.onclick=()=>{
  enabled?void start():stop();
 };
 retry.onclick=async()=>{stop();if(enabled)await start()};
-window.addEventListener('online',()=>{if(enabled)void start()});
-window.addEventListener('offline',()=>{if(enabled)status('لا يوجد اتصال بالإنترنت؛ ستتابع المزامنة عند عودته.')});
+window.addEventListener('online',()=>{if(enabled){if(live){void heartbeat();void poll()}else void start()}});
+window.addEventListener('offline',()=>{
+ for(const peer of connections.values()){try{peer.pc.close()}catch{}}
+ connections.clear();
+ if(enabled)status('انقطع الإنترنت؛ المزامنة متوقفة حتى عودة الاتصال.');
+});
 window.addEventListener('pagehide',()=>{
  clearInterval(heartbeatTimer);clearInterval(pollTimer);
  for(const state of connections.values())state.pc.close();
