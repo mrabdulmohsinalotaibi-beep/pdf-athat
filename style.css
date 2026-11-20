@@ -1067,3 +1067,15 @@ body{min-width:0;max-width:100%;overflow-x:clip}
 .large-pdf-dialog-actions .primary-btn{background:var(--green);color:white}
 .large-pdf-dialog-actions .primary-btn:hover{background:var(--green);filter:brightness(.9)}
 @media(max-width:400px){.large-pdf-dialog-inner{padding:19px}.large-pdf-dialog-actions{flex-direction:column}}
+
+/* Oversized PDF import: dedicated, non-dismissible progress until stored. */
+.large-pdf-progress{width:min(470px,calc(100vw - 28px))}
+.large-pdf-progress .large-pdf-progress-name{font-weight:650;overflow-wrap:anywhere;max-height:4em;overflow:hidden}
+.large-pdf-progress-track{height:14px;border-radius:999px;background:var(--panel-soft);border:1px solid var(--line);overflow:hidden;direction:ltr}
+.large-pdf-progress-track>span{display:block;width:0%;height:100%;background:var(--green);border-radius:999px;transition:width .18s ease}
+.large-pdf-progress-detail{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--mute);font-size:13px}
+.large-pdf-progress-detail strong{font-size:20px;color:var(--green);font-variant-numeric:tabular-nums}
+.large-pdf-progress #largePdfProgressDone{width:100%;margin-top:4px}
+.large-pdf-progress #largePdfProgressDone[hidden]{display:none!important}
+.large-pdf-progress[data-state="error"] .large-pdf-progress-track>span{background:#a04737}
+@media(prefers-reduced-motion:reduce){.large-pdf-progress-track>span{transition:none}}
