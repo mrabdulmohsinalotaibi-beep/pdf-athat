@@ -451,6 +451,35 @@ function confirmDuplicatePdf(existing,newName){
   try{dialog.showModal()}catch{finish(false)}
  });
 }
+function confirmLargePdf(file){
+ return new Promise(resolve=>{
+  const dialog=$("largePdfDialog"),accept=$("largePdfAccept"),cancel=$("largePdfCancel");
+  if(!dialog||!accept||!cancel){resolve(false);return}
+  $("largePdfSize").textContent=readableSize(file.size);
+  let settled=false;
+  const finish=answer=>{
+   if(settled)return;settled=true;
+   accept.removeEventListener("click",onAccept);
+   cancel.removeEventListener("click",onCancel);
+   dialog.removeEventListener("cancel",onEscape);
+   dialog.removeEventListener("click",onBackdrop);
+   dialog.removeEventListener("close",onClose);
+   if(dialog.open)dialog.close();
+   resolve(answer);
+  };
+  const onAccept=()=>finish(true);
+  const onCancel=()=>finish(false);
+  const onEscape=e=>{e.preventDefault();finish(false)};
+  const onClose=()=>finish(false);
+  const onBackdrop=e=>{if(e.target===dialog)finish(false)};
+  accept.addEventListener("click",onAccept);
+  cancel.addEventListener("click",onCancel);
+  dialog.addEventListener("cancel",onEscape);
+  dialog.addEventListener("click",onBackdrop);
+  dialog.addEventListener("close",onClose);
+  try{dialog.showModal();accept.focus()}catch(error){console.error("Oversized PDF dialog unavailable",error);finish(false)}
+ });
+}
 // Serialize uploads so two simultaneous selections cannot evade the duplicate check.
 let pendingPdfUpload=Promise.resolve();
 async function addFile(file){
@@ -458,7 +487,7 @@ async function addFile(file){
  try{
   if(file.size>PDF_PART_LIMIT){
    if(file.size>PDF_SPLIT_INPUT_LIMIT)throw Error("حجم الكتاب "+readableSize(file.size)+"؛ تقسيم الكتب الأكبر من 300 ميجابايت غير متاح داخل المتصفح حاليًا.");
-   const proceed=confirm("حجم الكتاب "+readableSize(file.size)+" ويتجاوز الحد المسموح (75 ميجابايت).\nهل تريد تقسيمه إلى أجزاء، وحفظها محليًا داخل مجلد باسم الكتاب؟\nلن يُعدّل الملف الأصلي.");
+   const proceed=await confirmLargePdf(file);
    if(!proceed){tell("بقي الملف الأصلي دون تغيير، ولم يُضف إلى المكتبة.");return}
    const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());
    if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");
