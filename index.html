@@ -225,4 +225,17 @@
   </div>
  </div>
 </dialog>
+<dialog id="largePdfProgress" class="large-pdf-dialog large-pdf-progress" aria-labelledby="largePdfProgressTitle" aria-describedby="largePdfProgressStatus" dir="rtl">
+ <div class="large-pdf-dialog-inner">
+  <div class="large-pdf-dialog-icon" aria-hidden="true">▤</div>
+  <h2 id="largePdfProgressTitle">تقسيم الكتاب وحفظه</h2>
+  <p id="largePdfProgressName" class="large-pdf-progress-name"></p>
+  <p id="largePdfProgressStatus" role="status" aria-live="polite">تهيئة الكتاب…</p>
+  <div class="large-pdf-progress-track" role="progressbar" id="largePdfProgressBar" aria-label="تقدم تقسيم الكتاب وحفظه" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="largePdfProgressFill"></span></div>
+  <div class="large-pdf-progress-detail"><strong id="largePdfProgressPercent">0%</strong><span id="largePdfProgressPages">جارٍ حساب الصفحات…</span></div>
+  <div class="large-pdf-size-info"><span>الأجزاء المحفوظة على هذا الجهاز</span><strong id="largePdfProgressSaved">0</strong></div>
+  <p class="large-pdf-dialog-note" id="largePdfProgressHint">ابقِ التطبيق مفتوحًا حتى يكتمل الحفظ. لن يُعدّل الملف الأصلي.</p>
+  <button id="largePdfProgressDone" type="button" class="primary-btn" hidden>فتح مجلد الكتاب</button>
+ </div>
+</dialog>
 </body></html>
