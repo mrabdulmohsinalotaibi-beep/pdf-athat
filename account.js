@@ -1,5 +1,23 @@
 const $=id=>document.getElementById(id);
 const state={signupChallenge:null,resetChallenge:null,emailChallenge:null,currentUser:null};
+const OFFLINE_KEY='pdf-athat-last-verified-user-v1';
+const PENDING_LOGOUT='pdf-athat-offline-logout-pending-v1';
+const rememberUser=user=>{
+ if(user&&typeof user.id==='string'&&user.id.length>0&&user.id.length<=150){
+  try{localStorage.setItem(OFFLINE_KEY,JSON.stringify({
+   id:user.id,username:String(user.username||'').slice(0,100),
+   email:String(user.email||'').slice(0,180),role:user.role==='admin'?'admin':'user'
+  }))}catch{}
+ }
+};
+const forgetUser=()=>{try{localStorage.removeItem(OFFLINE_KEY)}catch{}};
+const cachedUser=()=>{
+ try{
+  if(localStorage.getItem(PENDING_LOGOUT)==='yes')return null;
+  const user=JSON.parse(localStorage.getItem(OFFLINE_KEY)||'null');
+  return user&&typeof user.id==='string'&&user.id.length>0&&user.id.length<=150?user:null;
+ }catch{return null}
+};
 const status=message=>{$('authStatus').textContent=message||''};
 const profileStatus=message=>{$('profileStatus').textContent=message||''};
 const post=async(path,body)=>{
@@ -28,6 +46,7 @@ function showAuth(){
  $('profilePane').hidden=true;$('authPane').hidden=false;$('returnToProfile').hidden=true;
 }
 function forward(user){
+ rememberUser(user);
  location.replace(user?.role==='admin'?'/admin.html':'/');
 }
 function enterGuest(){
@@ -283,7 +302,7 @@ guard($('profileEmailConfirmForm'),async values=>{
  if(!state.emailChallenge)throw Error('اطلب رمز التحقق أولًا');
  messageFor('emailSettingStatus','');
  const result=await post('profile-email-confirm',{challengeId:state.emailChallenge,code:values.code});
- state.emailChallenge=null;state.currentUser=null;
+ state.emailChallenge=null;state.currentUser=null;forgetUser();
  $('profileEmailConfirmForm').hidden=true;
  showAuth();tab('login');
  status(result.message||'تم تغيير البريد. سجّل الدخول مرة أخرى.');
@@ -317,7 +336,7 @@ $('accountDeleteForm').addEventListener('submit',async event=>{
   const result=await post('profile-delete',{password:values.password,confirmation:values.confirmation,acknowledge:true});
   $('accountDeleteDialog').close();
   form.reset();
-  state.currentUser=null;state.emailChallenge=null;
+  state.currentUser=null;state.emailChallenge=null;forgetUser();localStorage.removeItem(PENDING_LOGOUT);
   showAuth();tab('login');
   status(result.message||'تم حذف الحساب. ملفات PDF المحلية لم تُحذف.');
  }catch(error){$('accountDeleteError').textContent=error.message}
@@ -333,7 +352,14 @@ $('accountPasswordChange').onclick=()=>{
 $('profileLogout').onclick=async()=>{
  const button=$('profileLogout');button.disabled=true;profileStatus('');
  try{
+  if(!navigator.onLine){
+   forgetUser();localStorage.setItem(PENDING_LOGOUT,'yes');
+   state.currentUser=null;showAuth();tab('login');
+   status('تم الخروج من هذا الجهاز. سيُنهى اتصال الحساب بالخادم عند عودة الإنترنت.');
+   return;
+  }
   await post('logout',{});
+  forgetUser();localStorage.removeItem(PENDING_LOGOUT);
   state.currentUser=null;
   showAuth();tab('login');
   status('تم تسجيل الخروج. ملفاتك المحلية محفوظة على هذا الجهاز.');
@@ -360,19 +386,47 @@ guard($('recoverForm'),async values=>{
 guard($('resetForm'),async values=>{
  if(!state.resetChallenge)throw Error('اطلب رمز الاستعادة أولًا');
  await post('reset',{challengeId:state.resetChallenge,code:values.code,password:values.password});
+ forgetUser();
  state.currentUser=null;showAuth();tab('login');
  status('تم تغيير كلمة المرور. سجّل الدخول الآن.');
 });
 async function loadAccount(){
  try{
+  // A local logout must remain effective even if the server cookie is still present.
+  if(localStorage.getItem(PENDING_LOGOUT)==='yes'){
+   if(navigator.onLine){
+    try{await post('logout',{});localStorage.removeItem(PENDING_LOGOUT)}
+    catch{status('خرجت من هذا الجهاز. تعذر إنهاء جلسة الخادم، أعد فتح الحساب عند توفر الإنترنت.')}
+   }
+   state.currentUser=null;showAuth();
+   return;
+  }
+  if(!navigator.onLine){
+   const saved=cachedUser();
+   if(saved){
+    showProfile(saved);
+    profileStatus('تعمل مكتبتك محليًا دون إنترنت. مزامنة الأجهزة وتعديل الحساب يحتاجان اتصالًا.');
+   }else{
+    showAuth();status('لم يُفعّل الدخول المحلي بعد. سجّل الدخول مرة واحدة بالإنترنت من هذا الجهاز.');
+   }
+   return;
+  }
   const response=await fetch('/api/auth/session',{credentials:'same-origin',cache:'no-store'});
-  if(!response.ok)throw Error('تعذر التحقق من جلسة الحساب. يمكنك المحاولة مجددًا.');
+  if(response.status===401||response.status===403){
+   forgetUser();state.currentUser=null;showAuth();return;
+  }
+  if(!response.ok)throw Error('تعذر التحقق من جلسة الحساب.');
   const data=await response.json();
-  if(data?.user?.id)showProfile(data.user);
-  else{state.currentUser=null;showAuth()}
+  if(data?.user?.id){rememberUser(data.user);showProfile(data.user)}
+  else{forgetUser();state.currentUser=null;showAuth()}
  }catch(error){
-  state.currentUser=null;showAuth();
-  status(error.message);
+  const saved=cachedUser();
+  if(saved){
+   showProfile(saved);
+   profileStatus('تعذر الاتصال بالخادم. يمكنك فتح مكتبتك المحلية دون مزامنة حتى يعود الإنترنت.');
+  }else{
+   state.currentUser=null;showAuth();status(error.message);
+  }
  }
 }
 void loadAccount();
