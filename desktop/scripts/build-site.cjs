@@ -66,6 +66,11 @@ fs.writeFileSync(htmlFile,html);
 const moduleEntry='<script type="module" src="./app-v2.js?v='+version+'"></script>';
 if(!html.includes(moduleEntry))throw Error('PDF reader entrypoint missing');
 html=html.replace(moduleEntry,'<script type="module" src="./site-entry.js?v='+version+'"></script>');
+// If a cached script is incomplete, never strand the user on a plain sand-colored screen.
+// The inline watchdog applies only to the PWA build, not to the Electron desktop app.
+const recoveryMarkup=`<div id="pdfBootNotice" hidden role="alert" dir="rtl" style="position:fixed;inset:auto 12px 12px;z-index:9999;padding:16px;border-radius:14px;background:#efe3d4;border:1px solid #ae8976;color:#780000;box-shadow:0 8px 30px #0003;font:14px system-ui;line-height:1.7;text-align:center"><strong>تعذر إكمال تشغيل المكتبة</strong><p>قد يحتاج التطبيق إلى تحديث ملفات التشغيل. بيانات كتبك المحلية لم تُحذف.</p><button type="button" onclick="location.reload()" style="background:#780000;color:#fff;border:0;border-radius:8px;padding:9px 15px">إعادة المحاولة</button></div><script>setTimeout(function(){if(!document.documentElement.dataset.pdfBootReady){var el=document.getElementById('pdfBootNotice');if(el)el.hidden=false}},8000);</script>`;
+if(!html.includes('</body>'))throw Error('Missing document body for offline recovery');
+html=html.replace('</body>',recoveryMarkup+'</body>');
 fs.writeFileSync(htmlFile,html);
 
 // build:offline removes the Electron-incompatible service-worker call, so the
@@ -108,10 +113,23 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 
 fs.writeFileSync(file,source);
 const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./prayer-background-push.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./large-pdf-split.js','./large-pdf-split.js?v='+version,'./large-pdf-worker.js','./large-pdf-worker.js?v='+version,'./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+// Guarantee a minimum offline reader. Optional enhancements can fail without preventing
+// installation of the service worker or making the entire app unusable offline.
+const coreShell=['./','./index.html','./site-entry.js?v='+version,'./app-v2.js?v='+version,'./style.css?v='+version,'./account.html','./account.js','./admin.css','./manifest.webmanifest?v='+version,'./icon.svg?v='+version,'./large-pdf-split.js?v='+version,'./large-pdf-worker.js?v='+version,'./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js'];
 let sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('pdf-athat-')&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()])));
+const CORE=${JSON.stringify(coreShell)};
+self.addEventListener('install',e=>e.waitUntil((async()=>{
+ const c=await caches.open(CACHE);
+ await c.addAll(CORE);
+ // Keep the previous working worker if core assets fail; optional features must not block install.
+ await Promise.allSettled(SHELL.filter(url=>!CORE.includes(url)).map(url=>c.add(url)));
+ await self.skipWaiting();
+})()));
+self.addEventListener('activate',e=>e.waitUntil(Promise.all([
+ caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('pdf-athat-')&&k!==CACHE).map(k=>caches.delete(k)))),
+ self.clients.claim()
+])));
 self.addEventListener('fetch',e=>{
  if(e.request.method!=='GET')return;
  const u=new URL(e.request.url);
@@ -120,13 +138,18 @@ self.addEventListener('fetch',e=>{
   const cache=await caches.open(CACHE);
   const cached=await cache.match(e.request);
   const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/large-pdf-split.js','/large-pdf-worker.js','/icon.svg','/manifest.webmanifest','/site-entry.js','/account.html','/account.js','/admin.html','/admin.js'].includes(u.pathname);
-  if(cached&&!revalidate)return cached;
+  // Offline navigation and hashed app modules must load instantly from Cache Storage.
+  if(cached){
+   if(revalidate)e.waitUntil(fetch(e.request,{cache:'no-store'}).then(response=>{
+    if(response.ok)return cache.put(e.request,response.clone());
+   }).catch(()=>{}));
+   return cached;
+  }
   try{
-   const response=await fetch(e.request,revalidate?{cache:'no-store'}:{});
+   const response=await fetch(e.request);
    if(response.ok)cache.put(e.request,response.clone()).catch(()=>{});
    return response;
   }catch(err){
-   if(cached)return cached;
    if(e.request.mode==='navigate')return await cache.match('./index.html')||Response.error();
    return Response.error();
   }
