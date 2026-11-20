@@ -211,4 +211,18 @@
   <div class="library-dialog-bottom"><button id="libraryDialogCancel" type="button">إلغاء</button><button id="libraryDialogSave" class="primary-btn" type="button">حفظ التغييرات</button></div>
  </form>
 </dialog>
+<dialog id="largePdfDialog" class="large-pdf-dialog" aria-labelledby="largePdfTitle" aria-describedby="largePdfDescription" dir="rtl">
+ <div class="large-pdf-dialog-inner">
+  <div class="large-pdf-dialog-icon" aria-hidden="true">▤</div>
+  <h2 id="largePdfTitle">كتاب كبير الحجم</h2>
+  <p id="largePdfDescription">يتجاوز هذا الكتاب الحد المسموح للملف الواحد.</p>
+  <div class="large-pdf-size-info"><span>حجم الكتاب</span><strong id="largePdfSize">—</strong></div>
+  <div class="large-pdf-size-info"><span>الحد المسموح للجزء</span><strong>75 ميجابايت</strong></div>
+  <p class="large-pdf-dialog-note">يمكن تقسيم الكتاب إلى أجزاء مرتبة، وحفظها محليًا داخل مجلد باسم الكتاب. سيبقى الملف الأصلي دون تعديل.</p>
+  <div class="large-pdf-dialog-actions">
+   <button id="largePdfAccept" class="primary-btn" type="button">تقسيم الكتاب</button>
+   <button id="largePdfCancel" type="button">إلغاء</button>
+  </div>
+ </div>
+</dialog>
 </body></html>
