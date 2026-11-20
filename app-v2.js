@@ -480,6 +480,44 @@ function confirmLargePdf(file){
   try{dialog.showModal();accept.focus()}catch(error){console.error("Oversized PDF dialog unavailable",error);finish(false)}
  });
 }
+function beginLargePdfProgress(file){
+ const dialog=$("largePdfProgress"),done=$("largePdfProgressDone");
+ dialog.dataset.state="running";
+ $("largePdfProgressName").textContent=file.name;
+ $("largePdfProgressStatus").textContent="جاري فتح الكتاب وفحص صفحاته…";
+ $("largePdfProgressHint").textContent="أبقِ التطبيق مفتوحًا حتى ينتهي تقسيم الكتاب وحفظه على هذا الجهاز. لن يُعدّل الملف الأصلي.";
+ $("largePdfProgressSaved").textContent="0";
+ $("largePdfProgressPages").textContent="جارٍ حساب الصفحات…";
+ done.hidden=true;done.onclick=null;
+ const setPercent=value=>{
+  const n=Math.min(100,Math.max(0,Math.round(value)));
+  $("largePdfProgressPercent").textContent=n+"%";
+  $("largePdfProgressFill").style.width=n+"%";
+  $("largePdfProgressBar").setAttribute("aria-valuenow",String(n));
+ };
+ setPercent(0);
+ const preventClose=event=>{if(dialog.dataset.state==="running")event.preventDefault()};
+ dialog.addEventListener("cancel",preventClose);
+ try{dialog.showModal()}catch(error){console.warn("PDF progress dialog unavailable",error)}
+ const display=(status,pages,saved,percent)=>{
+  $("largePdfProgressStatus").textContent=status;
+  if(pages!==undefined)$("largePdfProgressPages").textContent=pages;
+  if(saved!==undefined)$("largePdfProgressSaved").textContent=String(saved);
+  if(percent!==undefined)setPercent(percent);
+ };
+ const finish=(success,status,folder,saved)=>{
+  dialog.dataset.state=success?"complete":"error";
+  display(status,undefined,saved,success?100:undefined);
+  $("largePdfProgressHint").textContent=success?"تم التحقق من وجود الأجزاء في مكتبتك المحلية.":"لن تُحذف الأجزاء التي حُفظت بالفعل. يمكنك إعادة المحاولة بعد معالجة الخطأ.";
+  done.textContent=folder&&saved?"فتح مجلد الكتاب":"إغلاق";
+  done.hidden=false;
+  done.onclick=()=>{
+   if(folder&&saved)librarySelect("all",folder);
+   if(dialog.open)dialog.close();
+  };
+ };
+ return {display,finish};
+}
 // Serialize uploads so two simultaneous selections cannot evade the duplicate check.
 let pendingPdfUpload=Promise.resolve();
 async function addFile(file){
@@ -494,26 +532,48 @@ async function addFile(file){
    const existingFolders=new Set(folderList());
    let folder=base.slice(0,40),counter=2;
    while(existingFolders.has(folder)){const suffix=" ("+(counter++)+")";folder=base.slice(0,40-suffix.length)+suffix}
-   let savedCount=0;
+   let savedCount=0,completedPages=0,totalPages=0;
+   const addedIds=[];
+   const progress=beginLargePdfProgress(file);
+   // Let the modal paint before beginning expensive PDF operations.
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    try{
-    for await(const part of splitLargePdf(file,PDFDocument,({page,totalPages,part})=>tell("تقسيم الكتاب: الجزء "+part+" — الصفحة "+page+" من "+totalPages))){
+    for await(const part of splitLargePdf(file,PDFDocument,({page,totalPages:total,part:partIndex})=>{
+     totalPages=total;
+     progress.display("تقسيم الجزء "+partIndex+" — جارٍ تجهيز الصفحات…","اكتملت "+completedPages+" من "+total+" صفحة",savedCount,total?completedPages/total*100:0);
+    })){
+     progress.display("جارٍ حفظ الجزء "+part.partNumber+" على الجهاز…","اكتملت "+completedPages+" من "+part.totalPages+" صفحة",savedCount);
      const addedAt=Date.now();
      const sha256=await digestHex(await part.file.arrayBuffer());
      const d={id:crypto.randomUUID(),name:part.file.name,file:part.file,sha256,uploadedAt:addedAt,updated:addedAt,lastPage:1,deleted:false,favorite:false,folders:[folder],originalName:file.name,partNumber:part.partNumber,sourcePageStart:part.firstPage,sourcePageEnd:part.lastPage,sourceTotalPages:part.totalPages};
      await save("documents",d);
+     addedIds.push(d.id);
      savedCount++;
-     tell("حُفظ الجزء "+savedCount+" محليًا، جارٍ تجهيز التالي…");
+     completedPages=part.lastPage;
+     totalPages=part.totalPages;
+     progress.display("حُفظ الجزء "+savedCount+"، جارٍ متابعة الكتاب…","اكتملت "+completedPages+" من "+totalPages+" صفحة",savedCount,Math.min(99,completedPages/totalPages*100));
+     await new Promise(resolve=>setTimeout(resolve,0));
     }
+    if(!savedCount)throw Error("لم يُنتج التقسيم أي جزء");
+    progress.display("جارٍ التحقق من الأجزاء المحفوظة…",undefined,savedCount,99);
+    const stored=await getAll("documents");
+    const matching=new Set(stored.filter(d=>d.folders?.includes(folder)&&d.file instanceof Blob&&d.file.size>0).map(d=>d.id));
+    if(addedIds.some(id=>!matching.has(id)))throw Error("تعذر التحقق من حفظ بعض الأجزاء داخل الجهاز.");
+    if(!libraryCustomFolders.includes(folder))libraryCustomFolders.push(folder);
+    saveFolders();
+    await refresh();
+    progress.finish(true,"اكتمل تقسيم الكتاب وحفظ "+savedCount+" جزء بنجاح.",folder,savedCount);
+    return;
    }catch(error){
-    if(savedCount){libraryCustomFolders.push(folder);saveFolders();await refresh();throw Error("حُفظ "+savedCount+" جزء في مجلد "+folder+"، لكن توقف التقسيم: "+(error.message||"خطأ غير متوقع")+". الأجزاء المحفوظة لم تُحذف.")}
-    throw error;
+    console.error("PDF split or save failed",error);
+    if(savedCount){
+     if(!libraryCustomFolders.includes(folder))libraryCustomFolders.push(folder);
+     saveFolders();
+     await refresh();
+    }
+    progress.finish(false,"تعذر إكمال التقسيم: "+(error.message||"خطأ غير متوقع"),savedCount?folder:null,savedCount);
+    return;
    }
-   if(!savedCount)throw Error("لم يُنتج التقسيم أي جزء");
-   libraryCustomFolders.push(folder);saveFolders();
-   await refresh();
-   librarySelect("all",folder);
-   tell("تم تقسيم الكتاب إلى "+savedCount+" أجزاء وحفظها محليًا في مجلد «"+folder+"».");
-   return;
   }
   const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());
   if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");
