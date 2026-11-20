@@ -1,6 +1,6 @@
 import * as pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.min.mjs";
 import {PDFDocument,rgb,StandardFonts} from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
-import {PDF_PART_LIMIT, splitLargePdf} from "./large-pdf-split.js";
+import {PDF_PART_LIMIT} from "./large-pdf-split.js";
 pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs";
 const $=id=>document.getElementById(id),c=$("pdfCanvas"),ink=$("inkCanvas"),ctx=ink.getContext("2d");
 let readerMode="single",readerRTL=true,readerFlipBusy=false,readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="auto",librarySearch="",librarySort="date",libraryFoldersDefault=[],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
@@ -518,6 +518,32 @@ function beginLargePdfProgress(file){
  };
  return {display,finish};
 }
+async function splitPdfOnDevice(file,onProgress,onPart){
+ // Isolate expensive parsing and copying from the reader UI. Saving each
+ // part is acknowledged before the worker prepares another part.
+ const worker=new Worker(new URL("./large-pdf-worker.js",import.meta.url),{type:"module"});
+ try {
+  await new Promise((resolve,reject)=>{
+   let settled=false;
+   const settle=(error)=>{
+    if(settled)return; settled=true;
+    if(error)reject(error);else resolve();
+   };
+   worker.onerror=event=>{event.preventDefault();settle(Error("تعذر تشغيل محرك تقسيم PDF على هذا الجهاز."))};
+   worker.onmessage=async ({data})=>{
+    if(settled)return;
+    if(data?.type==="progress"){
+     onProgress(data);
+    }else if(data?.type==="part"){
+     try{await onPart(data);worker.postMessage({type:"saved"})}
+     catch(error){settle(error)}
+    }else if(data?.type==="done"){settle()}
+    else if(data?.type==="error"){settle(Error(data.message||"تعذر تقسيم الكتاب"))}
+   };
+   worker.postMessage({type:"start",file});
+  });
+ }finally{worker.terminate()}
+}
 // Serialize uploads so two simultaneous selections cannot evade the duplicate check.
 let pendingPdfUpload=Promise.resolve();
 async function addFile(file){
@@ -538,10 +564,10 @@ async function addFile(file){
    // Let the modal paint before beginning expensive PDF operations.
    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
    try{
-    for await(const part of splitLargePdf(file,PDFDocument,({page,totalPages:total,part:partIndex})=>{
+    await splitPdfOnDevice(file,({page,totalPages:total,part:partIndex})=>{
      totalPages=total;
      progress.display("تقسيم الجزء "+partIndex+" — جارٍ تجهيز الصفحات…","اكتملت "+completedPages+" من "+total+" صفحة",savedCount,total?completedPages/total*100:0);
-    })){
+    },async part=>{
      progress.display("جارٍ حفظ الجزء "+part.partNumber+" على الجهاز…","اكتملت "+completedPages+" من "+part.totalPages+" صفحة",savedCount);
      const addedAt=Date.now();
      const sha256=await digestHex(await part.file.arrayBuffer());
@@ -553,7 +579,7 @@ async function addFile(file){
      totalPages=part.totalPages;
      progress.display("حُفظ الجزء "+savedCount+"، جارٍ متابعة الكتاب…","اكتملت "+completedPages+" من "+totalPages+" صفحة",savedCount,Math.min(99,completedPages/totalPages*100));
      await new Promise(resolve=>setTimeout(resolve,0));
-    }
+    });
     if(!savedCount)throw Error("لم يُنتج التقسيم أي جزء");
     progress.display("جارٍ التحقق من الأجزاء المحفوظة…",undefined,savedCount,99);
     const stored=await getAll("documents");
