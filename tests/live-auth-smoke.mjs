@@ -11,8 +11,17 @@ for (let attempt = 0; attempt < 30; attempt++) {
   assert.equal(session.status,200);
   assert.equal((await session.json()).user,null);
   const html = await (await fetch(base + '/', {cache:'no-store',signal:AbortSignal.timeout(10000)})).text();
-  assert.match(html,/id="authGate"/);
-  assert.match(html,/<div id="app" hidden inert>/);
+  // The current site uses site-entry.js as its session gate. It hides the
+  // reader before verifying the session, then loads app-v2.js only on success.
+  assert.match(html,/<script type="module" src="\.\/site-entry\.js\?v=[^"]+"><\/script>/);
+  assert.match(html,/<div id="app">/);
+  const entryResponse=await fetch(base+'/site-entry.js',{cache:'no-store',signal:AbortSignal.timeout(10000)});
+  assert.equal(entryResponse.status,200);
+  const entry=await entryResponse.text();
+  assert.match(entry,/panel\.hidden=true/);
+  assert.match(entry,/fetch\('\/api\/auth\/session'/);
+  assert.match(entry,/location\.replace\('\/account\.html'\)/);
+  assert.match(entry,/import\('\.\/app-v2\.js/);
   const csrf = await fetch(base + '/api/auth/login', {
    method:'POST',headers:{'Content-Type':'application/json',Origin:'https://invalid.example'},
    body:'{}',signal:AbortSignal.timeout(10000)
