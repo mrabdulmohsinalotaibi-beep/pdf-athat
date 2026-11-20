@@ -1,6 +1,6 @@
 import * as pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.min.mjs";
 import {PDFDocument,rgb,StandardFonts} from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
-import {PDF_PART_LIMIT, PDF_SPLIT_INPUT_LIMIT, readableSize, splitLargePdf} from "./large-pdf-split.js";
+import {PDF_PART_LIMIT, PDF_SPLIT_INPUT_LIMIT, splitLargePdf} from "./large-pdf-split.js";
 pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs";
 const $=id=>document.getElementById(id),c=$("pdfCanvas"),ink=$("inkCanvas"),ctx=ink.getContext("2d");
 let readerMode="single",readerRTL=true,readerFlipBusy=false,readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="auto",librarySearch="",librarySort="date",libraryFoldersDefault=[],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
