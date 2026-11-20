@@ -16,12 +16,22 @@ for(const name of ['prayer-background-push.js','functions/api/prayer-push/[[path
 require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/library-desktop-layout.test.mjs')],{stdio:'inherit'});
 require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/reader-zoom-navigation.test.mjs')],{stdio:'inherit'});
 const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','admin-prayer-notification-pilot.js','prayer-background-push.js','peer-sync.js','site-ads.js','site-ads.css','traffic.js'];
-const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','large-pdf-split.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
+const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','large-pdf-split.js','large-pdf-worker.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
 // Version imported split engine too: iOS PWA may otherwise serve an obsolete
 // cached module containing a removed 300 MB input limit.
 const splitterSpecifier='from "./large-pdf-split.js"';
 if(!source.includes(splitterSpecifier))throw Error('Large PDF splitter import not found');
 source=source.replace(splitterSpecifier,'from "./large-pdf-split.js?v='+version+'"');
+// Force the newest PDF worker and its splitter module on PWA updates.
+const workerSpecifier='"./large-pdf-worker.js"';
+if(!source.includes(workerSpecifier))throw Error('Dedicated PDF splitter worker reference missing');
+source=source.replace(workerSpecifier,'"./large-pdf-worker.js?v='+version+'"');
+const splitWorkerFile=path.join(dist,'large-pdf-worker.js');
+let splitWorkerSource=fs.readFileSync(splitWorkerFile,'utf8');
+const splitWorkerImport='from "./large-pdf-split.js"';
+if(!splitWorkerSource.includes(splitWorkerImport))throw Error('PDF split worker engine import missing');
+splitWorkerSource=splitWorkerSource.replace(splitWorkerImport,'from "./large-pdf-split.js?v='+version+'"');
+fs.writeFileSync(splitWorkerFile,splitWorkerSource);
 const htmlFile=path.join(dist,'index.html');
 let html=fs.readFileSync(htmlFile,'utf8');
 // Version the visual assets to bypass older service-worker caches on mobile devices.
@@ -97,7 +107,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./prayer-background-push.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./large-pdf-split.js','./large-pdf-split.js?v='+version,'./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./prayer-background-push.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./large-pdf-split.js','./large-pdf-split.js?v='+version,'./large-pdf-worker.js','./large-pdf-worker.js?v='+version,'./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 let sw=`const CACHE="pdf-athat-offline-${version}";
 const SHELL=${JSON.stringify(precache)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -109,7 +119,7 @@ self.addEventListener('fetch',e=>{
  e.respondWith((async()=>{
   const cache=await caches.open(CACHE);
   const cached=await cache.match(e.request);
-  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/large-pdf-split.js','/icon.svg','/manifest.webmanifest','/site-entry.js','/account.html','/account.js','/admin.html','/admin.js'].includes(u.pathname);
+  const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/large-pdf-split.js','/large-pdf-worker.js','/icon.svg','/manifest.webmanifest','/site-entry.js','/account.html','/account.js','/admin.html','/admin.js'].includes(u.pathname);
   if(cached&&!revalidate)return cached;
   try{
    const response=await fetch(e.request,revalidate?{cache:'no-store'}:{});
