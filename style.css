@@ -627,7 +627,15 @@ button:focus-visible,.upload:focus-within,input:focus-visible{outline-color:var(
 .library-page .library-content{max-width:1400px}
 .library-page .library-overview-item strong{font-variant-numeric:tabular-nums}
 .library-book-name,.library-resume-name{overflow-wrap:anywhere}
-.peer-sync-btn{font-size:12px!important;white-space:nowrap;padding:7px 10px!important;min-width:0!important}
+.peer-sync-btn{font-size:12px!important;white-space:nowrap;padding:7px 10px!important;min-width:0!important;display:inline-flex!important;align-items:center;justify-content:center;gap:7px;font-weight:700}
+.peer-sync-btn::before{content:"";flex:none;width:10px;height:10px;border-radius:50%;background:var(--sync-tone,#dc2626);box-shadow:0 0 0 3px color-mix(in srgb,var(--sync-tone,#dc2626) 18%,transparent)}
+.peer-sync-btn[data-sync-state="stopped"],.peer-sync-status[data-sync-state="stopped"]{--sync-tone:#dc2626}
+.peer-sync-btn[data-sync-state="syncing"],.peer-sync-status[data-sync-state="syncing"]{--sync-tone:#eab308}
+.peer-sync-btn[data-sync-state="synced"],.peer-sync-status[data-sync-state="synced"]{--sync-tone:#16a34a}
+.peer-sync-status[data-sync-state]{border-inline-start:4px solid var(--sync-tone,#dc2626)}
+.peer-sync-btn[data-sync-state="syncing"]::before{animation:peer-sync-pulse 1.3s ease-in-out infinite}
+@keyframes peer-sync-pulse{50%{opacity:.45;transform:scale(.8)}}
+@media(prefers-reduced-motion:reduce){.peer-sync-btn[data-sync-state="syncing"]::before{animation:none}}
 .peer-sync-dialog{width:min(94vw,540px);max-height:86dvh;overflow:auto;border-radius:18px;padding:22px;border:1px solid var(--line);color:var(--ink);background:var(--panel);box-shadow:0 14px 45px #0004}
 .peer-sync-dialog::backdrop{background:#0008}
 .peer-sync-dialog h2{font-size:20px;margin:0 0 10px}
