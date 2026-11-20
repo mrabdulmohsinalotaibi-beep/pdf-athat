@@ -1,5 +1,6 @@
 import * as pdfjs from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.min.mjs";
 import {PDFDocument,rgb,StandardFonts} from "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm";
+import {PDF_PART_LIMIT, PDF_SPLIT_INPUT_LIMIT, readableSize, splitLargePdf} from "./large-pdf-split.js";
 pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs";
 const $=id=>document.getElementById(id),c=$("pdfCanvas"),ink=$("inkCanvas"),ctx=ink.getContext("2d");
 let readerMode="single",readerRTL=true,readerFlipBusy=false,readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="auto",librarySearch="",librarySort="date",libraryFoldersDefault=[],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
@@ -455,7 +456,37 @@ let pendingPdfUpload=Promise.resolve();
 async function addFile(file){
  if(!file)return;
  try{
-  if(file.size>75*1024*1024)throw Error("الحد الأقصى 75 ميجابايت");
+  if(file.size>PDF_PART_LIMIT){
+   if(file.size>PDF_SPLIT_INPUT_LIMIT)throw Error("حجم الكتاب "+readableSize(file.size)+"؛ تقسيم الكتب الأكبر من 300 ميجابايت غير متاح داخل المتصفح حاليًا.");
+   const proceed=confirm("حجم الكتاب "+readableSize(file.size)+" ويتجاوز الحد المسموح (75 ميجابايت).\nهل تريد تقسيمه إلى أجزاء، وحفظها محليًا داخل مجلد باسم الكتاب؟\nلن يُعدّل الملف الأصلي.");
+   if(!proceed){tell("بقي الملف الأصلي دون تغيير، ولم يُضف إلى المكتبة.");return}
+   const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());
+   if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");
+   const base=file.name.replace(/\.pdf$/i,"").trim()||"كتاب";
+   const existingFolders=new Set(folderList());
+   let folder=base.slice(0,40),counter=2;
+   while(existingFolders.has(folder)){const suffix=" ("+(counter++)+")";folder=base.slice(0,40-suffix.length)+suffix}
+   let savedCount=0;
+   try{
+    for await(const part of splitLargePdf(file,PDFDocument,({page,totalPages,part})=>tell("تقسيم الكتاب: الجزء "+part+" — الصفحة "+page+" من "+totalPages))){
+     const addedAt=Date.now();
+     const sha256=await digestHex(await part.file.arrayBuffer());
+     const d={id:crypto.randomUUID(),name:part.file.name,file:part.file,sha256,uploadedAt:addedAt,updated:addedAt,lastPage:1,deleted:false,favorite:false,folders:[folder],originalName:file.name,partNumber:part.partNumber,sourcePageStart:part.firstPage,sourcePageEnd:part.lastPage,sourceTotalPages:part.totalPages};
+     await save("documents",d);
+     savedCount++;
+     tell("حُفظ الجزء "+savedCount+" محليًا، جارٍ تجهيز التالي…");
+    }
+   }catch(error){
+    if(savedCount){libraryCustomFolders.push(folder);saveFolders();await refresh();throw Error("حُفظ "+savedCount+" جزء في مجلد "+folder+"، لكن توقف التقسيم: "+(error.message||"خطأ غير متوقع")+". الأجزاء المحفوظة لم تُحذف.")}
+    throw error;
+   }
+   if(!savedCount)throw Error("لم يُنتج التقسيم أي جزء");
+   libraryCustomFolders.push(folder);saveFolders();
+   await refresh();
+   librarySelect("all",folder);
+   tell("تم تقسيم الكتاب إلى "+savedCount+" أجزاء وحفظها محليًا في مجلد «"+folder+"».");
+   return;
+  }
   const head=new TextDecoder("latin1").decode(await file.slice(0,1024).arrayBuffer());
   if(!head.includes("%PDF-"))throw Error("الملف ليس PDF صالحًا");
   const sha256=await digestHex(await file.arrayBuffer());
