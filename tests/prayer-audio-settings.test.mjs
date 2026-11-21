@@ -18,3 +18,18 @@ test('adhan, iqama, pre-prayer controls and local recordings exist',()=>{
 });
 
 // Build verification for the prayer sound settings release.
+
+test('prayer close persists hidden state and can be reopened',()=>{
+ assert.match(source,/dismiss\.onclick=\(\)=>toggleOpen\(false\)/);
+ assert.match(source,/toggle\.onclick=\(\)=>toggleOpen\(!visible\)/);
+ assert.match(source,/bar\.hidden=!open/);
+ assert.match(source,/localStorage\.setItem\(hiddenKey,open\?'no':'yes'\)/);
+});
+test('settings retains notification test without redundant bell',()=>{
+ const pilot=fs.readFileSync(new URL('../admin-prayer-notification-pilot.js',import.meta.url),'utf8');
+ assert.doesNotMatch(pilot,/createElement\('button'\)[\s\S]*dataset\.prayerNotifyTest/);
+ assert.match(pilot,/testButton\.addEventListener\('click'/);
+ assert.match(pilot,/registration\.showNotification/);
+ assert.match(source,/settings\.onclick=cityButton\.onclick/);
+ assert.match(style,/grid-template-areas:"place settings close" "times times times"!important/);
+});
