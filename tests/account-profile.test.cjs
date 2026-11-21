@@ -36,7 +36,7 @@ function fixture(user){
  };
  const localValues=new Map();
  const sandbox={
-  document:doc,fetch,location:{replace(value){redirects.push(value)}},
+  document:doc,fetch,navigator:{onLine:true},location:{replace(value){redirects.push(value)}},
   indexedDB:{databases:async()=>[]},
   localStorage:{getItem(key){return localValues.get(key)||null},setItem(key,value){localValues.set(key,value)},removeItem(key){localValues.delete(key)}},
   console,FormData:class {},Promise
@@ -155,7 +155,7 @@ test('reader guest mode has no authentication, no cloud sync, and uses existing 
  const reader=fs.readFileSync(path.resolve(__dirname,'../app-v2.js'),'utf8');
  assert.match(entry,/if\(!guestMode\)\{/);
  assert.match(entry,/delete window\.__pdfAccountId/);
- assert.match(entry,/if\(user\)\{[\s\S]*import\('\.\/peer-sync\.js'\)/);
+ assert.match(entry,/if\(user\)import\('\.\/peer-sync\.js'\)/);
  assert.match(reader,/window\.__pdfGuestDBName\|\|"pdf-athat-v1"/);
  assert.doesNotMatch(entry,/indexedDB\.deleteDatabase/);
 });
