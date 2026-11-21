@@ -33,3 +33,10 @@ test('settings retains notification test without redundant bell',()=>{
  assert.match(source,/settings\.onclick=cityButton\.onclick/);
  assert.match(style,/grid-template-areas:"place settings close" "times times times"!important/);
 });
+
+test('responsive CSS always honors the closed prayer strip',()=>{
+ assert.match(style,/#app>\\.prayer-bar\\[hidden\\]\\s*\\{\\s*display:none!important\\s*\\}/);
+ const mobileGrid=style.lastIndexOf('display:grid!important');
+ const hideRule=style.lastIndexOf('#app>.prayer-bar[hidden]{display:none!important}');
+ assert.ok(hideRule>mobileGrid,'hidden rule must override the last mobile display declaration');
+});
