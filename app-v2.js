@@ -4,7 +4,20 @@ import {PDF_PART_LIMIT} from "./large-pdf-split.js";
 pdfjs.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.394/build/pdf.worker.min.mjs";
 const $=id=>document.getElementById(id),c=$("pdfCanvas"),ink=$("inkCanvas"),ctx=ink.getContext("2d");
 let readerMode="single",readerRTL=true,readerFlipBusy=false,readerZoom=1,continuousToken=0,readerQueue=[],readerWorking=false,readerObserver=null,readerNodes=[],readerSaveTimer=null,readerRenderKeys=new Set(),readerEditing=false,pdfiumDoc=null,pdfiumImport=null,inkVisible=true,db,pdf,active=null,page=1,scale=1,autoFit=true,tool="pointer",strokes=[],draft=null,renderTask=null,renderSeq=0,loadSeq=0,filter="all",libraryTab="all",libraryFolder="",libraryLayout="auto",librarySearch="",librarySort="date",libraryFoldersDefault=[],libraryCustomFolders=[],libraryThumbCache=new Map(),libraryThumbQueue=[],libraryThumbBusy=false,libraryThumbInFlight=new Set(),libraryThumbObserver=null,libraryDialogId=null,history=[],redo=[],nativeURL=null,searching=false,docBusy=false,fontMode="original",textRenderSeq=0;
-const tell=t=>{$("message").textContent=t||"";$("message").hidden=!t},isMobile=()=>innerWidth<=700;
+let noticeTimer=null;
+function tell(value){
+ const message=$("message"),text=String(value||"");
+ if(noticeTimer!==null){clearTimeout(noticeTimer);noticeTimer=null}
+ message.textContent=text;
+ message.hidden=!text;
+ if(!text)return;
+ // Success and informational notices should not obstruct reading indefinitely.
+ const important=/^(تعذر|لم |فشل|خطأ|تحذير|لا يدعم|لم تُ|لم يتم)/.test(text);
+ message.dataset.kind=important?"warning":"info";
+ noticeTimer=setTimeout(()=>{message.hidden=true;noticeTimer=null},important?6500:2600);
+}
+$("message").addEventListener("click",()=>tell(""));
+const isMobile=()=>innerWidth<=700;
 const desktopReaderKey="pdf-athat-desktop-reader-v1";
 const desktopReaderDefaults={view:"single",fit:"page",autoHide:true,expanded:true};
 let desktopReaderSettings={...desktopReaderDefaults};
