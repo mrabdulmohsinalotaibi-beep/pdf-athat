@@ -35,7 +35,7 @@ test('settings retains notification test without redundant bell',()=>{
 });
 
 test('responsive CSS always honors the closed prayer strip',()=>{
- assert.match(style,/#app>\\.prayer-bar\\[hidden\\]\\s*\\{\\s*display:none!important\\s*\\}/);
+ assert.ok(style.includes('#app>.prayer-bar[hidden]{display:none!important}'));
  const mobileGrid=style.lastIndexOf('display:grid!important');
  const hideRule=style.lastIndexOf('#app>.prayer-bar[hidden]{display:none!important}');
  assert.ok(hideRule>mobileGrid,'hidden rule must override the last mobile display declaration');
