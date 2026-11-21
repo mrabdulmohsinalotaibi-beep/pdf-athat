@@ -16,7 +16,8 @@ for(const name of ['prayer-background-push.js','functions/api/prayer-push/[[path
 require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/library-desktop-layout.test.mjs')],{stdio:'inherit'});
 require('node:child_process').execFileSync(process.execPath,['--test',path.join(root,'tests/reader-zoom-navigation.test.mjs')],{stdio:'inherit'});
 const accountAssets=['account.html','account.js','site-entry.js','legacy-import.js','admin.html','admin.js','admin.css','admin-entry.js','prayer-bar.js','prayer-bar.css','admin-prayer-notification-pilot.js','prayer-background-push.js','peer-sync.js','site-ads.js','site-ads.css','traffic.js'];
-const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','large-pdf-split.js','large-pdf-worker.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));const version=hash.digest('hex').slice(0,12);
+const hash=crypto.createHash('sha256');for(const name of ['app-v2.js','large-pdf-split.js','large-pdf-worker.js','index.html','style.css','icon.svg','manifest.webmanifest'])hash.update(fs.readFileSync(path.join(dist,name)));for(const name of accountAssets)hash.update(fs.readFileSync(path.join(root,name)));// A change to service-worker generation must also invalidate the previous offline cache.
+hash.update(fs.readFileSync(__filename));const version=hash.digest('hex').slice(0,12);
 // Version imported split engine too: iOS PWA may otherwise serve an obsolete
 // cached module containing a removed 300 MB input limit.
 const splitterSpecifier='from "./large-pdf-split.js"';
@@ -112,7 +113,7 @@ for(const marker of ['function showLibrary()','async function renderLibrary()','
 }
 
 fs.writeFileSync(file,source);
-const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./prayer-background-push.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.html','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./large-pdf-split.js','./large-pdf-split.js?v='+version,'./large-pdf-worker.js','./large-pdf-worker.js?v='+version,'./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
+const precache=['./prayer-bar.css?v='+version,'./prayer-bar.js?v='+version,'./admin-prayer-notification-pilot.js?v='+version,'./prayer-background-push.js?v='+version,'./peer-sync.js?v='+version,'./site-ads.js?v='+version,'./site-ads.css?v='+version,'./site-entry.js?v='+version,'./site-entry.js','./account.html','./account.js','./admin.js','./admin.css','./legacy-import.js','./prayer-bar.js','./prayer-bar.css','./peer-sync.js','./site-ads.js','./site-ads.css','./','./index.html','./style.css','./app-v2.js','./large-pdf-split.js','./large-pdf-split.js?v='+version,'./large-pdf-worker.js','./large-pdf-worker.js?v='+version,'./manifest.webmanifest','./icon.svg','./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js','./pdfium-adapter.js','./vendor/pdfium/pdfium.wasm','./style.css?v='+version,'./icon.svg?v='+version,'./app-v2.js?v='+version,'./manifest.webmanifest?v='+version];
 // Guarantee a minimum offline reader. Optional enhancements can fail without preventing
 // installation of the service worker or making the entire app unusable offline.
 const coreShell=['./','./index.html','./site-entry.js?v='+version,'./app-v2.js?v='+version,'./style.css?v='+version,'./account.html','./account.js','./admin.css','./manifest.webmanifest?v='+version,'./icon.svg?v='+version,'./large-pdf-split.js?v='+version,'./large-pdf-worker.js?v='+version,'./vendor/pdfjs/build/pdf.min.mjs','./vendor/pdfjs/build/pdf.worker.min.mjs','./vendor/pdf-lib.esm.js'];
@@ -133,21 +134,25 @@ self.addEventListener('activate',e=>e.waitUntil(Promise.all([
 self.addEventListener('fetch',e=>{
  if(e.request.method!=='GET')return;
  const u=new URL(e.request.url);
- if(u.origin!==self.location.origin||u.pathname.startsWith('/api/'))return;
+ // The admin dashboard is online-only. Safari rejects SW-served navigations whose
+ // cached response followed a redirect, so leave admin navigations to the browser.
+ if(u.origin!==self.location.origin||u.pathname.startsWith('/api/')||u.pathname==='/admin.html')return;
  e.respondWith((async()=>{
   const cache=await caches.open(CACHE);
   const cached=await cache.match(e.request);
+  if(cached?.redirected)await cache.delete(e.request);
+  const safeCached=cached&&!cached.redirected?cached:null;
   const revalidate=e.request.mode==='navigate'||['/index.html','/style.css','/app-v2.js','/large-pdf-split.js','/large-pdf-worker.js','/icon.svg','/manifest.webmanifest','/site-entry.js','/account.html','/account.js','/admin.html','/admin.js'].includes(u.pathname);
   // Offline navigation and hashed app modules must load instantly from Cache Storage.
-  if(cached){
+  if(safeCached){
    if(revalidate)e.waitUntil(fetch(e.request,{cache:'no-store'}).then(response=>{
-    if(response.ok)return cache.put(e.request,response.clone());
+    if(response.ok&&!response.redirected)return cache.put(e.request,response.clone());
    }).catch(()=>{}));
-   return cached;
+   return safeCached;
   }
   try{
    const response=await fetch(e.request);
-   if(response.ok)cache.put(e.request,response.clone()).catch(()=>{});
+   if(response.ok&&!response.redirected)cache.put(e.request,response.clone()).catch(()=>{});
    return response;
   }catch(err){
    if(e.request.mode==='navigate')return await cache.match('./index.html')||Response.error();
