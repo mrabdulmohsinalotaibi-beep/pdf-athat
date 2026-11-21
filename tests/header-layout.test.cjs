@@ -21,10 +21,11 @@ test('mobile/tablet header has independent action row and prayer strip never ove
  assert.match(prayer,/grid-template-areas:"place settings close" "times times times"/);
  assert.match(prayer,/#app:has\(\.prayer-bar:not\(\[hidden\]\)\)>\.workspace\{height:auto!important\}/);
 });
-test('old-library import remains available in backup management; no extra admin dotted menu',()=>{
+test('old-library recovery remains in account settings; no extra admin dotted menu',()=>{
  const legacy=file('legacy-import.js');
  const builder=file('desktop/scripts/build-site.cjs');
- assert.match(legacy,/const bar=\$\('#manageBackup \.manage-controls'\)/);
+ assert.match(legacy,/Account settings -> Restore local library/);
+ assert.match(file('account.js'),/\$\('scanGuestLibraries'\)\.onclick=/);
  assert.doesNotMatch(legacy,/document\.querySelector\('\.header-actions'\)/);
  assert.doesNotMatch(builder,/<script defer src=\\"\.\/admin-entry\.js/);
 });
