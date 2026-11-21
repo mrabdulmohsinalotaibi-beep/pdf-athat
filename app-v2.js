@@ -1163,10 +1163,13 @@ $("desk").addEventListener("touchend",e=>{
  if(Math.abs(deltaX)<65||Math.abs(deltaX)<Math.abs(deltaY)*1.4)return;
  void go(deltaX*(readerRTL?1:-1)>0?1:-1,true);
 },{passive:true});
-$("readerOpenNativeTab").onclick=()=>{
- if(!nativeURL)return;
- const popup=window.open(nativeURL+"#view=Fit&page="+page,"_blank","noopener,noreferrer");
- if(!popup)tell("اسمح بفتح التبويبات المنبثقة أو نزّل الملف لفتحه في عارض المتصفح");
+$("readerOpenNativeTab").onclick=async()=>{
+ // Keep the browser's native PDF renderer inside PDF.ATHAT. Opening the blob
+ // in a separate tab strands mobile users without an in-app return button.
+ if(!active||!nativeURL)return;
+ $("readerOptions").hidden=true;
+ if(readerMode!=="single")await setReaderMode("single");
+ if(active&&nativeURL)setFontMode("native");
 };
 $("viewer").addEventListener("pointermove",event=>{
  if(!desktopSingle()||!desktopReaderSettings.autoHide)return;
