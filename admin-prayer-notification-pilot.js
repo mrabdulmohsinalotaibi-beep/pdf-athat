@@ -1,22 +1,11 @@
 // An opt-in system notification test for all PDF.ATHAT visitors.
 // This does not schedule background push notifications or change any PDF documents.
 export function mountPrayerNotificationTest(){
- const bar=document.querySelector('.prayer-bar');
- if(!bar || bar.querySelector('[data-prayer-notify-test]'))return;
- const button=document.createElement('button');
- button.type='button';
- button.dataset.prayerNotifyTest='true';
- button.className='prayer-notify-test';
- button.textContent='🔔';
- button.title='إعدادات إشعارات الصلاة';
- button.setAttribute('aria-label','فتح إعدادات إشعارات الصلاة');
- // One compact bell in the strip. The test stays inside the existing settings dialog.
- const settings=bar.querySelector('.prayer-settings');
- if(settings)settings.insertAdjacentElement('beforebegin',button);
- else bar.append(button);
  const dialog=document.querySelector('.prayer-dialog');
+ if(!dialog || dialog.querySelector('[data-prayer-notification-test]'))return;
  const testSection=document.createElement('section');
  testSection.className='prayer-sound-group';
+ testSection.dataset.prayerNotificationTest='true';
  const testButton=document.createElement('button');
  testButton.type='button';testButton.className='prayer-secondary';
  testButton.textContent='🔔 تجربة إشعار النظام (اختبار محلي)';
@@ -25,10 +14,6 @@ export function mountPrayerNotificationTest(){
  testSection.append(testButton,status);
  dialog?.querySelector('.prayer-dialog-actions')?.before(testSection);
  if(dialog&&!testSection.isConnected)dialog.append(testSection);
- button.addEventListener('click',()=>{
-  if(dialog?.open){dialog.querySelector('[data-prayer-push]')?.scrollIntoView({block:'nearest',behavior:'smooth'});}
-  else settings?.click();
- });
  testButton.addEventListener('click',async()=>{
   status.textContent='';
   if(!('Notification' in window)||!('serviceWorker' in navigator)){
