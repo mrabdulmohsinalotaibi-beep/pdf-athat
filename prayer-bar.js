@@ -27,8 +27,8 @@
  const hijri=el('small','prayer-hijri','');
  info.append(cityButton,soon,hijri);
  const times=el('div','prayer-times');
- const settings=el('button','prayer-settings','⚙');settings.type='button';settings.title='تغيير المدينة';
- const dismiss=el('button','prayer-dismiss','×');dismiss.type='button';dismiss.title='إخفاء مواقيت الصلاة';
+ const settings=el('button','prayer-settings','⚙');settings.type='button';settings.title='إعدادات الصلاة والإشعارات';settings.setAttribute('aria-label','إعدادات الصلاة والإشعارات');
+ const dismiss=el('button','prayer-dismiss','×');dismiss.type='button';dismiss.title='إخفاء مواقيت الصلاة';dismiss.setAttribute('aria-label','إخفاء مواقيت الصلاة');
  bar.append(info,times,settings,dismiss);header.insertAdjacentElement('afterend',bar);
  const toast=el('div','prayer-alert');toast.hidden=true;toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');
  const alertText=el('strong','prayer-alert-text');const closeToast=el('button','prayer-alert-close','×');closeToast.type='button';closeToast.title='إغلاق التنبيه';

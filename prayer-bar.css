@@ -139,3 +139,11 @@
  #app>.prayer-bar :is(.prayer-notify-test,.prayer-settings,.prayer-dismiss){width:32px;max-width:32px;min-width:32px;min-height:32px}
  #app>.prayer-bar .prayer-time{font-size:10px}
 }
+
+/* The notification test is now inside Settings: only Settings and Close remain in the strip. */
+@media(max-width:980px){
+ #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 38px 38px!important;grid-template-areas:"place settings close" "times times times"!important}
+}
+@media(max-width:460px){
+ #app>.prayer-bar{grid-template-columns:minmax(0,1fr) 32px 32px!important}
+}
